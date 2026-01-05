@@ -1,0 +1,8 @@
+{
+  "yaml.schemas": {
+    "./contracts/ontology/intents.schema.yaml": "registry/**/ontology/intents.yaml",
+    "./contracts/ontology/entities.schema.yaml": "registry/**/ontology/entities.yaml",
+    "./contracts/ontology/terms.schema.yaml": "registry/**/ontology/terms.yaml",
+    "./contracts/policies/planner.schema.yaml": "registry/**/policies/planner.yaml"
+  }
+}

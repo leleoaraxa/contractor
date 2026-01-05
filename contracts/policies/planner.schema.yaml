@@ -1,0 +1,47 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$title: "CONTRACTOR Policies - Planner"
+$type: object
+$additionalProperties: false
+
+required: [planner]
+
+properties:
+  # Optional header used by some YAML policy conventions (editor/schema tooling)
+  terms:
+    type: array
+    items:
+      type: object
+      additionalProperties: true
+
+  planner:
+    type: object
+    additionalProperties: false
+    required: [min_matches, min_score, on_no_match]
+    properties:
+      min_matches:
+        type: integer
+        minimum: 0
+      min_score:
+        anyOf:
+          - type: number
+            minimum: 0
+          - type: integer
+            minimum: 0
+      on_no_match:
+        type: object
+        additionalProperties: false
+        required: [intent, entity, reason]
+        properties:
+          intent:
+            anyOf:
+              - type: "null"
+              - type: string
+                minLength: 1
+          entity:
+            anyOf:
+              - type: "null"
+              - type: string
+                minLength: 1
+          reason:
+            type: string
+            minLength: 1
