@@ -139,6 +139,7 @@ The platform never depends on Araquem, but Araquem validates the platform.
 - `docs/FOUNDATION.md` — Guardrails v0
 - `docs/ADR/` — Architecture Decision Records
 - `docs/C4/` — Architecture diagrams
+- `docs/RUNBOOKS/` — Operação (local, docker, promoção, troubleshooting)
 - `docs/SECURITY/` — Threat model and data handling
 
 ---
@@ -157,3 +158,20 @@ The platform never depends on Araquem, but Araquem validates the platform.
 Current stage: **Stage 0 — Foundation**
 
 CONTRACTOR is under active development and not yet a commercial product.
+
+---
+
+## How to run
+
+- **Local (sem Docker):** siga `docs/RUNBOOKS/run_local.md` para preparar `.env`, instalar dependências (`pip install -e .`) e iniciar Control Plane + Runtime via scripts em `scripts/dev/`.
+- **Docker Compose:** siga `docs/RUNBOOKS/run_docker.md` para subir `control`, `runtime` e o placeholder `redis` com `docker compose up --build`.
+- **Smoke test:** `./scripts/dev/smoke.sh` após os serviços estarem no ar (local ou Docker).
+
+## Stage 0 Exit Criteria
+
+Para declarar Stage 0 concluído:
+- Control Plane e Runtime sobem localmente ou via Docker (`healthz` ok) e consomem o registry filesystem.
+- Um bundle mínimo é validado e promovido para `current` (ex.: demo `202601050001`).
+- `/ask` responde de forma determinística usando `tenant_id` + alias atual, sem hardcodes de domínio.
+- Licença, `.env.example`, ADRs e diagramas C4 estão presentes e atualizados.
+- Runbooks documentam execução, promoção/rollback e troubleshooting inicial.
