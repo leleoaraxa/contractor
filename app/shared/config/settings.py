@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     # - "dev-key"
     # - "k1,k2"
     # - '["k1","k2"]'
-    contractor_api_keys: list[str] = Field(
+    contractor_api_keys: list[str] | str | None = Field(
         default_factory=list, validation_alias="CONTRACTOR_API_KEYS"
     )
 
@@ -136,6 +136,33 @@ class Settings(BaseSettings):
             contractor_env_settings,
             init_settings,
             safe_env_settings,
+            dotenv_settings,
+            file_secret_settings,
+        )
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls,
+        init_settings,
+        env_settings,
+        dotenv_settings,
+        file_secret_settings,
+    ):
+        def contractor_env_settings():
+            data = {}
+            api_keys = os.getenv("CONTRACTOR_API_KEYS")
+            if api_keys is not None:
+                data["contractor_api_keys"] = api_keys
+            auth_disabled = os.getenv("CONTRACTOR_AUTH_DISABLED")
+            if auth_disabled is not None:
+                data["contractor_auth_disabled"] = auth_disabled
+            return data
+
+        return (
+            contractor_env_settings,
+            init_settings,
+            env_settings,
             dotenv_settings,
             file_secret_settings,
         )
