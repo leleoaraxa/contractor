@@ -5,7 +5,7 @@ import json
 import os
 from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic_settings.sources import EnvSettingsSource
+from pydantic_settings.sources import DotEnvSettingsSource, EnvSettingsSource
 
 
 def _normalize_api_keys(v):
@@ -90,14 +90,22 @@ class Settings(BaseSettings):
         cls, settings_cls, init_settings, env_settings, dotenv_settings, file_secret_settings
     ):
         class ContractorEnvSettingsSource(EnvSettingsSource):
-            def _field_is_complex(self, field):
-                is_complex, allow_parse_failure = super()._field_is_complex(field)
-                if getattr(field, "alias", None) == "contractor_api_keys" or getattr(
-                    field, "validation_alias", None
-                ):
-                    # Allow parse failure so raw string values reach the validator.
-                    return True, True
-                return is_complex, allow_parse_failure
+            def prepare_field_value(self, field_name, field, field_value, value_is_complex):
+                try:
+                    return super().prepare_field_value(field_name, field, field_value, value_is_complex)
+                except ValueError:
+                    if field_name == "contractor_api_keys":
+                        return field_value
+                    raise
+
+        class ContractorDotEnvSettingsSource(DotEnvSettingsSource):
+            def prepare_field_value(self, field_name, field, field_value, value_is_complex):
+                try:
+                    return super().prepare_field_value(field_name, field, field_value, value_is_complex)
+                except ValueError:
+                    if field_name == "contractor_api_keys":
+                        return field_value
+                    raise
 
         contractor_env = ContractorEnvSettingsSource(
             settings_cls,
@@ -110,7 +118,20 @@ class Settings(BaseSettings):
             env_settings.env_parse_enums,
         )
 
-        return (init_settings, contractor_env, dotenv_settings, file_secret_settings)
+        contractor_dotenv = ContractorDotEnvSettingsSource(
+            settings_cls,
+            dotenv_settings.env_file,
+            dotenv_settings.env_file_encoding,
+            dotenv_settings.case_sensitive,
+            dotenv_settings.env_prefix,
+            dotenv_settings.env_nested_delimiter,
+            dotenv_settings.env_nested_max_split,
+            dotenv_settings.env_ignore_empty,
+            dotenv_settings.env_parse_none_str,
+            dotenv_settings.env_parse_enums,
+        )
+
+        return (init_settings, contractor_env, contractor_dotenv, file_secret_settings)
 
 
 settings = Settings()
