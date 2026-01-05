@@ -1,0 +1,19 @@
+{
+  "suite_id": "demo_pipeline_suite",
+  "tenant_id": "demo",
+  "release_alias": "current",
+  "cases": [
+    {
+      "id": "cache_miss_first_call",
+      "question": "health status",
+      "expected": { "intent": "health_check", "entity": "platform_status" },
+      "expected_meta": { "cache_hit": false }
+    },
+    {
+      "id": "cache_hit_second_call",
+      "question": "health status",
+      "expected": { "intent": "health_check", "entity": "platform_status" },
+      "expected_meta": { "cache_hit": true }
+    }
+  ]
+}
