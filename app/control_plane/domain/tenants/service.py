@@ -18,5 +18,17 @@ class TenantAliasService:
         self.repo.upsert(aliases)
         return aliases
 
+    def set_candidate(self, tenant_id: str, bundle_id: str) -> TenantAliases:
+        aliases = self.repo.get(tenant_id)
+        aliases.candidate_bundle_id = bundle_id
+        self.repo.upsert(aliases)
+        return aliases
+
+    def set_draft(self, tenant_id: str, bundle_id: str) -> TenantAliases:
+        aliases = self.repo.get(tenant_id)
+        aliases.draft_bundle_id = bundle_id
+        self.repo.upsert(aliases)
+        return aliases
+
     def resolve(self, tenant_id: str, release_alias: str) -> str | None:
         return self.repo.resolve(tenant_id, release_alias)

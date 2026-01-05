@@ -14,7 +14,7 @@ _repo = TenantAliasRepository()
 _svc = TenantAliasService(_repo)
 
 
-class SetCurrentRequest(BaseModel):
+class SetAliasRequest(BaseModel):
     bundle_id: str = Field(..., min_length=1)
 
 
@@ -31,13 +31,24 @@ def get_aliases(tenant_id: str) -> dict:
 
 
 @router.post("/tenants/{tenant_id}/aliases/current")
-def set_current(tenant_id: str, req: SetCurrentRequest) -> dict:
+def set_current(tenant_id: str, req: SetAliasRequest) -> dict:
     validate_tenant_id(tenant_id)
     a = _svc.set_current(tenant_id, req.bundle_id)
-    return {
-        "tenant_id": a.tenant_id,
-        "current": a.current_bundle_id,
-    }
+    return {"tenant_id": a.tenant_id, "current": a.current_bundle_id}
+
+
+@router.post("/tenants/{tenant_id}/aliases/candidate")
+def set_candidate(tenant_id: str, req: SetAliasRequest) -> dict:
+    validate_tenant_id(tenant_id)
+    a = _svc.set_candidate(tenant_id, req.bundle_id)
+    return {"tenant_id": a.tenant_id, "candidate": a.candidate_bundle_id}
+
+
+@router.post("/tenants/{tenant_id}/aliases/draft")
+def set_draft(tenant_id: str, req: SetAliasRequest) -> dict:
+    validate_tenant_id(tenant_id)
+    a = _svc.set_draft(tenant_id, req.bundle_id)
+    return {"tenant_id": a.tenant_id, "draft": a.draft_bundle_id}
 
 
 @router.get("/tenants/{tenant_id}/resolve/{release_alias}")

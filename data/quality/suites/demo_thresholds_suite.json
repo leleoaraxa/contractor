@@ -1,0 +1,17 @@
+{
+  "suite_id": "demo_thresholds_suite",
+  "tenant_id": "demo",
+  "release_alias": "candidate",
+  "cases": [
+    {
+      "id": "th1_below_min_matches",
+      "question": "hello contractor",
+      "expected": { "intent": null, "entity": null, "reason": "no_match" }
+    },
+    {
+      "id": "th2_pass_min_matches",
+      "question": "hello contractor health",
+      "expected": { "intent": "health_check", "entity": "platform_status", "reason": "ok" }
+    }
+  ]
+}
