@@ -17,6 +17,8 @@ from app.runtime.engine.cache.rt_cache import RuntimeCache
 from app.runtime.engine.ontology.ontology_loader import OntologyLoader
 from app.runtime.engine.planner.planner import Planner
 from app.runtime.engine.policies.policy_loader import CachePolicy, PolicyLoader
+from app.shared.security.auth import require_api_key
+from app.shared.security.rate_limit import enforce_rate_limit
 
 router = APIRouter()
 
@@ -56,6 +58,8 @@ def _compact_decision(full: dict) -> dict:
 def ask(req: AskRequest, request: Request) -> AskResponse:
     x_explain = (request.headers.get("X-Explain") or "").strip().lower()
     explain_enabled = x_explain in {"1", "true", "yes", "y", "on"}
+    require_api_key(request)
+    enforce_rate_limit(req.tenant_id, "runtime.ask")
 
     # 1) Resolve bundle_id deterministically
     bundle_id = req.bundle_id

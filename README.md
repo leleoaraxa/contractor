@@ -140,7 +140,7 @@ The platform never depends on Araquem, but Araquem validates the platform.
 - `docs/ADR/` — Architecture Decision Records
 - `docs/C4/` — Architecture diagrams
 - `docs/RUNBOOKS/` — Operação (local, docker, promoção, troubleshooting)
-- `docs/SECURITY/` — Threat model and data handling
+- `docs/SECURITY.md` — Threat model and security baseline
 
 ---
 

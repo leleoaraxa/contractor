@@ -8,6 +8,7 @@ from app.control_plane.domain.bundles.validator import (
     ManifestNotFoundError,
     validate_bundle,
 )
+from app.control_plane.domain.audit.logger import AuditLogger
 from app.control_plane.domain.quality.reports import (
     PromotionSetRepository,
     QualityReportRepository,
@@ -26,9 +27,11 @@ class QualityService:
         self,
         report_repo: QualityReportRepository | None = None,
         promotion_repo: PromotionSetRepository | None = None,
+        audit: AuditLogger | None = None,
     ) -> None:
         self.report_repo = report_repo or QualityReportRepository()
         self.promotion_repo = promotion_repo or PromotionSetRepository()
+        self.audit = audit or AuditLogger()
         host = settings.runtime_host or "localhost"
         if host == "0.0.0.0":
             host = "localhost"
@@ -82,6 +85,20 @@ class QualityService:
         }
 
         saved = self.report_repo.save(tenant_id, bundle_id, report)
+        try:
+            self.audit.log(
+                "promotion_run",
+                {
+                    "tenant_id": tenant_id,
+                    "bundle_id": bundle_id,
+                    "status": status,
+                    "required_suites": len(required_suites),
+                    "failures": len(overall_failures),
+                },
+            )
+        except Exception:
+            # audit logging is best-effort
+            pass
         return saved.content
 
     def ensure_gate(self, tenant_id: str, bundle_id: str, require_suites: bool) -> None:

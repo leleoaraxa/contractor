@@ -19,9 +19,10 @@
 
 3. **Verificar healthchecks**
    ```bash
-   curl -f http://localhost:8001/api/v1/control/healthz
-   curl -f http://localhost:8000/api/v1/runtime/healthz
+   curl -f -H "X-API-Key: ${CONTRACTOR_API_KEYS%%,*}" http://localhost:8001/api/v1/control/healthz
+   curl -f -H "X-API-Key: ${CONTRACTOR_API_KEYS%%,*}" http://localhost:8000/api/v1/runtime/healthz
    ```
+   - Caso `CONTRACTOR_AUTH_DISABLED=1`, o header é opcional.
 
 4. **Smoke test (host)**
    ```bash

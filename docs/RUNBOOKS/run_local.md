@@ -28,10 +28,13 @@
    ```bash
    ./scripts/dev/smoke.sh
    ```
+   - Se `CONTRACTOR_AUTH_DISABLED=0`, defina uma chave em `.env` (`CONTRACTOR_API_KEYS=dev-key`) e passe `X-API-Key` nas chamadas (o script já lê `CONTRACTOR_API_KEYS` automaticamente).
 
 ## Parâmetros importantes (.env)
 - `CONTROL_BASE_URL` deve apontar para o host/porta do Control Plane acessível pelo Runtime (default: `http://localhost:8001`).
 - `BUNDLE_REGISTRY_BASE` deve permanecer como `registry/tenants` no Stage 0 (filesystem).
+- `CONTRACTOR_API_KEYS` define a lista de chaves aceitas; `CONTRACTOR_AUTH_DISABLED=1` libera chamadas locais sem header.
+- `RATE_LIMIT_RPS` e `RATE_LIMIT_BURST` controlam o token bucket por tenant; `RATE_LIMIT_REDIS_URL`/`RUNTIME_REDIS_URL` habilitam backend Redis (fallback em memória).
 
 ## Estrutura esperada
 - `registry/tenants/demo/bundles/*` com manifests de exemplo.
