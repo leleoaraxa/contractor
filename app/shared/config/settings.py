@@ -1,8 +1,33 @@
 # app/shared/config/settings.py
 from __future__ import annotations
 
+import json
+import os
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings.sources import EnvSettingsSource
+
+
+def _normalize_api_keys(v):
+    if v is None:
+        return []
+    if isinstance(v, list):
+        return [str(x).strip() for x in v if str(x).strip()]
+    if isinstance(v, str):
+        s = v.strip()
+        if not s:
+            return []
+        if s.startswith("["):
+            try:
+                arr = json.loads(s)
+                if isinstance(arr, list):
+                    return [str(x).strip() for x in arr if str(x).strip()]
+            except Exception:
+                # fall back to CSV parsing below
+                pass
+        return [p.strip() for p in s.split(",") if p.strip()]
+    s = str(v).strip()
+    return [s] if s else []
 
 
 class Settings(BaseSettings):
@@ -23,7 +48,9 @@ class Settings(BaseSettings):
         default_factory=list, validation_alias="CONTRACTOR_API_KEYS"
     )
 
-    contractor_auth_disabled: bool = False
+    contractor_auth_disabled: bool = Field(
+        default=False, validation_alias="CONTRACTOR_AUTH_DISABLED"
+    )
 
     runtime_host: str = "0.0.0.0"
     runtime_port: int = 8000
@@ -55,29 +82,63 @@ class Settings(BaseSettings):
           - JSON list string: '["k1","k2"]'
           - list[str] (already parsed)
         """
-        if v is None:
-            return []
-        if isinstance(v, list):
-            return [str(x).strip() for x in v if str(x).strip()]
-        if isinstance(v, str):
-            s = v.strip()
-            if not s:
-                return []
-            if s.startswith("["):
-                import json
+        return _normalize_api_keys(v)
 
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls,
+        init_settings,
+        env_settings,
+        dotenv_settings,
+        file_secret_settings,
+    ):
+        def contractor_env_settings():
+            data = {}
+            api_keys_alias = "CONTRACTOR_API_KEYS"
+            api_keys = os.getenv("CONTRACTOR_API_KEYS")
+            single_key = os.getenv("CONTRACTOR_API_KEY")
+            if api_keys is None and single_key is not None:
+                api_keys = single_key
+            if api_keys is not None:
+                data[api_keys_alias] = _normalize_api_keys(api_keys)
+            auth_disabled_alias = "CONTRACTOR_AUTH_DISABLED"
+            auth_disabled = os.getenv("CONTRACTOR_AUTH_DISABLED")
+            if auth_disabled is not None:
+                data[auth_disabled_alias] = auth_disabled
+            return data
+
+        class SafeEnvSettingsSource(EnvSettingsSource):
+            def prepare_field_value(
+                self, field_name, field, field_value, value_is_complex
+            ):
                 try:
-                    arr = json.loads(s)
-                    if isinstance(arr, list):
-                        return [str(x).strip() for x in arr if str(x).strip()]
-                except Exception:
-                    # fall back to CSV parsing below
-                    pass
-            # CSV or single token
-            return [p.strip() for p in s.split(",") if p.strip()]
-        # last-resort
-        s = str(v).strip()
-        return [s] if s else []
+                    return super().prepare_field_value(
+                        field_name, field, field_value, value_is_complex
+                    )
+                except ValueError:
+                    if field_name == "contractor_api_keys":
+                        return field_value
+                    raise
+
+        safe_env_settings = SafeEnvSettingsSource(
+            settings_cls,
+            env_settings.case_sensitive,
+            env_settings.env_prefix,
+            env_settings.env_nested_delimiter,
+            env_settings.env_nested_max_split,
+            env_settings.env_ignore_empty,
+            env_settings.env_parse_none_str,
+            env_settings.env_parse_enums,
+        )
+
+        return (
+            contractor_env_settings,
+            init_settings,
+            safe_env_settings,
+            dotenv_settings,
+            file_secret_settings,
+        )
 
 
 settings = Settings()

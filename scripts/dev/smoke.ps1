@@ -1,13 +1,30 @@
 $ErrorActionPreference = "Stop"
 
-$authDisabled = $Env:CONTRACTOR_AUTH_DISABLED
-$apiKey = $Env:CONTRACTOR_API_KEY
-if (-not $apiKey -or $apiKey -eq "") {
-  $apiKey = ($Env:CONTRACTOR_API_KEYS -split ",")[0]
+function Test-AuthDisabled([string]$value) {
+  if (-not $value) { return $false }
+  $normalized = $value.Trim().ToLower()
+  return @("1", "true", "yes", "y", "on").Contains($normalized)
+}
+
+function Get-ApiKey() {
+  param([string]$candidate)
+  if (-not $candidate) { return "" }
+  $parts = $candidate -split ","
+  foreach ($p in $parts) {
+    $trimmed = $p.Trim()
+    if ($trimmed) { return $trimmed }
+  }
+  return ""
+}
+
+$authDisabled = Test-AuthDisabled $Env:CONTRACTOR_AUTH_DISABLED
+$apiKey = Get-ApiKey $Env:CONTRACTOR_API_KEY
+if (-not $apiKey) {
+  $apiKey = Get-ApiKey $Env:CONTRACTOR_API_KEYS
 }
 $headers = @{}
-if ($authDisabled -ne "1") {
-  if (-not $apiKey -or $apiKey -eq "") {
+if (-not $authDisabled) {
+  if (-not $apiKey) {
     throw "Set CONTRACTOR_API_KEYS (comma-separated) or CONTRACTOR_API_KEY when auth is enabled."
   }
   $headers["X-API-Key"] = $apiKey
