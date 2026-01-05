@@ -1,15 +1,28 @@
 # app/shared/config/settings.py
 from __future__ import annotations
 
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        extra="ignore",
+        env_parse_delimiter=",",  # <-- CRÍTICO: list[str] aceita "dev-key" e "k1,k2"
+    )
 
     environment: str = "local"
     log_level: str = "INFO"
-    contractor_api_keys: list[str] | None = None
+
+    # Accept env as:
+    # - "dev-key"
+    # - "k1,k2"
+    # - '["k1","k2"]'
+    contractor_api_keys: list[str] = Field(
+        default_factory=list, validation_alias="CONTRACTOR_API_KEYS"
+    )
+
     contractor_auth_disabled: bool = False
 
     runtime_host: str = "0.0.0.0"
@@ -17,6 +30,7 @@ class Settings(BaseSettings):
 
     control_host: str = "0.0.0.0"
     control_port: int = 8001
+
     runtime_redis_url: str | None = None
     rate_limit_redis_url: str | None = None
 
@@ -30,6 +44,40 @@ class Settings(BaseSettings):
 
     rate_limit_rps: int = 10
     rate_limit_burst: int = 20
+
+    @field_validator("contractor_api_keys", mode="before")
+    @classmethod
+    def _parse_contractor_api_keys(cls, v):
+        """
+        Allow CONTRACTOR_API_KEYS to be provided as:
+          - a single string: "dev-key"
+          - CSV string: "k1,k2"
+          - JSON list string: '["k1","k2"]'
+          - list[str] (already parsed)
+        """
+        if v is None:
+            return []
+        if isinstance(v, list):
+            return [str(x).strip() for x in v if str(x).strip()]
+        if isinstance(v, str):
+            s = v.strip()
+            if not s:
+                return []
+            if s.startswith("["):
+                import json
+
+                try:
+                    arr = json.loads(s)
+                    if isinstance(arr, list):
+                        return [str(x).strip() for x in arr if str(x).strip()]
+                except Exception:
+                    # fall back to CSV parsing below
+                    pass
+            # CSV or single token
+            return [p.strip() for p in s.split(",") if p.strip()]
+        # last-resort
+        s = str(v).strip()
+        return [s] if s else []
 
 
 settings = Settings()
