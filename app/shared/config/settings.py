@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import os
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic_settings.sources import EnvSettingsSource
 
@@ -44,8 +44,9 @@ class Settings(BaseSettings):
     # - "dev-key"
     # - "k1,k2"
     # - '["k1","k2"]'
-    contractor_api_keys: list[str] | str | None = Field(
-        default_factory=list, validation_alias="CONTRACTOR_API_KEYS"
+    contractor_api_keys: list[str] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("CONTRACTOR_API_KEYS", "CONTRACTOR_API_KEY"),
     )
 
     contractor_auth_disabled: bool = Field(
@@ -86,42 +87,19 @@ class Settings(BaseSettings):
 
     @classmethod
     def settings_customise_sources(
-        cls,
-        settings_cls,
-        init_settings,
-        env_settings,
-        dotenv_settings,
-        file_secret_settings,
+        cls, settings_cls, init_settings, env_settings, dotenv_settings, file_secret_settings
     ):
-        def contractor_env_settings():
-            data = {}
-            api_keys_alias = "CONTRACTOR_API_KEYS"
-            api_keys = os.getenv("CONTRACTOR_API_KEYS")
-            single_key = os.getenv("CONTRACTOR_API_KEY")
-            if api_keys is None and single_key is not None:
-                api_keys = single_key
-            if api_keys is not None:
-                data[api_keys_alias] = _normalize_api_keys(api_keys)
-            auth_disabled_alias = "CONTRACTOR_AUTH_DISABLED"
-            auth_disabled = os.getenv("CONTRACTOR_AUTH_DISABLED")
-            if auth_disabled is not None:
-                data[auth_disabled_alias] = auth_disabled
-            return data
+        class ContractorEnvSettingsSource(EnvSettingsSource):
+            def _field_is_complex(self, field):
+                is_complex, allow_parse_failure = super()._field_is_complex(field)
+                if getattr(field, "alias", None) == "contractor_api_keys" or getattr(
+                    field, "validation_alias", None
+                ):
+                    # Allow parse failure so raw string values reach the validator.
+                    return True, True
+                return is_complex, allow_parse_failure
 
-        class SafeEnvSettingsSource(EnvSettingsSource):
-            def prepare_field_value(
-                self, field_name, field, field_value, value_is_complex
-            ):
-                try:
-                    return super().prepare_field_value(
-                        field_name, field, field_value, value_is_complex
-                    )
-                except ValueError:
-                    if field_name == "contractor_api_keys":
-                        return field_value
-                    raise
-
-        safe_env_settings = SafeEnvSettingsSource(
+        contractor_env = ContractorEnvSettingsSource(
             settings_cls,
             env_settings.case_sensitive,
             env_settings.env_prefix,
@@ -132,40 +110,7 @@ class Settings(BaseSettings):
             env_settings.env_parse_enums,
         )
 
-        return (
-            contractor_env_settings,
-            init_settings,
-            safe_env_settings,
-            dotenv_settings,
-            file_secret_settings,
-        )
-
-    @classmethod
-    def settings_customise_sources(
-        cls,
-        settings_cls,
-        init_settings,
-        env_settings,
-        dotenv_settings,
-        file_secret_settings,
-    ):
-        def contractor_env_settings():
-            data = {}
-            api_keys = os.getenv("CONTRACTOR_API_KEYS")
-            if api_keys is not None:
-                data["contractor_api_keys"] = api_keys
-            auth_disabled = os.getenv("CONTRACTOR_AUTH_DISABLED")
-            if auth_disabled is not None:
-                data["contractor_auth_disabled"] = auth_disabled
-            return data
-
-        return (
-            contractor_env_settings,
-            init_settings,
-            env_settings,
-            dotenv_settings,
-            file_secret_settings,
-        )
+        return (init_settings, contractor_env, dotenv_settings, file_secret_settings)
 
 
 settings = Settings()
