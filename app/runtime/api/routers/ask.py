@@ -10,6 +10,11 @@ from app.runtime.engine.context.artifact_loader import (
 )
 from app.runtime.engine.context.tenant_context import TenantContext
 from app.runtime.engine.context.control_plane_client import ControlPlaneClient
+from app.runtime.engine.ontology.ontology_loader import (
+    OntologyLoader,
+    OntologyLoaderError,
+)
+from app.runtime.engine.planner.planner import Planner
 
 
 router = APIRouter()
@@ -60,8 +65,43 @@ def ask(req: AskRequest) -> AskResponse:
 
     ctx = TenantContext(tenant_id=req.tenant_id, bundle_id=bundle_id)
 
+    bundle_dir = manifest.get("_bundle_dir")
+    paths = manifest.get("paths") or {}
+    ontology_dir = paths.get("ontology_dir")
+
+    decision = {
+        "intent": None,
+        "entity": None,
+        "score": 0.0,
+        "matched_terms": [],
+        "explain": {"stage": "mvp", "note": "planner v1 deterministic"},
+    }
+
+    if bundle_dir and ontology_dir:
+        try:
+            ontology = OntologyLoader().load(
+                bundle_dir=bundle_dir, ontology_dir=ontology_dir
+            )
+            pd = Planner().decide(req.question, ontology)
+            decision = {
+                "intent": pd.intent_id,
+                "entity": pd.entity_id,
+                "score": pd.score,
+                "matched_terms": pd.matched_terms,
+                "intent_scores": pd.intent_scores,
+                "entity_scores": pd.entity_scores,
+                "explain": {
+                    "stage": "mvp",
+                    "ontology_version": ontology.version,
+                    "note": "planner v1 deterministic: exact token matches against terms.yaml",
+                },
+            }
+        except Exception as e:
+            decision["explain"] = {"stage": "mvp", "note": f"planner failed: {e}"}
+
     answer = (
-        "CONTRACTOR runtime is up. Planner/Builder/Executor/Formatter are not implemented yet.\n"
+        "CONTRACTOR runtime is up. Planner is now active (Stage 1).\n"
+        f"Decision: intent={decision.get('intent')} entity={decision.get('entity')}\n"
         f"Received question: {req.question}"
     )
 
@@ -74,13 +114,7 @@ def ask(req: AskRequest) -> AskResponse:
             "source": manifest.get("source"),
             "checksum": manifest.get("checksum"),
         },
-        "decision": {
-            "intent": None,
-            "entity": None,
-            "explain": {
-                "stage": "foundation",
-                "note": "decision is not implemented in Stage 0",
-            },
-        },
+        "decision": decision,
     }
+
     return AskResponse(answer=answer, meta=meta)
