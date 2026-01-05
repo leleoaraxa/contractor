@@ -30,19 +30,12 @@ if ($val.status -ne "pass") {
   throw ("validate failed: " + ($val.errors | ConvertTo-Json -Depth 8))
 }
 
-Write-Host "Run promotion suites against release_alias=candidate..."
-# Promotion set: start with routing suites (Stage 1). Expand later.
-$promotionSuites = @(
-  "data/quality/suites/demo_thresholds_suite.json"
-)
-
-foreach ($suite in $promotionSuites) {
-  $out = python scripts/quality/run_routing_suite.py --base-url $RuntimeBase --suite $suite | ConvertFrom-Json
-  if ($out.passed -ne $out.total) {
-    throw ("suite failed: " + ($out | ConvertTo-Json -Depth 8))
-  }
-  Write-Host ("OK " + $out.suite_id + " " + $out.passed + "/" + $out.total)
+Write-Host "Run quality gate (remote /quality/run)..."
+$report = Post-Json "$ControlBase/api/v1/control/tenants/$TenantId/bundles/$candidateBundle/quality/run" @{ }
+if ($report.result.status -ne "pass") {
+  throw ("quality gate failed: " + ($report.result.failures | ConvertTo-Json -Depth 8))
 }
+Write-Host ("Quality OK suites=" + ($report.required_suites -join ", ") + " commit=" + $report.commit_hash)
 
 Write-Host "Promote: set current = candidate bundle..."
 $set = Post-Json "$ControlBase/api/v1/control/tenants/$TenantId/aliases/current" @{ bundle_id = $candidateBundle }

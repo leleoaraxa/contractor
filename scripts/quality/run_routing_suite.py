@@ -4,26 +4,14 @@ from __future__ import annotations
 
 import argparse
 import json
-from urllib import request, error
+import sys
+from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-def post_json(url: str, payload: dict) -> dict:
-    data = json.dumps(payload).encode("utf-8")
-    req = request.Request(
-        url, data=data, method="POST", headers={"Content-Type": "application/json"}
-    )
-    try:
-        with request.urlopen(req, timeout=10) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-    except error.HTTPError as e:
-        # Preserve server detail to make suites debug-friendly
-        try:
-            body = e.read().decode("utf-8")
-        except Exception:
-            body = ""
-        raise RuntimeError(f"HTTP {e.code} calling {url}: {body}") from e
-    except Exception as e:
-        raise RuntimeError(f"Error calling {url}: {e}") from e
+from app.control_plane.domain.quality.runner import run_suite
 
 
 def main() -> int:
@@ -32,62 +20,17 @@ def main() -> int:
     ap.add_argument("--suite", default="data/quality/suites/demo_routing_suite.json")
     args = ap.parse_args()
 
-    suite = json.loads(open(args.suite, "r", encoding="utf-8").read())
-    tenant_id = suite["tenant_id"]
-    release_alias = suite.get("release_alias", "current")
-
-    ok = 0
-    total = 0
-    failures = []
-
-    for case in suite["cases"]:
-        total += 1
-        payload = {
-            "tenant_id": tenant_id,
-            "release_alias": release_alias,
-            "question": case["question"],
-        }
-
-        res = post_json(f"{args.base_url}/api/v1/runtime/ask", payload)
-        decision = (res.get("meta") or {}).get("decision") or {}
-
-        got_intent = decision.get("intent")
-        got_entity = decision.get("entity")
-        got_reason = decision.get("reason")
-
-        exp = case["expected"]
-        exp_intent = exp.get("intent")
-        exp_entity = exp.get("entity")
-        exp_reason = exp.get("reason", "__SKIP__")  # backward compatible
-
-        intent_ok = got_intent == exp_intent
-        entity_ok = got_entity == exp_entity
-        reason_ok = True if exp_reason == "__SKIP__" else (got_reason == exp_reason)
-
-        if intent_ok and entity_ok and reason_ok:
-            ok += 1
-        else:
-            failures.append(
-                {
-                    "id": case["id"],
-                    "question": case["question"],
-                    "expected": exp,
-                    "got": {
-                        "intent": got_intent,
-                        "entity": got_entity,
-                        "reason": got_reason,
-                    },
-                }
-            )
-
+    result = run_suite(base_url=args.base_url, suite_path=args.suite)
     report = {
-        "suite_id": suite.get("suite_id"),
-        "passed": ok,
-        "total": total,
-        "failures": failures,
+        "suite_id": result.get("suite_id"),
+        "passed": result.get("passed"),
+        "total": result.get("total"),
+        "failures": result.get("failures"),
+        "status": result.get("status"),
+        "release_alias": result.get("release_alias"),
     }
     print(json.dumps(report, ensure_ascii=False, indent=2))
-    return 0 if ok == total else 2
+    return 0 if result.get("status") == "pass" else 2
 
 
 if __name__ == "__main__":

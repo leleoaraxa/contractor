@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     bundle_registry_base: str = "registry/tenants"
     control_base_url: str = "http://localhost:8001"
     control_alias_store_path: str = "registry/control_plane/tenant_aliases.json"
+    control_quality_report_base: str = "registry/control_plane/quality_reports"
+    control_promotion_set_base: str = "registry/control_plane/promotion_sets"
 
 
 settings = Settings()

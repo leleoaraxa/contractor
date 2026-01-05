@@ -1,0 +1,3 @@
+suites:
+  - data/quality/suites/demo_routing_candidate_suite.json
+  - data/quality/suites/demo_thresholds_suite.json
