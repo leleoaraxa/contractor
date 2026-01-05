@@ -1,0 +1,27 @@
+{
+  "suite_id": "demo_routing_suite",
+  "tenant_id": "demo",
+  "release_alias": "candidate",
+  "cases": [
+    {
+      "id": "t1",
+      "question": "health status",
+      "expected": { "intent": "health_check", "entity": "platform_status" }
+    },
+    {
+      "id": "t2",
+      "question": "hello contractor",
+      "expected": { "intent": "health_check", "entity": "platform_status" }
+    },
+    {
+      "id": "t3_no_match",
+      "question": "foo bar baz",
+      "expected": { "intent": null, "entity": null, "reason": "no_match" }
+    },
+    {
+      "id": "t4_no_match_numbers",
+      "question": "12345 999",
+      "expected": { "intent": null, "entity": null, "reason": "no_match" }
+    }
+  ]
+}
