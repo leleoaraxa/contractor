@@ -196,6 +196,7 @@ contractor/
     workflows/
       ci.yaml
       security.yaml
+
 ```
 
 ### Observações operacionais
