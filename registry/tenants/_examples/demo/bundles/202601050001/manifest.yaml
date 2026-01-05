@@ -1,5 +1,5 @@
 bundle_id: "202601050001"
-tenant_id: "demo"
+tenant_id: "_examples/demo"
 created_at: "2026-01-05T00:01:00Z"
 source: "example"
 checksum: "dev-placeholder"
