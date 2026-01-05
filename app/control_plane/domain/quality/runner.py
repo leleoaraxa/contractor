@@ -64,6 +64,7 @@ def run_suite(base_url: str | None, suite_path: str, bundle_id: Optional[str] = 
 
         res = post_json(f"{runtime_base}/api/v1/runtime/ask", payload)
         decision = (res.get("meta") or {}).get("decision") or {}
+        cache_meta = (res.get("meta") or {}).get("cache") or {}
 
         got_intent = decision.get("intent")
         got_entity = decision.get("entity")
@@ -73,12 +74,18 @@ def run_suite(base_url: str | None, suite_path: str, bundle_id: Optional[str] = 
         exp_intent = exp.get("intent")
         exp_entity = exp.get("entity")
         exp_reason = exp.get("reason", "__SKIP__")
+        exp_cache_hit = (case.get("expected_meta") or {}).get("cache_hit", "__SKIP__")
 
         intent_ok = got_intent == exp_intent
         entity_ok = got_entity == exp_entity
         reason_ok = True if exp_reason == "__SKIP__" else (got_reason == exp_reason)
+        cache_ok = (
+            True
+            if exp_cache_hit == "__SKIP__"
+            else (bool(cache_meta.get("cache_hit")) == bool(exp_cache_hit))
+        )
 
-        if intent_ok and entity_ok and reason_ok:
+        if intent_ok and entity_ok and reason_ok and cache_ok:
             ok += 1
         else:
             failures.append(
@@ -90,6 +97,7 @@ def run_suite(base_url: str | None, suite_path: str, bundle_id: Optional[str] = 
                         "intent": got_intent,
                         "entity": got_entity,
                         "reason": got_reason,
+                        "cache_hit": cache_meta.get("cache_hit"),
                     },
                 }
             )

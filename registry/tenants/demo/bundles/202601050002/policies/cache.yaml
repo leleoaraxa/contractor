@@ -1,0 +1,10 @@
+terms:
+  - name: "cache"
+    kind: "policy"
+    scope: "runtime"
+    version: 1
+
+cache:
+  enabled: true
+  default_ttl_seconds: 30
+  max_ttl_seconds: 300

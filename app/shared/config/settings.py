@@ -15,6 +15,7 @@ class Settings(BaseSettings):
 
     control_host: str = "0.0.0.0"
     control_port: int = 8001
+    runtime_redis_url: str | None = None
 
     # Local registry base for MVP (filesystem). In AWS stage, this will be S3.
     bundle_registry_base: str = "registry/tenants"

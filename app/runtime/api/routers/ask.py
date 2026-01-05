@@ -10,9 +10,13 @@ from app.runtime.engine.context.artifact_loader import (
 )
 from app.runtime.engine.context.tenant_context import TenantContext
 from app.runtime.engine.context.control_plane_client import ControlPlaneClient
+from app.runtime.engine.builder.builder import Builder
+from app.runtime.engine.executor.executor import NoopExecutor
+from app.runtime.engine.formatter.formatter import Formatter
+from app.runtime.engine.cache.rt_cache import RuntimeCache
 from app.runtime.engine.ontology.ontology_loader import OntologyLoader
 from app.runtime.engine.planner.planner import Planner
-from app.runtime.engine.policies.policy_loader import PolicyLoader
+from app.runtime.engine.policies.policy_loader import CachePolicy, PolicyLoader
 
 router = APIRouter()
 
@@ -80,6 +84,7 @@ def ask(req: AskRequest, request: Request) -> AskResponse:
         raise HTTPException(status_code=404, detail=str(e))
 
     ctx = TenantContext(tenant_id=req.tenant_id, bundle_id=bundle_id)
+    policy_loader = PolicyLoader()
 
     bundle_dir = manifest.get("_bundle_dir")
     paths = manifest.get("paths") or {}
@@ -106,7 +111,7 @@ def ask(req: AskRequest, request: Request) -> AskResponse:
             ontology = OntologyLoader().load(
                 bundle_dir=bundle_dir, ontology_dir=ontology_dir
             )
-            policy = PolicyLoader().load_planner_policy(
+            policy = policy_loader.load_planner_policy(
                 bundle_dir=bundle_dir, policies_dir=policies_dir
             )
             pd = Planner().decide(req.question, ontology, policy)
@@ -170,23 +175,58 @@ def ask(req: AskRequest, request: Request) -> AskResponse:
     # 5) Compact by default; full only when explain enabled
     decision = decision_full if explain_enabled else _compact_decision(decision_full)
 
-    answer = (
-        "CONTRACTOR runtime is up. Planner is now active (Stage 1).\n"
-        f"Decision: intent={decision.get('intent')} entity={decision.get('entity')}\n"
-        f"Received question: {req.question}"
+    plan = Builder().build(req.question, decision, ctx)
+    cache_policy = (
+        policy_loader.load_cache_policy(bundle_dir=bundle_dir, policies_dir=policies_dir)
+        if bundle_dir and policies_dir
+        else CachePolicy()
+    )
+    cache_service = RuntimeCache(ctx, cache_policy)
+    canonical_payload = {
+        "question": req.question,
+        "plan": plan.model_dump(),
+        "decision": {
+            "intent": decision.get("intent"),
+            "entity": decision.get("entity"),
+            "reason": decision.get("reason"),
+        },
+        "explain": explain_enabled,
+    }
+    cached_payload, cache_meta = cache_service.read(canonical_payload)
+
+    formatter = Formatter()
+    release_alias = req.release_alias if not req.bundle_id else None
+
+    if cached_payload:
+        cache_meta.cache_hit = True
+        cached_meta = cached_payload.get("meta") or {}
+        cache_dump = cache_meta.model_dump(exclude_none=True)
+        if not explain_enabled:
+            cache_dump.pop("metrics", None)
+            cache_dump.pop("cache_key", None)
+        cached_meta["cache"] = cache_dump
+        return AskResponse(answer=cached_payload.get("answer", ""), meta=cached_meta)
+
+    executor = NoopExecutor()
+    execution = executor.execute(plan, ctx)
+
+    formatted = formatter.format(
+        question=req.question,
+        plan=plan,
+        decision=decision,
+        execution=execution,
+        ctx=ctx,
+        manifest=manifest,
+        cache_meta=cache_meta,
+        explain_enabled=explain_enabled,
+        release_alias=release_alias,
     )
 
-    meta = {
-        "tenant_id": ctx.tenant_id,
-        "bundle_id": ctx.bundle_id,
-        "release_alias": req.release_alias if not req.bundle_id else None,
-        "manifest": {
-            "created_at": manifest.get("created_at"),
-            "source": manifest.get("source"),
-            "checksum": manifest.get("checksum"),
-        },
-        "decision": decision,
-        "explain_enabled": explain_enabled,
-    }
+    final_cache_meta = cache_service.write(
+        canonical_payload=canonical_payload,
+        value=formatted.model_dump(),
+        cache_meta=cache_meta,
+    )
+    formatted.meta["cache"] = final_cache_meta.model_dump(exclude_none=True)
 
-    return AskResponse(answer=answer, meta=meta)
+    return AskResponse(answer=formatted.answer, meta=formatted.meta)
