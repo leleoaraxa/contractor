@@ -1,8 +1,33 @@
 # app/shared/config/settings.py
 from __future__ import annotations
 
-from pydantic import Field, field_validator
+import json
+import os
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings.sources import EnvSettingsSource
+
+
+def _normalize_api_keys(v):
+    if v is None:
+        return []
+    if isinstance(v, list):
+        return [str(x).strip() for x in v if str(x).strip()]
+    if isinstance(v, str):
+        s = v.strip()
+        if not s:
+            return []
+        if s.startswith("["):
+            try:
+                arr = json.loads(s)
+                if isinstance(arr, list):
+                    return [str(x).strip() for x in arr if str(x).strip()]
+            except Exception:
+                # fall back to CSV parsing below
+                pass
+        return [p.strip() for p in s.split(",") if p.strip()]
+    s = str(v).strip()
+    return [s] if s else []
 
 
 class Settings(BaseSettings):
@@ -20,10 +45,13 @@ class Settings(BaseSettings):
     # - "k1,k2"
     # - '["k1","k2"]'
     contractor_api_keys: list[str] = Field(
-        default_factory=list, validation_alias="CONTRACTOR_API_KEYS"
+        default_factory=list,
+        validation_alias=AliasChoices("CONTRACTOR_API_KEYS", "CONTRACTOR_API_KEY"),
     )
 
-    contractor_auth_disabled: bool = False
+    contractor_auth_disabled: bool = Field(
+        default=False, validation_alias="CONTRACTOR_AUTH_DISABLED"
+    )
 
     runtime_host: str = "0.0.0.0"
     runtime_port: int = 8000
@@ -55,29 +83,34 @@ class Settings(BaseSettings):
           - JSON list string: '["k1","k2"]'
           - list[str] (already parsed)
         """
-        if v is None:
-            return []
-        if isinstance(v, list):
-            return [str(x).strip() for x in v if str(x).strip()]
-        if isinstance(v, str):
-            s = v.strip()
-            if not s:
-                return []
-            if s.startswith("["):
-                import json
+        return _normalize_api_keys(v)
 
-                try:
-                    arr = json.loads(s)
-                    if isinstance(arr, list):
-                        return [str(x).strip() for x in arr if str(x).strip()]
-                except Exception:
-                    # fall back to CSV parsing below
-                    pass
-            # CSV or single token
-            return [p.strip() for p in s.split(",") if p.strip()]
-        # last-resort
-        s = str(v).strip()
-        return [s] if s else []
+    @classmethod
+    def settings_customise_sources(
+        cls, settings_cls, init_settings, env_settings, dotenv_settings, file_secret_settings
+    ):
+        class ContractorEnvSettingsSource(EnvSettingsSource):
+            def _field_is_complex(self, field):
+                is_complex, allow_parse_failure = super()._field_is_complex(field)
+                if getattr(field, "alias", None) == "contractor_api_keys" or getattr(
+                    field, "validation_alias", None
+                ):
+                    # Allow parse failure so raw string values reach the validator.
+                    return True, True
+                return is_complex, allow_parse_failure
+
+        contractor_env = ContractorEnvSettingsSource(
+            settings_cls,
+            env_settings.case_sensitive,
+            env_settings.env_prefix,
+            env_settings.env_nested_delimiter,
+            env_settings.env_nested_max_split,
+            env_settings.env_ignore_empty,
+            env_settings.env_parse_none_str,
+            env_settings.env_parse_enums,
+        )
+
+        return (init_settings, contractor_env, dotenv_settings, file_secret_settings)
 
 
 settings = Settings()
