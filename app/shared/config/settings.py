@@ -9,6 +9,8 @@ class Settings(BaseSettings):
 
     environment: str = "local"
     log_level: str = "INFO"
+    contractor_api_keys: list[str] | None = None
+    contractor_auth_disabled: bool = False
 
     runtime_host: str = "0.0.0.0"
     runtime_port: int = 8000
@@ -16,6 +18,7 @@ class Settings(BaseSettings):
     control_host: str = "0.0.0.0"
     control_port: int = 8001
     runtime_redis_url: str | None = None
+    rate_limit_redis_url: str | None = None
 
     # Local registry base for MVP (filesystem). In AWS stage, this will be S3.
     bundle_registry_base: str = "registry/tenants"
@@ -23,6 +26,10 @@ class Settings(BaseSettings):
     control_alias_store_path: str = "registry/control_plane/tenant_aliases.json"
     control_quality_report_base: str = "registry/control_plane/quality_reports"
     control_promotion_set_base: str = "registry/control_plane/promotion_sets"
+    control_audit_log_path: str = "registry/control_plane/audit.log"
+
+    rate_limit_rps: int = 10
+    rate_limit_burst: int = 20
 
 
 settings = Settings()
