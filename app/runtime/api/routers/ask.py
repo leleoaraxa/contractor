@@ -15,7 +15,7 @@ from app.runtime.engine.ontology.ontology_loader import (
     OntologyLoaderError,
 )
 from app.runtime.engine.planner.planner import Planner
-
+from app.runtime.engine.policies.policy_loader import PolicyLoader
 
 router = APIRouter()
 
@@ -82,20 +82,43 @@ def ask(req: AskRequest) -> AskResponse:
             ontology = OntologyLoader().load(
                 bundle_dir=bundle_dir, ontology_dir=ontology_dir
             )
-            pd = Planner().decide(req.question, ontology)
+            policy = PolicyLoader().load_planner_policy(
+                bundle_dir=bundle_dir, policies_dir=paths.get("policies_dir")
+            )
+            pd = Planner().decide(req.question, ontology, policy)
             decision = {
                 "intent": pd.intent_id,
                 "entity": pd.entity_id,
                 "score": pd.score,
                 "matched_terms": pd.matched_terms,
+                "reason": pd.reason,
+                "thresholds": pd.thresholds,
+                # richer explain (meta-only)
+                "tokens": pd.tokens,
+                "considered_terms": pd.considered_terms,
                 "intent_scores": pd.intent_scores,
                 "entity_scores": pd.entity_scores,
+                "intent_topk": {
+                    "top1": pd.intent_topk.top1_id,
+                    "top1_score": pd.intent_topk.top1_score,
+                    "top2": pd.intent_topk.top2_id,
+                    "top2_score": pd.intent_topk.top2_score,
+                    "gap": pd.intent_topk.gap,
+                },
+                "entity_topk": {
+                    "top1": pd.entity_topk.top1_id,
+                    "top1_score": pd.entity_topk.top1_score,
+                    "top2": pd.entity_topk.top2_id,
+                    "top2_score": pd.entity_topk.top2_score,
+                    "gap": pd.entity_topk.gap,
+                },
                 "explain": {
                     "stage": "mvp",
                     "ontology_version": ontology.version,
-                    "note": "planner v1 deterministic: exact token matches against terms.yaml",
+                    "note": "planner v1 deterministic + thresholds from policies/planner.yaml",
                 },
             }
+
         except Exception as e:
             decision["explain"] = {"stage": "mvp", "note": f"planner failed: {e}"}
 

@@ -1,0 +1,14 @@
+version: 1
+
+planner:
+  # mínimo de termos que precisam bater para considerar roteamento válido
+  min_matches: 1
+
+  # score mínimo (média do top intent + top entity) para considerar válido
+  min_score: 1.0
+
+  # comportamento quando não passa thresholds
+  on_no_match:
+    intent: null
+    entity: null
+    reason: "no_match"
