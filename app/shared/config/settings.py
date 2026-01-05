@@ -23,7 +23,9 @@ class Settings(BaseSettings):
         default_factory=list, validation_alias="CONTRACTOR_API_KEYS"
     )
 
-    contractor_auth_disabled: bool = False
+    contractor_auth_disabled: bool = Field(
+        default=False, validation_alias="CONTRACTOR_AUTH_DISABLED"
+    )
 
     runtime_host: str = "0.0.0.0"
     runtime_port: int = 8000
