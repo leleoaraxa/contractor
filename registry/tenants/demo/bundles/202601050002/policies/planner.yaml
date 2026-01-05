@@ -5,10 +5,8 @@ terms:
     version: 1
 
 planner:
-  # Agora exige 3 termos batendo
-  min_matches: 3
+  min_matches: 1
   min_score: 1.0
-
   on_no_match:
     intent: null
     entity: null
