@@ -4,6 +4,8 @@ services:
     command: ["python","-m","uvicorn","app.control_plane.api.main:app","--host","0.0.0.0","--port","8001"]
     ports: ["8001:8001"]
     env_file: .env
+    environment:
+      - BUNDLE_REGISTRY_BASE=registry/tenants
     volumes:
       - ./:/app
     healthcheck:
@@ -17,6 +19,9 @@ services:
     command: ["python","-m","uvicorn","app.runtime.api.main:app","--host","0.0.0.0","--port","8000"]
     ports: ["8000:8000"]
     env_file: .env
+    environment:
+      - CONTROL_BASE_URL=http://control:8001
+      - BUNDLE_REGISTRY_BASE=registry/tenants
     volumes:
       - ./:/app
     depends_on:
