@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException
 import yaml
 
 from app.shared.config.settings import settings
+from app.shared.utils.ids import validate_tenant_id
 
 router = APIRouter()
 
@@ -24,11 +25,7 @@ def _bundle_dir(tenant_id: str, bundle_id: str) -> Path:
 
 @router.get("/tenants/{tenant_id}/bundles/{bundle_id}/validate")
 def validate_bundle(tenant_id: str, bundle_id: str) -> dict:
-    # Guard: tenant_id must be URL-safe and path-safe
-    if "/" in tenant_id or "\\" in tenant_id:
-        raise HTTPException(
-            status_code=400, detail="invalid tenant_id: must not contain '/' or '\\\\'"
-        )
+    validate_tenant_id(tenant_id)
 
     bdir = _bundle_dir(tenant_id, bundle_id)
     manifest_path = bdir / "manifest.yaml"

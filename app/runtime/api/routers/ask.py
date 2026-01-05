@@ -16,7 +16,7 @@ router = APIRouter()
 
 
 class AskRequest(BaseModel):
-    tenant_id: str = Field(..., min_length=1)
+    tenant_id: str = Field(..., min_length=1, pattern=r"^[A-Za-z0-9._-]+$")
     question: str = Field(..., min_length=1)
     conversation_id: str | None = None
     client_id: str | None = None

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 from typing import Any, Dict
 
 import yaml
@@ -26,7 +27,12 @@ class ArtifactLoader:
         bundle_dir = self.base_dir / tenant_id / "bundles" / bundle_id
         manifest_path = bundle_dir / "manifest.yaml"
         if not manifest_path.exists():
-            raise ArtifactLoaderError(f"manifest not found: {manifest_path}")
+            cwd = Path(os.getcwd()).resolve()
+            raise ArtifactLoaderError(
+                "manifest not found: "
+                f"path={manifest_path} abs={manifest_path.resolve()} "
+                f"base_dir={self.base_dir.resolve()} cwd={cwd}"
+            )
 
         data = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
         if data.get("tenant_id") not in (tenant_id, None):

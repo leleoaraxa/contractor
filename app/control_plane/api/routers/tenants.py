@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from app.control_plane.domain.tenants.repository import TenantAliasRepository
 from app.control_plane.domain.tenants.service import TenantAliasService
+from app.shared.utils.ids import validate_tenant_id
 
 router = APIRouter()
 
@@ -19,6 +20,7 @@ class SetCurrentRequest(BaseModel):
 
 @router.get("/tenants/{tenant_id}/aliases")
 def get_aliases(tenant_id: str) -> dict:
+    validate_tenant_id(tenant_id)
     a = _svc.get_aliases(tenant_id)
     return {
         "tenant_id": a.tenant_id,
@@ -30,6 +32,7 @@ def get_aliases(tenant_id: str) -> dict:
 
 @router.post("/tenants/{tenant_id}/aliases/current")
 def set_current(tenant_id: str, req: SetCurrentRequest) -> dict:
+    validate_tenant_id(tenant_id)
     a = _svc.set_current(tenant_id, req.bundle_id)
     return {
         "tenant_id": a.tenant_id,
@@ -39,6 +42,7 @@ def set_current(tenant_id: str, req: SetCurrentRequest) -> dict:
 
 @router.get("/tenants/{tenant_id}/resolve/{release_alias}")
 def resolve_alias(tenant_id: str, release_alias: str) -> dict:
+    validate_tenant_id(tenant_id)
     if release_alias not in {"draft", "candidate", "current"}:
         raise HTTPException(status_code=400, detail="invalid release_alias")
     bundle_id = _svc.resolve(tenant_id, release_alias)
