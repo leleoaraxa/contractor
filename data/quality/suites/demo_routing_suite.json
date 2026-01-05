@@ -1,0 +1,17 @@
+{
+  "suite_id": "demo_routing_suite",
+  "tenant_id": "demo",
+  "release_alias": "current",
+  "cases": [
+    {
+      "id": "t1",
+      "question": "health status",
+      "expected": { "intent": "health_check", "entity": "platform_status" }
+    },
+    {
+      "id": "t2",
+      "question": "hello contractor",
+      "expected": { "intent": "health_check", "entity": "platform_status" }
+    }
+  ]
+}
