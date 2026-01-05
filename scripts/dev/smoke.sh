@@ -1,15 +1,37 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-API_KEY="${CONTRACTOR_API_KEY:-${CONTRACTOR_API_KEYS:-}}"
+is_truthy() {
+  local value="$1"
+  shopt -s nocasematch
+  [[ "$value" == "1" || "$value" == "true" || "$value" == "yes" || "$value" == "y" || "$value" == "on" ]]
+}
+
+first_non_empty_token() {
+  local raw="$1"
+  IFS=',' read -ra parts <<<"$raw"
+  for token in "${parts[@]}"; do
+    local trimmed="${token#"${token%%[![:space:]]*}"}"
+    trimmed="${trimmed%"${trimmed##*[![:space:]]}"}"
+    if [[ -n "$trimmed" ]]; then
+      echo "$trimmed"
+      return
+    fi
+  done
+}
+
+API_KEY="$(first_non_empty_token "${CONTRACTOR_API_KEY:-}")"
+if [[ -z "$API_KEY" ]]; then
+  API_KEY="$(first_non_empty_token "${CONTRACTOR_API_KEYS:-}")"
+fi
 AUTH_HEADER=()
 
-if [[ "${CONTRACTOR_AUTH_DISABLED:-0}" != "1" ]]; then
+if ! is_truthy "${CONTRACTOR_AUTH_DISABLED:-0}"; then
   if [[ -z "${API_KEY}" ]]; then
     echo "Set CONTRACTOR_API_KEYS (comma-separated) or CONTRACTOR_API_KEY when auth is enabled."
     exit 1
   fi
-  AUTH_HEADER=(-H "X-API-Key: ${API_KEY%%,*}")
+  AUTH_HEADER=(-H "X-API-Key: $API_KEY")
 fi
 
 curl -sf "${AUTH_HEADER[@]}" http://localhost:8000/api/v1/runtime/healthz >/dev/null
