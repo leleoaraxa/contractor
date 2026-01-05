@@ -132,27 +132,26 @@ contractor/
 
   registry/                           # artefatos versionados (exemplo local)
     tenants/
-      _examples/
-        demo/
-          bundles/
-            202601050001/
-              manifest.yaml
-              ontology/
-                entity.yaml
-                intents.yaml
-              entities/
-                catalog.yaml
-                fiis_cadastro.yaml    # exemplo apenas (não “hardcode”, é conteúdo do bundle)
-              policies/
-                cache.yaml
-                quality.yaml
-                rag.yaml
-                narrator.yaml
-              templates/
-                fiis_cadastro/table.md.j2
-              suites/
-                routing_suite.json
-                entities_sql_suite.json
+      demo/
+        bundles/
+          202601050001/
+            manifest.yaml
+            ontology/
+              entity.yaml
+              intents.yaml
+            entities/
+              catalog.yaml
+              fiis_cadastro.yaml    # exemplo apenas (não “hardcode”, é conteúdo do bundle)
+            policies/
+              cache.yaml
+              quality.yaml
+              rag.yaml
+              narrator.yaml
+            templates/
+              fiis_cadastro/table.md.j2
+            suites/
+              routing_suite.json
+              entities_sql_suite.json
 
   ops/
     compose/
