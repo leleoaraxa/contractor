@@ -1,7 +1,7 @@
 # app/runtime/api/routers/ask.py
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app.runtime.engine.context.artifact_loader import (
@@ -10,10 +10,7 @@ from app.runtime.engine.context.artifact_loader import (
 )
 from app.runtime.engine.context.tenant_context import TenantContext
 from app.runtime.engine.context.control_plane_client import ControlPlaneClient
-from app.runtime.engine.ontology.ontology_loader import (
-    OntologyLoader,
-    OntologyLoaderError,
-)
+from app.runtime.engine.ontology.ontology_loader import OntologyLoader
 from app.runtime.engine.planner.planner import Planner
 from app.runtime.engine.policies.policy_loader import PolicyLoader
 
@@ -36,9 +33,27 @@ class AskResponse(BaseModel):
     meta: dict
 
 
+def _compact_decision(full: dict) -> dict:
+    """
+    Keep schema stable, reduce payload by default.
+    Always return: intent, entity, score, reason, thresholds, explain
+    """
+    return {
+        "intent": full.get("intent"),
+        "entity": full.get("entity"),
+        "score": full.get("score", 0.0),
+        "reason": full.get("reason", "unknown"),
+        "thresholds": full.get("thresholds", {"min_matches": 0.0, "min_score": 0.0}),
+        "explain": full.get("explain", {"stage": "mvp", "note": "", "enabled": False}),
+    }
+
+
 @router.post("/ask", response_model=AskResponse)
-def ask(req: AskRequest) -> AskResponse:
-    # Resolve bundle_id deterministically
+def ask(req: AskRequest, request: Request) -> AskResponse:
+    x_explain = (request.headers.get("X-Explain") or "").strip().lower()
+    explain_enabled = x_explain in {"1", "true", "yes", "y", "on"}
+
+    # 1) Resolve bundle_id deterministically
     bundle_id = req.bundle_id
     if not bundle_id:
         cp = ControlPlaneClient()
@@ -57,6 +72,7 @@ def ask(req: AskRequest) -> AskResponse:
                 },
             )
 
+    # 2) Load manifest (bundle registry)
     loader = ArtifactLoader()
     try:
         manifest = loader.load_manifest(req.tenant_id, bundle_id)
@@ -68,59 +84,91 @@ def ask(req: AskRequest) -> AskResponse:
     bundle_dir = manifest.get("_bundle_dir")
     paths = manifest.get("paths") or {}
     ontology_dir = paths.get("ontology_dir")
+    policies_dir = paths.get("policies_dir")
 
-    decision = {
+    # 3) Start with a stable fallback decision (always valid schema)
+    decision_full: dict = {
         "intent": None,
         "entity": None,
         "score": 0.0,
-        "matched_terms": [],
-        "explain": {"stage": "mvp", "note": "planner v1 deterministic"},
+        "reason": "not_implemented",
+        "thresholds": {"min_matches": 0.0, "min_score": 0.0},
+        "explain": {
+            "stage": "mvp",
+            "note": "planner not executed (missing bundle_dir/ontology_dir)",
+            "enabled": explain_enabled,
+        },
     }
 
+    # 4) Try planner if we have ontology configured
     if bundle_dir and ontology_dir:
         try:
             ontology = OntologyLoader().load(
                 bundle_dir=bundle_dir, ontology_dir=ontology_dir
             )
             policy = PolicyLoader().load_planner_policy(
-                bundle_dir=bundle_dir, policies_dir=paths.get("policies_dir")
+                bundle_dir=bundle_dir, policies_dir=policies_dir
             )
             pd = Planner().decide(req.question, ontology, policy)
-            decision = {
+
+            decision_full = {
+                # stable core
                 "intent": pd.intent_id,
                 "entity": pd.entity_id,
                 "score": pd.score,
-                "matched_terms": pd.matched_terms,
                 "reason": pd.reason,
                 "thresholds": pd.thresholds,
-                # richer explain (meta-only)
-                "tokens": pd.tokens,
-                "considered_terms": pd.considered_terms,
-                "intent_scores": pd.intent_scores,
-                "entity_scores": pd.entity_scores,
-                "intent_topk": {
-                    "top1": pd.intent_topk.top1_id,
-                    "top1_score": pd.intent_topk.top1_score,
-                    "top2": pd.intent_topk.top2_id,
-                    "top2_score": pd.intent_topk.top2_score,
-                    "gap": pd.intent_topk.gap,
-                },
-                "entity_topk": {
-                    "top1": pd.entity_topk.top1_id,
-                    "top1_score": pd.entity_topk.top1_score,
-                    "top2": pd.entity_topk.top2_id,
-                    "top2_score": pd.entity_topk.top2_score,
-                    "gap": pd.entity_topk.gap,
-                },
                 "explain": {
                     "stage": "mvp",
                     "ontology_version": ontology.version,
                     "note": "planner v1 deterministic + thresholds from policies/planner.yaml",
+                    "enabled": explain_enabled,
                 },
             }
 
+            # enrich only when explain is enabled
+            if explain_enabled:
+                decision_full.update(
+                    {
+                        "matched_terms": pd.matched_terms,
+                        "tokens": pd.tokens,
+                        "considered_terms": pd.considered_terms,
+                        "intent_scores": pd.intent_scores,
+                        "entity_scores": pd.entity_scores,
+                        "intent_topk": {
+                            "top1": pd.intent_topk.top1_id,
+                            "top1_score": pd.intent_topk.top1_score,
+                            "top2": pd.intent_topk.top2_id,
+                            "top2_score": pd.intent_topk.top2_score,
+                            "gap": pd.intent_topk.gap,
+                        },
+                        "entity_topk": {
+                            "top1": pd.entity_topk.top1_id,
+                            "top1_score": pd.entity_topk.top1_score,
+                            "top2": pd.entity_topk.top2_id,
+                            "top2_score": pd.entity_topk.top2_score,
+                            "gap": pd.entity_topk.gap,
+                        },
+                    }
+                )
+
         except Exception as e:
-            decision["explain"] = {"stage": "mvp", "note": f"planner failed: {e}"}
+            # Keep stable schema on error
+            decision_full = {
+                "intent": None,
+                "entity": None,
+                "score": 0.0,
+                "reason": "planner_error",
+                "thresholds": {"min_matches": 0.0, "min_score": 0.0},
+                "explain": {
+                    "stage": "mvp",
+                    "note": f"planner failed: {e}",
+                    "enabled": explain_enabled,
+                },
+            }
+
+    # 5) Compact by default; full only when explain enabled
+    decision = decision_full if explain_enabled else _compact_decision(decision_full)
 
     answer = (
         "CONTRACTOR runtime is up. Planner is now active (Stage 1).\n"
@@ -138,6 +186,7 @@ def ask(req: AskRequest) -> AskResponse:
             "checksum": manifest.get("checksum"),
         },
         "decision": decision,
+        "explain_enabled": explain_enabled,
     }
 
     return AskResponse(answer=answer, meta=meta)
