@@ -1,3 +1,4 @@
+# app/runtime/api/routers/ask.py
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
@@ -8,6 +9,7 @@ from app.runtime.engine.context.artifact_loader import (
     ArtifactLoaderError,
 )
 from app.runtime.engine.context.tenant_context import TenantContext
+from app.runtime.engine.context.control_plane_client import ControlPlaneClient
 
 
 router = APIRouter()
@@ -18,9 +20,10 @@ class AskRequest(BaseModel):
     question: str = Field(..., min_length=1)
     conversation_id: str | None = None
     client_id: str | None = None
-    bundle_id: str = Field(
-        ..., min_length=1
-    )  # Stage 0 explicit; later resolve alias current/candidate.
+
+    # Stage 0+: allow explicit bundle_id OR release_alias resolution (default current)
+    bundle_id: str | None = None
+    release_alias: str = Field(default="current", pattern="^(draft|candidate|current)$")
 
 
 class AskResponse(BaseModel):
@@ -30,15 +33,24 @@ class AskResponse(BaseModel):
 
 @router.post("/ask", response_model=AskResponse)
 def ask(req: AskRequest) -> AskResponse:
+    # Resolve bundle_id deterministically
+    bundle_id = req.bundle_id
+    if not bundle_id:
+        cp = ControlPlaneClient()
+        bundle_id = cp.resolve_bundle_id(req.tenant_id, req.release_alias)
+        if not bundle_id:
+            raise HTTPException(
+                status_code=404, detail="bundle_id not provided and alias not set"
+            )
+
     loader = ArtifactLoader()
     try:
-        manifest = loader.load_manifest(req.tenant_id, req.bundle_id)
+        manifest = loader.load_manifest(req.tenant_id, bundle_id)
     except ArtifactLoaderError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
-    ctx = TenantContext(tenant_id=req.tenant_id, bundle_id=req.bundle_id)
+    ctx = TenantContext(tenant_id=req.tenant_id, bundle_id=bundle_id)
 
-    # Stage 0: deterministic stub (no domain logic).
     answer = (
         "CONTRACTOR runtime is up. Planner/Builder/Executor/Formatter are not implemented yet.\n"
         f"Received question: {req.question}"
@@ -47,6 +59,7 @@ def ask(req: AskRequest) -> AskResponse:
     meta = {
         "tenant_id": ctx.tenant_id,
         "bundle_id": ctx.bundle_id,
+        "release_alias": req.release_alias if not req.bundle_id else None,
         "manifest": {
             "created_at": manifest.get("created_at"),
             "source": manifest.get("source"),

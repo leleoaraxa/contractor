@@ -1,3 +1,4 @@
+# app/shared/config/settings.py
 from __future__ import annotations
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -17,6 +18,7 @@ class Settings(BaseSettings):
 
     # Local registry base for MVP (filesystem). In AWS stage, this will be S3.
     bundle_registry_base: str = "registry/tenants"
+    control_base_url: str = "http://localhost:8001"
 
 
 settings = Settings()
