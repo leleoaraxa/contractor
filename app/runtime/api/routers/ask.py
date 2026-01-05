@@ -37,10 +37,19 @@ def ask(req: AskRequest) -> AskResponse:
     bundle_id = req.bundle_id
     if not bundle_id:
         cp = ControlPlaneClient()
-        bundle_id = cp.resolve_bundle_id(req.tenant_id, req.release_alias)
+        res = cp.resolve_bundle_id(req.tenant_id, req.release_alias)
+        bundle_id = res.bundle_id
         if not bundle_id:
             raise HTTPException(
-                status_code=404, detail="bundle_id not provided and alias not set"
+                status_code=404,
+                detail={
+                    "error": "bundle_id not provided and alias not set",
+                    "control_plane": {
+                        "url": res.url,
+                        "status": res.status,
+                        "detail": res.detail,
+                    },
+                },
             )
 
     loader = ArtifactLoader()

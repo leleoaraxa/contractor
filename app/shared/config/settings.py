@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     # Local registry base for MVP (filesystem). In AWS stage, this will be S3.
     bundle_registry_base: str = "registry/tenants"
     control_base_url: str = "http://localhost:8001"
+    control_alias_store_path: str = "registry/control_plane/tenant_aliases.json"
 
 
 settings = Settings()

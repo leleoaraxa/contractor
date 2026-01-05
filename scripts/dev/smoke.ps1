@@ -13,6 +13,12 @@ Invoke-RestMethod -Method Post -ContentType "application/json" `
   -Uri http://localhost:8001/api/v1/control/tenants/demo/aliases/current `
   -Body '{"bundle_id":"202601050001"}' | Out-Null
 
+Write-Host "Confirm aliases..."
+Invoke-RestMethod http://localhost:8001/api/v1/control/tenants/demo/aliases | Out-Null
+
+Write-Host "Confirm resolve current..."
+Invoke-RestMethod http://localhost:8001/api/v1/control/tenants/demo/resolve/current | Out-Null
+
 Write-Host "Ask (alias current)..."
 Invoke-RestMethod -Method Post -ContentType "application/json" `
   -Uri http://localhost:8000/api/v1/runtime/ask `
