@@ -71,22 +71,38 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Smoke test for quality gate flow.")
     ap.add_argument("--tenant-id", default="demo")
     ap.add_argument("--bundle-id", help="Target bundle_id. Defaults to current candidate alias.")
-    ap.add_argument("--control-base", default="http://localhost:8001")
+    ap.add_argument(
+        "--control-base",
+        default=os.getenv("CONTROL_BASE_URL", "http://localhost:8001"),
+        help="Base URL for control plane (default: CONTROL_BASE_URL env or http://localhost:8001).",
+    )
     args = ap.parse_args()
 
     base = args.control_base.rstrip("/")
     headers = build_headers()
+
+    print("[+] Check control healthz...")
+    get_json(f"{base}/api/v1/control/healthz", headers=headers)
+
     aliases = get_json(f"{base}/api/v1/control/tenants/{args.tenant_id}/aliases", headers=headers)
     target_bundle = args.bundle_id or aliases.get("candidate")
     if not target_bundle:
         raise RuntimeError("target bundle_id not provided and candidate alias not set")
 
     print(f"[+] Run quality report for tenant={args.tenant_id} bundle={target_bundle}")
-    report = post_json(
-        f"{base}/api/v1/control/tenants/{args.tenant_id}/bundles/{target_bundle}/quality/run",
-        {},
-        headers=headers,
-    )
+    try:
+        report = post_json(
+            f"{base}/api/v1/control/tenants/{args.tenant_id}/bundles/{target_bundle}/quality/run",
+            {},
+            headers=headers,
+        )
+    except RuntimeError as exc:
+        msg = str(exc).lower()
+        if "connection refused" in msg or "failed to establish a new connection" in msg:
+            raise RuntimeError(
+                "Control could not reach runtime /ask endpoint (is runtime up and reachable?)."
+            ) from exc
+        raise
     result_status = (report.get("result") or {}).get("status")
     if result_status != "pass":
         raise RuntimeError(f"quality gate failed: {(report.get('result') or {}).get('failures')}")
