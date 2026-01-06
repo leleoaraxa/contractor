@@ -119,7 +119,11 @@ class QualityService:
         try:
             report = self.get_report(tenant_id, bundle_id)
         except FileNotFoundError as e:
-            raise ValueError(f"quality report not found: {e}") from e
+            raise ValueError(
+                f"quality report not found for bundle {bundle_id}; run POST "
+                f"/api/v1/control/tenants/{tenant_id}/bundles/{bundle_id}/quality/run first. "
+                f"Underlying error: {e}"
+            ) from e
 
         required_suites = self.promotion_repo.load(tenant_id)
         missing = [s for s in required_suites if s not in (report.get("required_suites") or [])]
