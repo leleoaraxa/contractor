@@ -115,7 +115,9 @@ def main() -> int:
         msg = str(exc).lower()
         if "connection refused" in msg or "failed to establish a new connection" in msg:
             raise RuntimeError(
-                "Control could not reach runtime /ask endpoint (is runtime up and reachable?)."
+                "Control could not reach runtime /ask endpoint (is runtime up and reachable?). "
+                "If running via docker-compose, ensure the control service has RUNTIME_BASE_URL "
+                "pointing to the runtime container (e.g., http://runtime:8000)."
             ) from exc
         raise
     result_status = (report.get("result") or {}).get("status")

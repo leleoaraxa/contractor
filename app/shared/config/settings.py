@@ -55,6 +55,9 @@ class Settings(BaseSettings):
 
     runtime_host: str = "0.0.0.0"
     runtime_port: int = 8000
+    runtime_base_url: str | None = Field(
+        default=None, validation_alias="RUNTIME_BASE_URL"
+    )
 
     control_host: str = "0.0.0.0"
     control_port: int = 8001

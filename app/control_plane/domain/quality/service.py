@@ -32,10 +32,13 @@ class QualityService:
         self.report_repo = report_repo or QualityReportRepository()
         self.promotion_repo = promotion_repo or PromotionSetRepository()
         self.audit = audit or AuditLogger()
-        host = settings.runtime_host or "localhost"
-        if host == "0.0.0.0":
-            host = "localhost"
-        self.runtime_base_url = f"http://{host}:{settings.runtime_port}"
+        if settings.runtime_base_url:
+            self.runtime_base_url = settings.runtime_base_url.rstrip("/")
+        else:
+            host = settings.runtime_host or "localhost"
+            if host == "0.0.0.0":
+                host = "localhost"
+            self.runtime_base_url = f"http://{host}:{settings.runtime_port}"
 
     def get_report(self, tenant_id: str, bundle_id: str) -> Dict:
         qr = self.report_repo.get(tenant_id, bundle_id)
