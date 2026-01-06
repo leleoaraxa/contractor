@@ -76,13 +76,28 @@ def main() -> int:
         default=os.getenv("CONTROL_BASE_URL", "http://localhost:8001"),
         help="Base URL for control plane (default: CONTROL_BASE_URL env or http://localhost:8001).",
     )
+    ap.add_argument(
+        "--runtime-base",
+        default=os.getenv("RUNTIME_BASE_URL", "http://localhost:8000"),
+        help="Base URL for runtime (default: RUNTIME_BASE_URL env or http://localhost:8000).",
+    )
     args = ap.parse_args()
 
     base = args.control_base.rstrip("/")
+    runtime_base = args.runtime_base.rstrip("/")
     headers = build_headers()
 
     print("[+] Check control healthz...")
     get_json(f"{base}/api/v1/control/healthz", headers=headers)
+
+    print("[+] Check runtime healthz...")
+    try:
+        get_json(f"{runtime_base}/api/v1/runtime/healthz", headers=headers)
+    except Exception as exc:
+        raise RuntimeError(
+            f"Runtime health check failed at {runtime_base}/api/v1/runtime/healthz. "
+            "Start runtime (docker-compose) or point --runtime-base to the reachable host."
+        ) from exc
 
     aliases = get_json(f"{base}/api/v1/control/tenants/{args.tenant_id}/aliases", headers=headers)
     target_bundle = args.bundle_id or aliases.get("candidate")
