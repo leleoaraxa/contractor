@@ -119,11 +119,14 @@ class QualityService:
         try:
             report = self.get_report(tenant_id, bundle_id)
         except FileNotFoundError as e:
-            raise ValueError(
-                f"quality report not found for bundle {bundle_id}; run POST "
-                f"/api/v1/control/tenants/{tenant_id}/bundles/{bundle_id}/quality/run first. "
-                f"Underlying error: {e}"
-            ) from e
+            try:
+                report = self.run_quality(tenant_id, bundle_id)
+            except Exception as exc:
+                raise ValueError(
+                    f"quality report not found for bundle {bundle_id} and automatic run failed; "
+                    f"run POST /api/v1/control/tenants/{tenant_id}/bundles/{bundle_id}/quality/run. "
+                    f"Underlying error: {e}; run error: {exc}"
+                ) from exc
 
         required_suites = self.promotion_repo.load(tenant_id)
         missing = [s for s in required_suites if s not in (report.get("required_suites") or [])]
@@ -131,7 +134,10 @@ class QualityService:
             raise ValueError(f"quality report missing required suites: {missing}")
 
         if (report.get("result") or {}).get("status") != "pass":
-            raise ValueError("quality report status is not pass")
+            raise ValueError(
+                f"quality report status is not pass for bundle {bundle_id}: "
+                f"{(report.get('result') or {}).get('failures')}"
+            )
 
         # check that every required suite is pass
         suites = {}
