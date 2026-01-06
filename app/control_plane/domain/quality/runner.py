@@ -14,10 +14,13 @@ def _utcnow() -> str:
     return datetime.now(tz=timezone.utc).isoformat()
 
 
-def post_json(url: str, payload: Dict) -> Dict:
+def post_json(url: str, payload: Dict, headers: Optional[Dict[str, str]] = None) -> Dict:
     data = json.dumps(payload).encode("utf-8")
     req = request.Request(
-        url, data=data, method="POST", headers={"Content-Type": "application/json"}
+        url,
+        data=data,
+        method="POST",
+        headers={"Content-Type": "application/json", **(headers or {})},
     )
     try:
         with request.urlopen(req, timeout=10) as resp:
@@ -32,7 +35,9 @@ def post_json(url: str, payload: Dict) -> Dict:
         raise RuntimeError(f"Error calling {url}: {e}") from e
 
 
-def run_suite(base_url: str | None, suite_path: str, bundle_id: Optional[str] = None) -> Dict:
+def run_suite(
+    base_url: str | None, suite_path: str, bundle_id: Optional[str] = None, headers: Optional[Dict[str, str]] = None
+) -> Dict:
     """
     Run a routing suite against runtime /ask endpoint.
 
@@ -62,7 +67,7 @@ def run_suite(base_url: str | None, suite_path: str, bundle_id: Optional[str] = 
         if bundle_id:
             payload["bundle_id"] = bundle_id
 
-        res = post_json(f"{runtime_base}/api/v1/runtime/ask", payload)
+        res = post_json(f"{runtime_base}/api/v1/runtime/ask", payload, headers=headers)
         decision = (res.get("meta") or {}).get("decision") or {}
         cache_meta = (res.get("meta") or {}).get("cache") or {}
 

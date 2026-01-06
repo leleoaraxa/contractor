@@ -32,10 +32,13 @@ class QualityService:
         self.report_repo = report_repo or QualityReportRepository()
         self.promotion_repo = promotion_repo or PromotionSetRepository()
         self.audit = audit or AuditLogger()
-        host = settings.runtime_host or "localhost"
-        if host == "0.0.0.0":
-            host = "localhost"
-        self.runtime_base_url = f"http://{host}:{settings.runtime_port}"
+        if settings.runtime_base_url:
+            self.runtime_base_url = settings.runtime_base_url.rstrip("/")
+        else:
+            host = settings.runtime_host or "localhost"
+            if host == "0.0.0.0":
+                host = "localhost"
+            self.runtime_base_url = f"http://{host}:{settings.runtime_port}"
 
     def get_report(self, tenant_id: str, bundle_id: str) -> Dict:
         qr = self.report_repo.get(tenant_id, bundle_id)
@@ -119,7 +122,14 @@ class QualityService:
         try:
             report = self.get_report(tenant_id, bundle_id)
         except FileNotFoundError as e:
-            raise ValueError(f"quality report not found: {e}") from e
+            try:
+                report = self.run_quality(tenant_id, bundle_id)
+            except Exception as exc:
+                raise ValueError(
+                    f"quality report not found for bundle {bundle_id} and automatic run failed; "
+                    f"run POST /api/v1/control/tenants/{tenant_id}/bundles/{bundle_id}/quality/run. "
+                    f"Underlying error: {e}; run error: {exc}"
+                ) from exc
 
         required_suites = self.promotion_repo.load(tenant_id)
         missing = [s for s in required_suites if s not in (report.get("required_suites") or [])]
@@ -127,7 +137,10 @@ class QualityService:
             raise ValueError(f"quality report missing required suites: {missing}")
 
         if (report.get("result") or {}).get("status") != "pass":
-            raise ValueError("quality report status is not pass")
+            raise ValueError(
+                f"quality report status is not pass for bundle {bundle_id}: "
+                f"{(report.get('result') or {}).get('failures')}"
+            )
 
         # check that every required suite is pass
         suites = {}

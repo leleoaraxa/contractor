@@ -5,11 +5,38 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import os
 from urllib import error, request
 
 
-def get_json(url: str) -> dict:
-    req = request.Request(url, method="GET")
+TRUTHY = {"1", "true", "yes", "y", "on"}
+DEFAULT_API_KEY = "dev-key"
+
+
+def first_non_empty_token(raw: str | None) -> str:
+    if not raw:
+        return ""
+    for part in raw.split(","):
+        token = part.strip()
+        if token:
+            return token
+    return ""
+
+
+def build_headers() -> dict[str, str]:
+    auth_disabled = (os.getenv("CONTRACTOR_AUTH_DISABLED") or "").strip().lower() in TRUTHY
+    if auth_disabled:
+        return {}
+    api_key = first_non_empty_token(os.getenv("CONTRACTOR_API_KEY"))
+    if not api_key:
+        api_key = first_non_empty_token(os.getenv("CONTRACTOR_API_KEYS"))
+    if not api_key:
+        api_key = DEFAULT_API_KEY
+    return {"X-API-Key": api_key}
+
+
+def get_json(url: str, headers: dict[str, str] | None = None) -> dict:
+    req = request.Request(url, method="GET", headers=headers or {})
     try:
         with request.urlopen(req, timeout=10) as resp:
             body = resp.read().decode("utf-8")
@@ -21,10 +48,13 @@ def get_json(url: str) -> dict:
         raise RuntimeError(f"GET {url} failed: {e}") from e
 
 
-def post_json(url: str, payload: dict) -> dict:
+def post_json(url: str, payload: dict, headers: dict[str, str] | None = None) -> dict:
     data = json.dumps(payload).encode("utf-8")
     req = request.Request(
-        url, data=data, method="POST", headers={"Content-Type": "application/json"}
+        url,
+        data=data,
+        method="POST",
+        headers={"Content-Type": "application/json", **(headers or {})},
     )
     try:
         with request.urlopen(req, timeout=15) as resp:
@@ -41,20 +71,55 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Smoke test for quality gate flow.")
     ap.add_argument("--tenant-id", default="demo")
     ap.add_argument("--bundle-id", help="Target bundle_id. Defaults to current candidate alias.")
-    ap.add_argument("--control-base", default="http://localhost:8001")
+    ap.add_argument(
+        "--control-base",
+        default=os.getenv("CONTROL_BASE_URL", "http://localhost:8001"),
+        help="Base URL for control plane (default: CONTROL_BASE_URL env or http://localhost:8001).",
+    )
+    ap.add_argument(
+        "--runtime-base",
+        default=os.getenv("RUNTIME_BASE_URL", "http://localhost:8000"),
+        help="Base URL for runtime (default: RUNTIME_BASE_URL env or http://localhost:8000).",
+    )
     args = ap.parse_args()
 
     base = args.control_base.rstrip("/")
-    aliases = get_json(f"{base}/api/v1/control/tenants/{args.tenant_id}/aliases")
+    runtime_base = args.runtime_base.rstrip("/")
+    headers = build_headers()
+
+    print("[+] Check control healthz...")
+    get_json(f"{base}/api/v1/control/healthz", headers=headers)
+
+    print("[+] Check runtime healthz...")
+    try:
+        get_json(f"{runtime_base}/api/v1/runtime/healthz", headers=headers)
+    except Exception as exc:
+        raise RuntimeError(
+            f"Runtime health check failed at {runtime_base}/api/v1/runtime/healthz. "
+            "Start runtime (docker-compose) or point --runtime-base to the reachable host."
+        ) from exc
+
+    aliases = get_json(f"{base}/api/v1/control/tenants/{args.tenant_id}/aliases", headers=headers)
     target_bundle = args.bundle_id or aliases.get("candidate")
     if not target_bundle:
         raise RuntimeError("target bundle_id not provided and candidate alias not set")
 
     print(f"[+] Run quality report for tenant={args.tenant_id} bundle={target_bundle}")
-    report = post_json(
-        f"{base}/api/v1/control/tenants/{args.tenant_id}/bundles/{target_bundle}/quality/run",
-        {},
-    )
+    try:
+        report = post_json(
+            f"{base}/api/v1/control/tenants/{args.tenant_id}/bundles/{target_bundle}/quality/run",
+            {},
+            headers=headers,
+        )
+    except RuntimeError as exc:
+        msg = str(exc).lower()
+        if "connection refused" in msg or "failed to establish a new connection" in msg:
+            raise RuntimeError(
+                "Control could not reach runtime /ask endpoint (is runtime up and reachable?). "
+                "If running via docker-compose, ensure the control service has RUNTIME_BASE_URL "
+                "pointing to the runtime container (e.g., http://runtime:8000)."
+            ) from exc
+        raise
     result_status = (report.get("result") or {}).get("status")
     if result_status != "pass":
         raise RuntimeError(f"quality gate failed: {(report.get('result') or {}).get('failures')}")
@@ -68,12 +133,14 @@ def main() -> int:
         post_json(
             f"{base}/api/v1/control/tenants/{args.tenant_id}/aliases/candidate",
             {"bundle_id": target_bundle},
+            headers=headers,
         )
 
         print("[+] Promote candidate -> current (gate enforced)...")
         post_json(
             f"{base}/api/v1/control/tenants/{args.tenant_id}/aliases/current",
             {"bundle_id": target_bundle},
+            headers=headers,
         )
         print("[✓] Promotion succeeded.")
     finally:
@@ -82,12 +149,14 @@ def main() -> int:
             post_json(
                 f"{base}/api/v1/control/tenants/{args.tenant_id}/aliases/current",
                 {"bundle_id": prev_current},
+                headers=headers,
             )
         if prev_candidate and prev_candidate != target_bundle:
             print("[+] Restore candidate to previous value...")
             post_json(
                 f"{base}/api/v1/control/tenants/{args.tenant_id}/aliases/candidate",
                 {"bundle_id": prev_candidate},
+                headers=headers,
             )
 
     return 0

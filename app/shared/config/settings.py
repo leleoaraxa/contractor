@@ -1,8 +1,33 @@
 # app/shared/config/settings.py
 from __future__ import annotations
 
-from pydantic import Field, field_validator
+import json
+import os
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings.sources import DotEnvSettingsSource, EnvSettingsSource
+
+
+def _normalize_api_keys(v):
+    if v is None:
+        return []
+    if isinstance(v, list):
+        return [str(x).strip() for x in v if str(x).strip()]
+    if isinstance(v, str):
+        s = v.strip()
+        if not s:
+            return []
+        if s.startswith("["):
+            try:
+                arr = json.loads(s)
+                if isinstance(arr, list):
+                    return [str(x).strip() for x in arr if str(x).strip()]
+            except Exception:
+                # fall back to CSV parsing below
+                pass
+        return [p.strip() for p in s.split(",") if p.strip()]
+    s = str(v).strip()
+    return [s] if s else []
 
 
 class Settings(BaseSettings):
@@ -20,13 +45,19 @@ class Settings(BaseSettings):
     # - "k1,k2"
     # - '["k1","k2"]'
     contractor_api_keys: list[str] = Field(
-        default_factory=list, validation_alias="CONTRACTOR_API_KEYS"
+        default_factory=list,
+        validation_alias=AliasChoices("CONTRACTOR_API_KEYS", "CONTRACTOR_API_KEY"),
     )
 
-    contractor_auth_disabled: bool = False
+    contractor_auth_disabled: bool = Field(
+        default=False, validation_alias="CONTRACTOR_AUTH_DISABLED"
+    )
 
     runtime_host: str = "0.0.0.0"
     runtime_port: int = 8000
+    runtime_base_url: str | None = Field(
+        default=None, validation_alias="RUNTIME_BASE_URL"
+    )
 
     control_host: str = "0.0.0.0"
     control_port: int = 8001
@@ -55,29 +86,55 @@ class Settings(BaseSettings):
           - JSON list string: '["k1","k2"]'
           - list[str] (already parsed)
         """
-        if v is None:
-            return []
-        if isinstance(v, list):
-            return [str(x).strip() for x in v if str(x).strip()]
-        if isinstance(v, str):
-            s = v.strip()
-            if not s:
-                return []
-            if s.startswith("["):
-                import json
+        return _normalize_api_keys(v)
 
+    @classmethod
+    def settings_customise_sources(
+        cls, settings_cls, init_settings, env_settings, dotenv_settings, file_secret_settings
+    ):
+        class ContractorEnvSettingsSource(EnvSettingsSource):
+            def prepare_field_value(self, field_name, field, field_value, value_is_complex):
                 try:
-                    arr = json.loads(s)
-                    if isinstance(arr, list):
-                        return [str(x).strip() for x in arr if str(x).strip()]
-                except Exception:
-                    # fall back to CSV parsing below
-                    pass
-            # CSV or single token
-            return [p.strip() for p in s.split(",") if p.strip()]
-        # last-resort
-        s = str(v).strip()
-        return [s] if s else []
+                    return super().prepare_field_value(field_name, field, field_value, value_is_complex)
+                except ValueError:
+                    if field_name == "contractor_api_keys":
+                        return field_value
+                    raise
+
+        class ContractorDotEnvSettingsSource(DotEnvSettingsSource):
+            def prepare_field_value(self, field_name, field, field_value, value_is_complex):
+                try:
+                    return super().prepare_field_value(field_name, field, field_value, value_is_complex)
+                except ValueError:
+                    if field_name == "contractor_api_keys":
+                        return field_value
+                    raise
+
+        contractor_env = ContractorEnvSettingsSource(
+            settings_cls,
+            env_settings.case_sensitive,
+            env_settings.env_prefix,
+            env_settings.env_nested_delimiter,
+            env_settings.env_nested_max_split,
+            env_settings.env_ignore_empty,
+            env_settings.env_parse_none_str,
+            env_settings.env_parse_enums,
+        )
+
+        contractor_dotenv = ContractorDotEnvSettingsSource(
+            settings_cls,
+            dotenv_settings.env_file,
+            dotenv_settings.env_file_encoding,
+            dotenv_settings.case_sensitive,
+            dotenv_settings.env_prefix,
+            dotenv_settings.env_nested_delimiter,
+            dotenv_settings.env_nested_max_split,
+            dotenv_settings.env_ignore_empty,
+            dotenv_settings.env_parse_none_str,
+            dotenv_settings.env_parse_enums,
+        )
+
+        return (init_settings, contractor_env, contractor_dotenv, file_secret_settings)
 
 
 settings = Settings()
