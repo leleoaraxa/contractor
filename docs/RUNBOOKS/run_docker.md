@@ -9,6 +9,7 @@
    ```bash
    cp .env.example .env
    ```
+   - Para Redis, mantenha `redis://redis:6379/0` (acesso via serviço `redis` do compose).
 
 2. **Subir serviços**
    ```bash

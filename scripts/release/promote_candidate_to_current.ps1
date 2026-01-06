@@ -6,12 +6,25 @@ Param(
 
 $ErrorActionPreference = "Stop"
 
+$authDisabledValue = $env:CONTRACTOR_AUTH_DISABLED
+$AuthDisabled = $false
+if ($authDisabledValue) {
+  $AuthDisabled = ($authDisabledValue -eq "1") -or ($authDisabledValue.ToLower() -eq "true")
+}
+
+$Headers = @{}
+if (-not $AuthDisabled) {
+  $ApiKey = ($env:CONTRACTOR_API_KEYS -split ",")[0]
+  if (-not $ApiKey) { throw "CONTRACTOR_API_KEYS is required when auth is enabled." }
+  $Headers["X-API-Key"] = $ApiKey
+}
+
 function Get-Json($Url) {
-  return Invoke-RestMethod -Method Get -Uri $Url
+  return Invoke-RestMethod -Method Get -Uri $Url -Headers $Headers
 }
 
 function Post-Json($Url, $Body) {
-  return Invoke-RestMethod -Method Post -Uri $Url -ContentType "application/json" -Body ($Body | ConvertTo-Json)
+  return Invoke-RestMethod -Method Post -Uri $Url -Headers $Headers -ContentType "application/json" -Body ($Body | ConvertTo-Json)
 }
 
 Write-Host "Resolve candidate..."
