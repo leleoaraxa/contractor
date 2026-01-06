@@ -1,3 +1,4 @@
+# app/shared/security/auth.py
 from __future__ import annotations
 
 from fastapi import HTTPException, Request, status

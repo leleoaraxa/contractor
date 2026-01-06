@@ -81,4 +81,3 @@ def current_commit_hash() -> str | None:
         return out.decode("utf-8").strip()
     except Exception:
         return None
-

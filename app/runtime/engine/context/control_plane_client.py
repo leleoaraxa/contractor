@@ -36,8 +36,6 @@ class ControlPlaneClient:
                 detail = e.read().decode("utf-8")
             except Exception:
                 detail = str(e)
-            return ResolveResult(
-                bundle_id=None, url=url, status=f"http_{e.code}", detail=detail
-            )
+            return ResolveResult(bundle_id=None, url=url, status=f"http_{e.code}", detail=detail)
         except Exception as e:
             return ResolveResult(bundle_id=None, url=url, status="error", detail=str(e))

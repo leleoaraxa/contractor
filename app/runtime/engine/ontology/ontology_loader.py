@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List
 
 import yaml
 
@@ -102,6 +102,4 @@ class OntologyLoader:
                 )
             )
 
-        return OntologyBundle(
-            version=version, intents=intents, entities=entities, terms=terms
-        )
+        return OntologyBundle(version=version, intents=intents, entities=entities, terms=terms)

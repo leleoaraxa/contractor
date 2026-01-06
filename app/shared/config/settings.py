@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import os
 from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic_settings.sources import DotEnvSettingsSource, EnvSettingsSource
@@ -55,9 +54,7 @@ class Settings(BaseSettings):
 
     runtime_host: str = "0.0.0.0"
     runtime_port: int = 8000
-    runtime_base_url: str | None = Field(
-        default=None, validation_alias="RUNTIME_BASE_URL"
-    )
+    runtime_base_url: str | None = Field(default=None, validation_alias="RUNTIME_BASE_URL")
 
     control_host: str = "0.0.0.0"
     control_port: int = 8001
@@ -90,12 +87,19 @@ class Settings(BaseSettings):
 
     @classmethod
     def settings_customise_sources(
-        cls, settings_cls, init_settings, env_settings, dotenv_settings, file_secret_settings
+        cls,
+        settings_cls,
+        init_settings,
+        env_settings,
+        dotenv_settings,
+        file_secret_settings,
     ):
         class ContractorEnvSettingsSource(EnvSettingsSource):
             def prepare_field_value(self, field_name, field, field_value, value_is_complex):
                 try:
-                    return super().prepare_field_value(field_name, field, field_value, value_is_complex)
+                    return super().prepare_field_value(
+                        field_name, field, field_value, value_is_complex
+                    )
                 except ValueError:
                     if field_name == "contractor_api_keys":
                         return field_value
@@ -104,7 +108,9 @@ class Settings(BaseSettings):
         class ContractorDotEnvSettingsSource(DotEnvSettingsSource):
             def prepare_field_value(self, field_name, field, field_value, value_is_complex):
                 try:
-                    return super().prepare_field_value(field_name, field, field_value, value_is_complex)
+                    return super().prepare_field_value(
+                        field_name, field, field_value, value_is_complex
+                    )
                 except ValueError:
                     if field_name == "contractor_api_keys":
                         return field_value

@@ -24,9 +24,7 @@ class Builder:
         intent_id = decision.get("intent")
         entity_id = decision.get("entity")
 
-        rationale = (
-            "deterministic noop plan (Stage 1 runtime skeleton: planner -> builder)"
-        )
+        rationale = "deterministic noop plan (Stage 1 runtime skeleton: planner -> builder)"
 
         return Plan(
             action=action,

@@ -1,8 +1,9 @@
+# app/control_plane/domain/bundles/contracts_validator.py
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Set
 
 import yaml
 

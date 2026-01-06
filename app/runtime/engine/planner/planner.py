@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 from app.runtime.engine.ontology.ontology_loader import OntologyBundle
 from app.runtime.engine.policies.policy_loader import PlannerPolicy
@@ -72,9 +72,7 @@ class Planner:
         def _top2(d: Dict[str, float]) -> TopK:
             if not d:
                 return TopK(None, 0.0, None, 0.0, 0.0)
-            items = sorted(
-                d.items(), key=lambda kv: (-kv[1], kv[0])
-            )  # deterministic tie-break
+            items = sorted(d.items(), key=lambda kv: (-kv[1], kv[0]))  # deterministic tie-break
             top1_id, top1_score = items[0]
             if len(items) > 1:
                 top2_id, top2_score = items[1]
@@ -95,9 +93,7 @@ class Planner:
             "min_matches": float(policy.min_matches),
             "min_score": float(policy.min_score),
         }
-        passes = (len(matched_terms) >= policy.min_matches) and (
-            score >= policy.min_score
-        )
+        passes = (len(matched_terms) >= policy.min_matches) and (score >= policy.min_score)
 
         if not passes:
             # No-match policy (yaml-driven)

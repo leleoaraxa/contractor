@@ -10,7 +10,9 @@ from app.runtime.engine.contracts.models import ExecutionResult, Plan
 
 class Executor(ABC):
     @abstractmethod
-    def execute(self, plan: Plan, ctx: TenantContext) -> ExecutionResult:  # pragma: no cover - interface
+    def execute(
+        self, plan: Plan, ctx: TenantContext
+    ) -> ExecutionResult:  # pragma: no cover - interface
         raise NotImplementedError
 
 

@@ -115,4 +115,3 @@ def validate_bundle(tenant_id: str, bundle_id: str) -> Dict:
         "bundle_dir": str(bdir.resolve()),
         "errors": errors,
     }
-

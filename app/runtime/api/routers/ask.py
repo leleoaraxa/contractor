@@ -112,9 +112,7 @@ def ask(req: AskRequest, request: Request) -> AskResponse:
     # 4) Try planner if we have ontology configured
     if bundle_dir and ontology_dir:
         try:
-            ontology = OntologyLoader().load(
-                bundle_dir=bundle_dir, ontology_dir=ontology_dir
-            )
+            ontology = OntologyLoader().load(bundle_dir=bundle_dir, ontology_dir=ontology_dir)
             policy = policy_loader.load_planner_policy(
                 bundle_dir=bundle_dir, policies_dir=policies_dir
             )

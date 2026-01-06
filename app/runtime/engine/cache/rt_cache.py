@@ -21,7 +21,9 @@ class _BaseBackend:
     def get(self, key: str) -> Optional[Dict[str, Any]]:  # pragma: no cover - interface
         raise NotImplementedError
 
-    def set(self, key: str, value: Dict[str, Any], ttl_seconds: Optional[int]) -> None:  # pragma: no cover - interface
+    def set(
+        self, key: str, value: Dict[str, Any], ttl_seconds: Optional[int]
+    ) -> None:  # pragma: no cover - interface
         raise NotImplementedError
 
 
@@ -143,7 +145,9 @@ class RuntimeCache:
         _CACHE_METRICS["latency_ms_total"] += latency_ms
 
     def read(self, canonical_payload: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], CacheMeta]:
-        cache_meta = CacheMeta(backend=self.backend.name, ttl_seconds=self.policy.default_ttl_seconds)
+        cache_meta = CacheMeta(
+            backend=self.backend.name, ttl_seconds=self.policy.default_ttl_seconds
+        )
 
         if not self.policy.enabled:
             cache_meta.bypassed = True

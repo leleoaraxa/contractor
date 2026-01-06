@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+
 def build_headers() -> dict[str, str]:
     truthy = {"1", "true", "yes", "y", "on"}
     auth_disabled = (os.getenv("CONTRACTOR_AUTH_DISABLED") or "").strip().lower() in truthy
@@ -47,7 +48,9 @@ def main() -> int:
     except ModuleNotFoundError as exc:
         missing = exc.name or ""
         if missing == "pydantic":
-            raise RuntimeError("Missing dependency 'pydantic'; install project deps (e.g., `pip install -e .`)") from exc
+            raise RuntimeError(
+                "Missing dependency 'pydantic'; install project deps (e.g., `pip install -e .`)"
+            ) from exc
         raise
 
     headers = build_headers()

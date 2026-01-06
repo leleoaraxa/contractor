@@ -1,3 +1,4 @@
+# app/shared/security/rate_limit.py
 from __future__ import annotations
 
 import importlib
@@ -26,7 +27,9 @@ class RateLimitResult:
 class _BaseRateLimitBackend:
     name = "base"
 
-    def consume(self, key: str, rps: float, burst: float) -> RateLimitResult:  # pragma: no cover
+    def consume(
+        self, key: str, rps: float, burst: float
+    ) -> RateLimitResult:  # pragma: no cover
         raise NotImplementedError
 
 
@@ -110,7 +113,9 @@ class TokenBucketRateLimiter:
             try:
                 return _RedisRateLimitBackend(redis_url)
             except Exception as exc:  # pragma: no cover - defensive
-                logger.warning("rate limiter using in-memory backend (redis error: %s)", exc)
+                logger.warning(
+                    "rate limiter using in-memory backend (redis error: %s)", exc
+                )
         return _MemoryRateLimitBackend()
 
     def consume(self, tenant_id: str, scope: str) -> RateLimitResult:

@@ -41,9 +41,7 @@ class TenantAliasRepository:
             }
             for tid, a in data.items()
         }
-        self.store_path.write_text(
-            json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
+        self.store_path.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
 
     def get(self, tenant_id: str) -> TenantAliases:
         all_ = self._read_all()

@@ -36,7 +36,10 @@ def post_json(url: str, payload: Dict, headers: Optional[Dict[str, str]] = None)
 
 
 def run_suite(
-    base_url: str | None, suite_path: str, bundle_id: Optional[str] = None, headers: Optional[Dict[str, str]] = None
+    base_url: str | None,
+    suite_path: str,
+    bundle_id: Optional[str] = None,
+    headers: Optional[Dict[str, str]] = None,
 ) -> Dict:
     """
     Run a routing suite against runtime /ask endpoint.

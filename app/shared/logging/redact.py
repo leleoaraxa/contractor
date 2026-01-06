@@ -7,9 +7,7 @@ from typing import Any, Dict
 # Minimal baseline redaction. Extend via policies later.
 _PATTERNS = [
     (
-        re.compile(
-            r"(?i)(password|passwd|secret|token|api[_-]?key)\s*[:=]\s*([^\s,;]+)"
-        ),
+        re.compile(r"(?i)(password|passwd|secret|token|api[_-]?key)\s*[:=]\s*([^\s,;]+)"),
         r"\1=[REDACTED]",
     ),
     (
