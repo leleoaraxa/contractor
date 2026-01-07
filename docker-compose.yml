@@ -55,7 +55,7 @@ services:
     image: postgres:16-alpine
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=SiriosPg2024
+      - POSTGRES_PASSWORD=contractor
       - POSTGRES_DB=contractor
     volumes:
       - contractor_pgdata:/var/lib/postgresql/data
