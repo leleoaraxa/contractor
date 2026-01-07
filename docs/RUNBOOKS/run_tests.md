@@ -16,5 +16,5 @@ O teste `tests/integration/test_e2e_flow.py` valida:
 
 ### Comando
 ```bash
-pytest tests/integration/test_e2e_flow.py
+pytest -q tests/integration/test_e2e_flow.py
 ```
