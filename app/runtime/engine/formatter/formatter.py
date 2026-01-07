@@ -42,16 +42,18 @@ class Formatter:
             cache_dump.pop("metrics", None)
             cache_dump.pop("cache_key", None)
 
-        executor_meta = {
-            "name": execution.meta.get("executor"),
+        execution_dump = {
             "status": execution.status,
+            "row_count": execution.row_count,
+            "results": execution.results,
         }
         if explain_enabled:
-            executor_meta["data"] = execution.data
-            if execution.meta:
-                executor_meta["meta"] = execution.meta
+            execution_dump["query"] = execution.query
+            execution_dump["params"] = execution.params
             if execution.error:
-                executor_meta["error"] = execution.error
+                execution_dump["error"] = execution.error
+            if execution.meta:
+                execution_dump["meta"] = execution.meta
 
         plan_dump = plan.model_dump()
         if not explain_enabled:
@@ -68,7 +70,7 @@ class Formatter:
             },
             "decision": decision,
             "plan": plan_dump,
-            "executor": executor_meta,
+            "execution": execution_dump,
             "cache": cache_dump,
             "explain_enabled": explain_enabled,
         }

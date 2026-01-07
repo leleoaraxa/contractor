@@ -24,7 +24,7 @@ class ControlPlaneClient:
         self.headers = outbound_auth_headers()
 
     def resolve_bundle_id(self, tenant_id: str, release_alias: str) -> ResolveResult:
-        url = f"{self.base_url}/api/v1/control/tenants/{tenant_id}/resolve/{release_alias}"
+        url = f"{self.base_url}/api/v1/control/tenants/{tenant_id}/versions/{release_alias}/resolve"
         req = request.Request(url, method="GET", headers=self.headers)
         try:
             with request.urlopen(req, timeout=5) as resp:
