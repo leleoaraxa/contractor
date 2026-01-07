@@ -22,8 +22,40 @@ importlib.reload(settings_module)
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 from app.control_plane.api.main import app as control_plane_app
+from app.control_plane.domain.bundles.validator import validate_bundle
+from app.control_plane.domain.quality.reports import PromotionSetRepository, QualityReportRepository
+from app.control_plane.domain.templates.safety import TemplateSafetyValidator
 from app.runtime.api.main import app as runtime_app
 from app.runtime.engine.context.control_plane_client import ResolveResult
+
+
+def _write_quality_report(tenant_id: str, bundle_id: str) -> None:
+    validator = TemplateSafetyValidator()
+    validation = validate_bundle(tenant_id, bundle_id)
+    template_safety = validator.validate_bundle(tenant_id, bundle_id)
+    required_suites = PromotionSetRepository().load(tenant_id)
+    suite_results = [
+        {
+            "status": "pass",
+            "suite_id": f"suite_{idx}",
+            "suite_source": suite_path,
+            "suite_path": suite_path,
+            "failures": [],
+        }
+        for idx, suite_path in enumerate(required_suites)
+    ]
+    report = {
+        "tenant_id": tenant_id,
+        "bundle_id": bundle_id,
+        "validate": validation,
+        "template_safety": template_safety,
+        "required_suites": required_suites,
+        "suites": suite_results,
+        "result": {"status": "pass", "failures": []},
+        "timestamps": {"started_at": "now", "finished_at": "now"},
+        "commit_hash": None,
+    }
+    QualityReportRepository().save(tenant_id, bundle_id, report)
 
 
 def test_e2e_flow():
@@ -33,6 +65,8 @@ def test_e2e_flow():
     tenant_id = "demo"
     bundle_id = "202601050001"
     headers = {"X-API-Key": TEST_API_KEY}
+
+    _write_quality_report(tenant_id, bundle_id)
 
     # 1. Validate the bundle (verifies control plane is up)
     response = control_client.get(

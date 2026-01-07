@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from app.control_plane.domain.tenants.models import TenantAliases
 from app.control_plane.domain.tenants.repository import TenantAliasRepository
-from app.control_plane.domain.quality.service import QualityService
+from app.control_plane.domain.quality.service import PromotionGateError, QualityService
 from app.control_plane.domain.audit.logger import AuditLogger
 
 
@@ -35,7 +35,9 @@ class TenantAliasService:
         )
 
     def set_current(self, tenant_id: str, bundle_id: str) -> TenantAliases:
-        self.quality.ensure_gate(tenant_id, bundle_id, require_suites=True)
+        self.quality.ensure_gate(
+            tenant_id, bundle_id, require_suites=True, require_template_safety=True
+        )
         aliases = self.repo.get(tenant_id)
         previous = aliases.current_bundle_id
         aliases.current_bundle_id = bundle_id
@@ -49,7 +51,9 @@ class TenantAliasService:
         return aliases
 
     def set_candidate(self, tenant_id: str, bundle_id: str) -> TenantAliases:
-        self.quality.ensure_gate(tenant_id, bundle_id, require_suites=True)
+        self.quality.ensure_gate(
+            tenant_id, bundle_id, require_suites=True, require_template_safety=True
+        )
         aliases = self.repo.get(tenant_id)
         previous = aliases.candidate_bundle_id
         aliases.candidate_bundle_id = bundle_id
@@ -79,3 +83,12 @@ class TenantAliasService:
 
     def resolve(self, tenant_id: str, release_alias: str) -> str | None:
         return self.repo.resolve(tenant_id, release_alias)
+
+    @staticmethod
+    def format_gate_error(exc: PromotionGateError) -> dict:
+        return {
+            "error": "promotion_gate_failed",
+            "gate": exc.gate,
+            "detail": exc.detail,
+            "report_path": exc.report_path,
+        }

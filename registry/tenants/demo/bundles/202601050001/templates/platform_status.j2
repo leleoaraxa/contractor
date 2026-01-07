@@ -1,0 +1,3 @@
+Status: {{ rows[0].status | default("unknown") }}
+Message: {{ rows[0].message | default("n/a") }}
+Format: {{ policies.output.format | default("text") }}

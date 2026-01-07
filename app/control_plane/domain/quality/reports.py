@@ -32,6 +32,9 @@ class QualityReportRepository:
     def _path(self, tenant_id: str, bundle_id: str) -> Path:
         return self.base_path / tenant_id / f"{bundle_id}.json"
 
+    def path_for(self, tenant_id: str, bundle_id: str) -> str:
+        return str(self._path(tenant_id, bundle_id))
+
     def get(self, tenant_id: str, bundle_id: str) -> QualityReport:
         path = self._path(tenant_id, bundle_id)
         if not path.exists():
