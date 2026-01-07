@@ -7,6 +7,15 @@ Este runbook descreve o pipeline atual do runtime, incluindo resolução de alia
 - `POST /api/v1/runtime/ask`
 - `GET /api/v1/runtime/healthz`
 
+## Como validar runtime healthz
+
+```bash
+curl -f -H "X-API-Key: ${CONTRACTOR_API_KEYS%%,*}" \
+  http://localhost:8000/api/v1/runtime/healthz
+```
+
+> Com `CONTRACTOR_AUTH_DISABLED=1`, o header `X-API-Key` é opcional.
+
 ## Pipeline /ask (resumo)
 
 1. **Autenticação e rate limit**
