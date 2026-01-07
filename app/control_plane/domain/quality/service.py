@@ -14,7 +14,7 @@ from app.control_plane.domain.quality.reports import (
     QualityReportRepository,
     current_commit_hash,
 )
-from app.control_plane.domain.quality.runner import run_suite
+from app.control_plane.domain.quality.runner import run_suite, runtime_request_headers
 from app.control_plane.domain.templates.safety import TemplateSafetyValidator
 from app.shared.config.settings import settings
 
@@ -54,10 +54,14 @@ class QualityService:
         required_suites = self.promotion_repo.load(tenant_id)
         suite_results: List[Dict] = []
         suite_failures: List[Dict] = []
+        runtime_headers = runtime_request_headers()
 
         for suite_path in required_suites:
             result = run_suite(
-                base_url=self.runtime_base_url, suite_path=suite_path, bundle_id=bundle_id
+                base_url=self.runtime_base_url,
+                suite_path=suite_path,
+                bundle_id=bundle_id,
+                headers=runtime_headers,
             )
             suite_results.append(result)
             if result.get("status") != "pass":
