@@ -22,6 +22,7 @@ services:
     environment:
       - CONTROL_BASE_URL=http://control:8001
       - BUNDLE_REGISTRY_BASE=registry/tenants
+      - POSTGRES_DSN=postgresql://postgres:SiriosPg2024@postgres:5432/contractor
     volumes:
       - ./:/app
     depends_on:
