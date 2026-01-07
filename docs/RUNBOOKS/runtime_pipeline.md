@@ -19,6 +19,7 @@ curl -f -H "X-API-Key: ${CONTRACTOR_API_KEYS%%,*}" \
 ## Pipeline /ask (resumo)
 
 1. **Autenticação e rate limit**
+   - Se o Redis estiver indisponível, o runtime pode cair para a política in-memory. Isso não invalida o smoke, mas pode alterar o comportamento conforme os thresholds configurados.
 2. **Resolução de bundle_id**
    - Se `bundle_id` não for informado, o runtime resolve via Control Plane:
      `GET /api/v1/control/tenants/{tenant_id}/versions/{alias}/resolve`

@@ -161,9 +161,21 @@ if [[ "$RESPONSE_STATUS" != "200" ]]; then
 fi
 rm -f "$RESPONSE_BODY"
 
-request_json POST "$RUNTIME_BASE/api/v1/runtime/ask" "$ask_payload"
-if [[ "$RESPONSE_STATUS" != "429" ]]; then
-  echo "Unexpected status for second ask (rate limit): ${RESPONSE_STATUS} (expected 429)"
+rate_limited=0
+max_attempts=25
+sleep_seconds=0.075
+for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+  request_json POST "$RUNTIME_BASE/api/v1/runtime/ask" "$ask_payload"
+  if [[ "$RESPONSE_STATUS" == "200" ]]; then
+    rm -f "$RESPONSE_BODY"
+    sleep "$sleep_seconds"
+    continue
+  fi
+  if [[ "$RESPONSE_STATUS" == "429" ]]; then
+    rate_limited=1
+    break
+  fi
+  echo "Unexpected status during rate limit probe: ${RESPONSE_STATUS}"
   if [[ -s "$RESPONSE_BODY" ]]; then
     cat "$RESPONSE_BODY"
   else
@@ -181,7 +193,14 @@ if [[ "$RESPONSE_STATUS" != "429" ]]; then
   fi
   rm -f "$RESPONSE_BODY"
   exit 1
+done
+
+if [[ "$rate_limited" -ne 1 ]]; then
+  rm -f "$RESPONSE_BODY"
+  echo "rate limit not triggered; adjust RATE_LIMIT_RPS/RATE_LIMIT_BURST or policy"
+  exit 1
 fi
+
 python - "$RESPONSE_BODY" <<'PY'
 import json, sys
 data = json.load(open(sys.argv[1]))

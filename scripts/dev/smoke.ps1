@@ -176,8 +176,21 @@ if ($resp.StatusCode -ne 200) {
   }
   throw "Unexpected status $($resp.StatusCode): $($resp.Content)"
 }
-$resp = Invoke-JsonRequest -Method Post -Uri "$runtimeBase/api/v1/runtime/ask" -Body $askPayload
-if ($resp.StatusCode -ne 429) {
+$rateLimited = $false
+$maxAttempts = 25
+$sleepMs = 75
+for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+  $resp = Invoke-JsonRequest -Method Post -Uri "$runtimeBase/api/v1/runtime/ask" -Body $askPayload
+  if ($resp.StatusCode -eq 200) {
+    Start-Sleep -Milliseconds $sleepMs
+    continue
+  }
+  if ($resp.StatusCode -eq 429) {
+    $detail = ($resp.Content | ConvertFrom-Json).detail
+    if ($detail.error -ne "rate_limit_exceeded") { throw "Unexpected detail: $($resp.Content)" }
+    $rateLimited = $true
+    break
+  }
   Write-ResponseBody "Body:" $resp.Content
   if ($resp.StatusCode -eq 500) {
     $explainResp = Invoke-JsonRequest -Method Post -Uri "$runtimeBase/api/v1/runtime/ask" `
@@ -187,8 +200,9 @@ if ($resp.StatusCode -ne 429) {
   }
   throw "Unexpected status $($resp.StatusCode): $($resp.Content)"
 }
-$detail = ($resp.Content | ConvertFrom-Json).detail
-if ($detail.error -ne "rate_limit_exceeded") { throw "Unexpected detail: $($resp.Content)" }
+if (-not $rateLimited) {
+  throw "rate limit not triggered; adjust RATE_LIMIT_RPS/RATE_LIMIT_BURST or policy"
+}
 Write-Host "Rate limit OK"
 
 Write-Host "OK"
