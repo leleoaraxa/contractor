@@ -35,6 +35,15 @@ def post_json(url: str, payload: Dict, headers: Optional[Dict[str, str]] = None)
         raise RuntimeError(f"Error calling {url}: {e}") from e
 
 
+def runtime_request_headers() -> Dict[str, str]:
+    if settings.contractor_auth_disabled:
+        return {}
+    api_key = next((key for key in settings.contractor_api_keys if key), "")
+    if not api_key:
+        raise RuntimeError("missing API key for internal runtime call")
+    return {"X-API-Key": api_key}
+
+
 def run_suite(
     base_url: str | None,
     suite_path: str,

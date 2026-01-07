@@ -57,18 +57,27 @@ function Invoke-JsonRequest {
   try {
     if ($Body) {
       $response = Invoke-WebRequest -Method $Method -Uri $Uri -Headers $headers `
-        -ContentType "application/json" -Body $Body
+        -ContentType "application/json" -Body $Body -UseBasicParsing
     } else {
-      $response = Invoke-WebRequest -Method $Method -Uri $Uri -Headers $headers
+      $response = Invoke-WebRequest -Method $Method -Uri $Uri -Headers $headers -UseBasicParsing
     }
     return [pscustomobject]@{ StatusCode = $response.StatusCode; Content = $response.Content }
   } catch {
     $resp = $_.Exception.Response
     $status = if ($resp) { [int]$resp.StatusCode } else { 0 }
     $content = ""
-    if ($resp -and $resp.GetResponseStream()) {
-      $reader = New-Object System.IO.StreamReader($resp.GetResponseStream())
-      $content = $reader.ReadToEnd()
+    if ($resp) {
+      try {
+        $stream = $resp.GetResponseStream()
+        if ($stream) {
+          $reader = New-Object System.IO.StreamReader($stream)
+          $content = $reader.ReadToEnd()
+        }
+      } catch {
+      }
+    }
+    if (-not $content -and $_.ErrorDetails -and $_.ErrorDetails.Message) {
+      $content = $_.ErrorDetails.Message
     }
     return [pscustomobject]@{ StatusCode = $status; Content = $content }
   }
@@ -77,7 +86,7 @@ function Invoke-JsonRequest {
 function Test-Healthz {
   param([string]$Uri)
   try {
-    Invoke-WebRequest -Method Get -Uri $Uri -Headers $headers | Out-Null
+    Invoke-WebRequest -Method Get -Uri $Uri -Headers $headers -UseBasicParsing | Out-Null
     return $true
   } catch {
     return $false
@@ -120,8 +129,26 @@ Write-Host "Promotion FAIL (template safety, bundle 202601050002)..."
 $resp = Invoke-JsonRequest -Method Post -Uri "$controlBase/api/v1/control/tenants/demo/aliases/candidate" `
   -Body '{"bundle_id":"202601050002"}'
 if ($resp.StatusCode -ne 400) { throw "Unexpected status $($resp.StatusCode): $($resp.Content)" }
-$detail = ($resp.Content | ConvertFrom-Json).detail
-if ($detail.gate -ne "template_safety") { throw "Unexpected gate: $($resp.Content)" }
+$parsed = $null
+try {
+  $parsed = $resp.Content | ConvertFrom-Json
+} catch {
+  Write-Warning "Failed to parse JSON response: $($resp.Content)"
+}
+$detail = if ($parsed) { $parsed.detail } else { $null }
+$detailObj = $null
+if ($detail -is [string]) {
+  try {
+    $detailObj = $detail | ConvertFrom-Json
+  } catch {
+    $detailObj = $null
+  }
+} elseif ($detail) {
+  $detailObj = $detail
+}
+if (-not $detailObj -or $detailObj.gate -ne "template_safety") {
+  throw "Unexpected gate: $($resp.Content)"
+}
 Write-Host "Template safety gate OK"
 
 Write-Host "Rate limit enforcement (bundle 202601050003)..."
