@@ -25,16 +25,19 @@ if (-not $apiKey) {
 $controlBase = if ($Env:CONTROL_BASE_URL) { $Env:CONTROL_BASE_URL } else { "http://localhost:8001" }
 $runtimeBase = if ($Env:RUNTIME_BASE_URL) { $Env:RUNTIME_BASE_URL } else { "http://localhost:8000" }
 
-function Normalize-Base([string]$base, [string]$suffix) {
+function Normalize-Base([string]$base, [string[]]$suffixes) {
   $trimmed = $base.TrimEnd("/")
-  if ($trimmed.EndsWith($suffix)) {
-    $trimmed = $trimmed.Substring(0, $trimmed.Length - $suffix.Length).TrimEnd("/")
+  foreach ($suffix in $suffixes) {
+    if ($trimmed.EndsWith($suffix)) {
+      $trimmed = $trimmed.Substring(0, $trimmed.Length - $suffix.Length).TrimEnd("/")
+      break
+    }
   }
   return $trimmed
 }
 
-$controlBase = Normalize-Base $controlBase "/api/v1/control"
-$runtimeBase = Normalize-Base $runtimeBase "/api/v1/runtime"
+$controlBase = Normalize-Base $controlBase @("/api/v1/control/healthz", "/api/v1/control")
+$runtimeBase = Normalize-Base $runtimeBase @("/api/v1/runtime/healthz", "/api/v1/runtime")
 $headers = @{}
 if (-not $authDisabled) {
   if (-not $apiKey) {
@@ -83,13 +86,13 @@ function Test-Healthz {
 
 $controlHealthz = "$controlBase/api/v1/control/healthz"
 if (-not (Test-Healthz $controlHealthz)) {
-  Write-Host "Suba: docker compose up -d redis control runtime"
+  Write-Host "Suba: docker compose up -d redis control"
   Write-Host "Health check failed: $controlHealthz"
   exit 1
 }
 $runtimeHealthz = "$runtimeBase/api/v1/runtime/healthz"
 if (-not (Test-Healthz $runtimeHealthz)) {
-  Write-Host "Suba: docker compose up -d redis control runtime"
+  Write-Host "Suba: docker compose up -d redis runtime"
   Write-Host "Health check failed: $runtimeHealthz"
   exit 1
 }
