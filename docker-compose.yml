@@ -25,10 +25,11 @@ services:
     environment:
       - CONTROL_BASE_URL=http://control:8001
       - BUNDLE_REGISTRY_BASE=registry/tenants
-      - POSTGRES_DSN=postgresql://postgres:SiriosPg2024@sirios_db:5432/contractor
     volumes:
       - ./:/app
     depends_on:
+      contractor_db:
+        condition: service_healthy
       control:
         condition: service_healthy
     healthcheck:
@@ -50,6 +51,25 @@ services:
     networks:
       - contractor_net
 
+  contractor_db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=SiriosPg2024
+      - POSTGRES_DB=contractor
+    volumes:
+      - contractor_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d contractor"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+    networks:
+      - contractor_net
+
 networks:
   contractor_net:
     external: true
+
+volumes:
+  contractor_pgdata:
