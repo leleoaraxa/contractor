@@ -51,15 +51,21 @@ function Invoke-JsonRequest {
   param(
     [string]$Method,
     [string]$Uri,
-    [string]$Body = $null
+    [string]$Body = $null,
+    [hashtable]$ExtraHeaders = $null
   )
 
   try {
+    $mergedHeaders = @{}
+    $headers.Keys | ForEach-Object { $mergedHeaders[$_] = $headers[$_] }
+    if ($ExtraHeaders) {
+      $ExtraHeaders.Keys | ForEach-Object { $mergedHeaders[$_] = $ExtraHeaders[$_] }
+    }
     if ($Body) {
-      $response = Invoke-WebRequest -Method $Method -Uri $Uri -Headers $headers `
+      $response = Invoke-WebRequest -Method $Method -Uri $Uri -Headers $mergedHeaders `
         -ContentType "application/json" -Body $Body -UseBasicParsing
     } else {
-      $response = Invoke-WebRequest -Method $Method -Uri $Uri -Headers $headers -UseBasicParsing
+      $response = Invoke-WebRequest -Method $Method -Uri $Uri -Headers $mergedHeaders -UseBasicParsing
     }
     return [pscustomobject]@{ StatusCode = $response.StatusCode; Content = $response.Content }
   } catch {
@@ -81,6 +87,12 @@ function Invoke-JsonRequest {
     }
     return [pscustomobject]@{ StatusCode = $status; Content = $content }
   }
+}
+
+function Write-ResponseBody {
+  param([string]$Label, [string]$Content)
+  $display = if ($Content) { $Content } else { "<empty>" }
+  Write-Host "$Label $display"
 }
 
 function Test-Healthz {
@@ -154,9 +166,27 @@ Write-Host "Template safety gate OK"
 Write-Host "Rate limit enforcement (bundle 202601050003)..."
 $askPayload = '{"tenant_id":"demo","question":"smoke test","bundle_id":"202601050003","release_alias":"current"}'
 $resp = Invoke-JsonRequest -Method Post -Uri "$runtimeBase/api/v1/runtime/ask" -Body $askPayload
-if ($resp.StatusCode -ne 200) { throw "Unexpected status $($resp.StatusCode): $($resp.Content)" }
+if ($resp.StatusCode -ne 200) {
+  Write-ResponseBody "Body:" $resp.Content
+  if ($resp.StatusCode -eq 500) {
+    $explainResp = Invoke-JsonRequest -Method Post -Uri "$runtimeBase/api/v1/runtime/ask" `
+      -Body $askPayload -ExtraHeaders @{ "X-Explain" = "1" }
+    Write-Host "X-Explain status $($explainResp.StatusCode)"
+    Write-ResponseBody "X-Explain body:" $explainResp.Content
+  }
+  throw "Unexpected status $($resp.StatusCode): $($resp.Content)"
+}
 $resp = Invoke-JsonRequest -Method Post -Uri "$runtimeBase/api/v1/runtime/ask" -Body $askPayload
-if ($resp.StatusCode -ne 429) { throw "Unexpected status $($resp.StatusCode): $($resp.Content)" }
+if ($resp.StatusCode -ne 429) {
+  Write-ResponseBody "Body:" $resp.Content
+  if ($resp.StatusCode -eq 500) {
+    $explainResp = Invoke-JsonRequest -Method Post -Uri "$runtimeBase/api/v1/runtime/ask" `
+      -Body $askPayload -ExtraHeaders @{ "X-Explain" = "1" }
+    Write-Host "X-Explain status $($explainResp.StatusCode)"
+    Write-ResponseBody "X-Explain body:" $explainResp.Content
+  }
+  throw "Unexpected status $($resp.StatusCode): $($resp.Content)"
+}
 $detail = ($resp.Content | ConvertFrom-Json).detail
 if ($detail.error -ne "rate_limit_exceeded") { throw "Unexpected detail: $($resp.Content)" }
 Write-Host "Rate limit OK"

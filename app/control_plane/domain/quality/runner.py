@@ -40,7 +40,7 @@ def runtime_request_headers() -> Dict[str, str]:
         return {}
     api_key = next((key for key in settings.contractor_api_keys if key), "")
     if not api_key:
-        raise RuntimeError("missing API key for internal runtime call")
+        raise RuntimeError("missing X-API-Key (control -> runtime internal call)")
     return {"X-API-Key": api_key}
 
 
@@ -55,6 +55,9 @@ def run_suite(
 
     Returns a structured result used by the Control Plane quality report.
     """
+    if headers is None:
+        raise RuntimeError("missing X-API-Key (control -> runtime internal call)")
+
     host = settings.runtime_host or "localhost"
     if host == "0.0.0.0":
         host = "localhost"

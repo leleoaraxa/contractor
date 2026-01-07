@@ -11,7 +11,7 @@ from app.runtime.engine.context.artifact_loader import (
 from app.runtime.engine.context.tenant_context import TenantContext
 from app.runtime.engine.context.control_plane_client import ControlPlaneClient
 from app.runtime.engine.builder.builder import Builder
-from app.runtime.engine.executor.postgres import PostgresExecutor
+from app.runtime.engine.executor.postgres import PostgresExecution, PostgresExecutor
 from app.runtime.engine.formatter.formatter import Formatter
 from app.runtime.engine.cache.rt_cache import RuntimeCache
 from app.runtime.engine.ontology.ontology_loader import OntologyLoader
@@ -225,8 +225,19 @@ def ask(req: AskRequest, request: Request) -> AskResponse:
         cached_meta["cache"] = cache_dump
         return AskResponse(answer=cached_payload.get("answer", ""), meta=cached_meta)
 
-    executor = PostgresExecutor()
-    execution = executor.execute(plan, ctx)
+    if plan.action == "noop" or not plan.entity_id:
+        execution = PostgresExecution(
+            status="skipped",
+            query=None,
+            params={},
+            results=[],
+            row_count=0,
+            error="no entity selected for execution",
+            meta={"executor": "postgres", "skipped": True},
+        )
+    else:
+        executor = PostgresExecutor()
+        execution = executor.execute(plan, ctx)
 
     formatted = formatter.format(
         question=req.question,
