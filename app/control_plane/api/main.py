@@ -8,6 +8,7 @@ from app.control_plane.api.routers.healthz import router as healthz_router
 from app.control_plane.api.routers.tenants import router as tenants_router
 from app.control_plane.api.routers.bundles import router as bundles_router
 from app.control_plane.api.routers.quality import router as quality_router
+from app.control_plane.api.routers.versions import router as versions_router
 
 
 def create_app() -> FastAPI:
@@ -18,6 +19,7 @@ def create_app() -> FastAPI:
     app.include_router(tenants_router, prefix="/api/v1/control")
     app.include_router(bundles_router, prefix="/api/v1/control")
     app.include_router(quality_router, prefix="/api/v1/control")
+    app.include_router(versions_router, prefix="/api/v1/control")
 
     return app
 
