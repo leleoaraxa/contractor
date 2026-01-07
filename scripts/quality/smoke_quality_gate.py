@@ -35,36 +35,75 @@ def build_headers() -> dict[str, str]:
     return {"X-API-Key": api_key}
 
 
-def get_json(url: str, headers: dict[str, str] | None = None) -> dict:
-    req = request.Request(url, method="GET", headers=headers or {})
+def _truncate_body(body: str, limit: int = 1024) -> str:
+    if len(body) <= limit:
+        return body
+    return f"{body[:limit]}...[truncated]"
+
+
+def _log_verbose(enabled: bool, message: str) -> None:
+    if enabled:
+        print(f"[verbose] {message}")
+
+
+def request_json(
+    method: str,
+    url: str,
+    payload: dict | None = None,
+    headers: dict[str, str] | None = None,
+    *,
+    verbose: bool = False,
+    timeout: int = 10,
+) -> dict:
+    data = json.dumps(payload).encode("utf-8") if payload is not None else None
+    req_headers = headers or {}
+    if payload is not None:
+        req_headers = {"Content-Type": "application/json", **req_headers}
+    req = request.Request(url, data=data, method=method, headers=req_headers)
+    _log_verbose(verbose, f"{method} {url}")
     try:
-        with request.urlopen(req, timeout=10) as resp:
+        with request.urlopen(req, timeout=timeout) as resp:
             body = resp.read().decode("utf-8")
+            _log_verbose(verbose, f"{method} {url} -> {resp.status}")
             return json.loads(body) if body else {}
     except error.HTTPError as e:
         detail = e.read().decode("utf-8")
-        raise RuntimeError(f"HTTP {e.code} GET {url}: {detail}") from e
+        detail = _truncate_body(detail)
+        _log_verbose(verbose, f"{method} {url} -> {e.code} {detail}")
+        raise RuntimeError(f"HTTP {e.code} {method} {url}: {detail}") from e
     except Exception as e:
-        raise RuntimeError(f"GET {url} failed: {e}") from e
+        raise RuntimeError(f"{method} {url} failed: {e}") from e
 
 
-def post_json(url: str, payload: dict, headers: dict[str, str] | None = None) -> dict:
-    data = json.dumps(payload).encode("utf-8")
-    req = request.Request(
+def get_json(url: str, headers: dict[str, str] | None = None, *, verbose: bool = False) -> dict:
+    return request_json("GET", url, headers=headers, verbose=verbose, timeout=10)
+
+
+def post_json(
+    url: str,
+    payload: dict,
+    headers: dict[str, str] | None = None,
+    *,
+    verbose: bool = False,
+) -> dict:
+    return request_json(
+        "POST",
         url,
-        data=data,
-        method="POST",
-        headers={"Content-Type": "application/json", **(headers or {})},
+        payload=payload,
+        headers=headers,
+        verbose=verbose,
+        timeout=15,
     )
-    try:
-        with request.urlopen(req, timeout=15) as resp:
-            body = resp.read().decode("utf-8")
-            return json.loads(body) if body else {}
-    except error.HTTPError as e:
-        detail = e.read().decode("utf-8")
-        raise RuntimeError(f"HTTP {e.code} POST {url}: {detail}") from e
-    except Exception as e:
-        raise RuntimeError(f"POST {url} failed: {e}") from e
+
+
+def normalize_base_url(base: str, suffixes: tuple[str, ...]) -> str:
+    trimmed = base.rstrip("/")
+    for suffix in suffixes:
+        if trimmed.endswith(suffix):
+            trimmed = trimmed[: -len(suffix)]
+            trimmed = trimmed.rstrip("/")
+            break
+    return trimmed
 
 
 def main() -> int:
@@ -81,25 +120,47 @@ def main() -> int:
         default=os.getenv("RUNTIME_BASE_URL", "http://localhost:8000"),
         help="Base URL for runtime (default: RUNTIME_BASE_URL env or http://localhost:8000).",
     )
+    ap.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Print verbose request details (URL, status code, response body on error).",
+    )
     args = ap.parse_args()
 
-    base = args.control_base.rstrip("/")
-    runtime_base = args.runtime_base.rstrip("/")
+    base = normalize_base_url(
+        args.control_base,
+        ("/api/v1/control/healthz", "/api/v1/control"),
+    )
+    runtime_base = normalize_base_url(
+        args.runtime_base,
+        ("/api/v1/runtime/healthz", "/api/v1/runtime"),
+    )
     headers = build_headers()
+    verbose = args.verbose
 
     print("[+] Check control healthz...")
-    get_json(f"{base}/api/v1/control/healthz", headers=headers)
+    get_json(f"{base}/api/v1/control/healthz", headers=headers, verbose=verbose)
 
     print("[+] Check runtime healthz...")
+    runtime_healthz = f"{runtime_base}/api/v1/runtime/healthz"
     try:
-        get_json(f"{runtime_base}/api/v1/runtime/healthz", headers=headers)
+        get_json(runtime_healthz, headers=headers, verbose=verbose)
     except Exception as exc:
+        base_hint = ""
+        if "/api/v1/runtime" in args.runtime_base:
+            base_hint = " Use the runtime host root (e.g., http://localhost:8000) for --runtime-base."
         raise RuntimeError(
-            f"Runtime health check failed at {runtime_base}/api/v1/runtime/healthz. "
-            "Start runtime (docker-compose) or point --runtime-base to the reachable host."
+            f"Runtime health check failed for {runtime_healthz}. Start runtime "
+            "(e.g., `docker compose up runtime` or "
+            "`uvicorn app.runtime.api.main:app --host 0.0.0.0 --port 8000`) "
+            f"or point --runtime-base to the reachable host.{base_hint}"
         ) from exc
 
-    aliases = get_json(f"{base}/api/v1/control/tenants/{args.tenant_id}/aliases", headers=headers)
+    aliases = get_json(
+        f"{base}/api/v1/control/tenants/{args.tenant_id}/aliases",
+        headers=headers,
+        verbose=verbose,
+    )
     target_bundle = args.bundle_id or aliases.get("candidate")
     if not target_bundle:
         raise RuntimeError("target bundle_id not provided and candidate alias not set")
@@ -110,6 +171,7 @@ def main() -> int:
             f"{base}/api/v1/control/tenants/{args.tenant_id}/bundles/{target_bundle}/quality/run",
             {},
             headers=headers,
+            verbose=verbose,
         )
     except RuntimeError as exc:
         msg = str(exc).lower()
@@ -134,6 +196,7 @@ def main() -> int:
             f"{base}/api/v1/control/tenants/{args.tenant_id}/aliases/candidate",
             {"bundle_id": target_bundle},
             headers=headers,
+            verbose=verbose,
         )
 
         print("[+] Promote candidate -> current (gate enforced)...")
@@ -141,6 +204,7 @@ def main() -> int:
             f"{base}/api/v1/control/tenants/{args.tenant_id}/aliases/current",
             {"bundle_id": target_bundle},
             headers=headers,
+            verbose=verbose,
         )
         print("[✓] Promotion succeeded.")
     finally:
@@ -150,6 +214,7 @@ def main() -> int:
                 f"{base}/api/v1/control/tenants/{args.tenant_id}/aliases/current",
                 {"bundle_id": prev_current},
                 headers=headers,
+                verbose=verbose,
             )
         if prev_candidate and prev_candidate != target_bundle:
             print("[+] Restore candidate to previous value...")
@@ -157,6 +222,7 @@ def main() -> int:
                 f"{base}/api/v1/control/tenants/{args.tenant_id}/aliases/candidate",
                 {"bundle_id": prev_candidate},
                 headers=headers,
+                verbose=verbose,
             )
 
     return 0

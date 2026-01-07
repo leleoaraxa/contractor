@@ -5,7 +5,7 @@
 O teste `tests/integration/test_e2e_flow.py` valida:
 
 1. **Validação do bundle** via Control Plane (`/bundles/{bundle_id}/validate`).
-2. **Promoção** do alias `current` via `/versions/current`.
+2. **Promoção** do alias `current` via `/versions/current` (gate aplicado no SET).
 3. **Execução do runtime /ask** usando o alias `current` (com `PostgresExecutor` mockado).
 
 ### Pré-requisitos

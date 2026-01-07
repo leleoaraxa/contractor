@@ -7,15 +7,31 @@ Problemas comuns ao subir o Control Plane + Runtime localmente.
 - **Ação**:
   1. Verificar aliases atuais (store usado pelo runtime):
      ```bash
-     curl -s http://localhost:8001/api/v1/control/tenants/demo/versions | jq
+     curl -s -H "X-API-Key: ${CONTRACTOR_API_KEYS%%,*}" \
+       http://localhost:8001/api/v1/control/tenants/demo/aliases | jq
      ```
-  2. Reatribuir `current` para o bundle conhecido:
+  2. Reatribuir `current` para o bundle conhecido (gate obrigatório para `candidate/current`):
      ```bash
-     curl -s -X PUT -H "Content-Type: application/json" \
+     curl -s -X POST -H "Content-Type: application/json" \
+       -H "X-API-Key: ${CONTRACTOR_API_KEYS%%,*}" \
        -d '{"bundle_id":"202601050001"}' \
-       http://localhost:8001/api/v1/control/tenants/demo/versions/current | jq
+       http://localhost:8001/api/v1/control/tenants/demo/aliases/current | jq
      ```
-  3. Se quiser forçar gate de qualidade, use o endpoint equivalente em `/aliases`.
+  3. O endpoint `/versions` resolve é público e usado pelo runtime:
+     ```bash
+     curl -s http://localhost:8001/api/v1/control/tenants/demo/versions/current/resolve | jq
+     ```
+
+## smoke_quality_gate: Runtime health check failed
+- **Sintoma**: `Runtime health check failed` ao rodar `scripts/quality/smoke_quality_gate.py`.
+- **Ação**:
+  1. Verifique se o runtime está ativo:
+     ```bash
+     curl -f -H "X-API-Key: ${CONTRACTOR_API_KEYS%%,*}" \
+       http://localhost:8000/api/v1/runtime/healthz
+     ```
+  2. Se estiver rodando via docker-compose, confirme que a porta 8000 está exposta e que o serviço `runtime` está healthy.
+  3. Se você passou `--runtime-base` com `/api/v1/runtime`, use apenas a raiz (ex.: `http://localhost:8000`).
 
 ## Manifest ou diretório ausente
 - **Sintoma**: validação falha com `manifest not found` ou `bundle.missing_dir`.
