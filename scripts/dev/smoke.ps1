@@ -186,8 +186,18 @@ for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
     continue
   }
   if ($resp.StatusCode -eq 429) {
-    $detail = ($resp.Content | ConvertFrom-Json).detail
-    if ($detail.error -ne "rate_limit_exceeded") { throw "Unexpected detail: $($resp.Content)" }
+    $parsed = $null
+    try {
+      $parsed = $resp.Content | ConvertFrom-Json
+    } catch {
+      Write-ResponseBody "Body:" $resp.Content
+      throw "429 received but body is not valid JSON"
+    }
+    $detail = $parsed.detail
+    if (-not $detail -or $detail.error -ne "rate_limit_exceeded") {
+      Write-ResponseBody "Body:" $resp.Content
+      throw "429 received but detail.error is not rate_limit_exceeded"
+    }
     $rateLimited = $true
     break
   }

@@ -201,12 +201,34 @@ if [[ "$rate_limited" -ne 1 ]]; then
   exit 1
 fi
 
+echo "Body:"
+cat "$RESPONSE_BODY"
 python - "$RESPONSE_BODY" <<'PY'
-import json, sys
-data = json.load(open(sys.argv[1]))
+import json
+import sys
+
+try:
+    data = json.load(open(sys.argv[1]))
+except json.JSONDecodeError:
+    sys.exit(2)
+
 detail = data.get("detail") or {}
-assert detail.get("error") == "rate_limit_exceeded", data
+if detail.get("error") != "rate_limit_exceeded":
+    sys.exit(3)
 PY
+status=$?
+if [[ "$status" -eq 2 ]]; then
+  echo "429 received but body is not valid JSON"
+  cat "$RESPONSE_BODY"
+  rm -f "$RESPONSE_BODY"
+  exit 1
+fi
+if [[ "$status" -eq 3 ]]; then
+  echo "429 received but detail.error is not rate_limit_exceeded"
+  cat "$RESPONSE_BODY"
+  rm -f "$RESPONSE_BODY"
+  exit 1
+fi
 rm -f "$RESPONSE_BODY"
 echo "Rate limit OK"
 
