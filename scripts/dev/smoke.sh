@@ -39,7 +39,9 @@ normalize_base() {
   echo "$base"
 }
 
+CONTROL_BASE="$(normalize_base "$CONTROL_BASE" "/api/v1/control/healthz")"
 CONTROL_BASE="$(normalize_base "$CONTROL_BASE" "/api/v1/control")"
+RUNTIME_BASE="$(normalize_base "$RUNTIME_BASE" "/api/v1/runtime/healthz")"
 RUNTIME_BASE="$(normalize_base "$RUNTIME_BASE" "/api/v1/runtime")"
 
 if ! is_truthy "${CONTRACTOR_AUTH_DISABLED:-0}"; then
@@ -78,15 +80,16 @@ assert_status() {
 
 check_healthz() {
   local url="$1"
+  local message="$2"
   if ! curl -sSf "${AUTH_HEADER[@]}" "$url" >/dev/null; then
-    echo "Suba: docker compose up -d redis control runtime"
+    echo "Suba: ${message}"
     echo "Health check failed: $url"
     exit 1
   fi
 }
 
-check_healthz "$CONTROL_BASE/api/v1/control/healthz"
-check_healthz "$RUNTIME_BASE/api/v1/runtime/healthz"
+check_healthz "$CONTROL_BASE/api/v1/control/healthz" "docker compose up -d redis control"
+check_healthz "$RUNTIME_BASE/api/v1/runtime/healthz" "docker compose up -d redis runtime"
 
 python scripts/quality/smoke_quality_gate.py \
   --tenant-id demo \
