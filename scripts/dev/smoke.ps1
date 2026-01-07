@@ -38,7 +38,8 @@ $runtimeBase = Normalize-Base $runtimeBase "/api/v1/runtime"
 $headers = @{}
 if (-not $authDisabled) {
   if (-not $apiKey) {
-    throw "Set CONTRACTOR_API_KEYS (comma-separated) or CONTRACTOR_API_KEY when auth is enabled."
+    $apiKey = "dev-key"
+    Write-Warning "CONTRACTOR_API_KEY(S) not set; using fallback dev-key."
   }
   $headers["X-API-Key"] = $apiKey
 }
@@ -68,6 +69,29 @@ function Invoke-JsonRequest {
     }
     return [pscustomobject]@{ StatusCode = $status; Content = $content }
   }
+}
+
+function Test-Healthz {
+  param([string]$Uri)
+  try {
+    Invoke-WebRequest -Method Get -Uri $Uri -Headers $headers | Out-Null
+    return $true
+  } catch {
+    return $false
+  }
+}
+
+$controlHealthz = "$controlBase/api/v1/control/healthz"
+if (-not (Test-Healthz $controlHealthz)) {
+  Write-Host "Suba: docker compose up -d redis control runtime"
+  Write-Host "Health check failed: $controlHealthz"
+  exit 1
+}
+$runtimeHealthz = "$runtimeBase/api/v1/runtime/healthz"
+if (-not (Test-Healthz $runtimeHealthz)) {
+  Write-Host "Suba: docker compose up -d redis control runtime"
+  Write-Host "Health check failed: $runtimeHealthz"
+  exit 1
 }
 
 python scripts/quality/smoke_quality_gate.py `

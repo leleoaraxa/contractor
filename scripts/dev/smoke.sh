@@ -44,8 +44,8 @@ RUNTIME_BASE="$(normalize_base "$RUNTIME_BASE" "/api/v1/runtime")"
 
 if ! is_truthy "${CONTRACTOR_AUTH_DISABLED:-0}"; then
   if [[ -z "${API_KEY}" ]]; then
-    echo "Set CONTRACTOR_API_KEYS (comma-separated) or CONTRACTOR_API_KEY when auth is enabled."
-    exit 1
+    API_KEY="dev-key"
+    echo "WARNING: CONTRACTOR_API_KEY(S) not set; using fallback dev-key."
   fi
   AUTH_HEADER=(-H "X-API-Key: $API_KEY")
 fi
@@ -75,6 +75,18 @@ assert_status() {
     exit 1
   fi
 }
+
+check_healthz() {
+  local url="$1"
+  if ! curl -sSf "${AUTH_HEADER[@]}" "$url" >/dev/null; then
+    echo "Suba: docker compose up -d redis control runtime"
+    echo "Health check failed: $url"
+    exit 1
+  fi
+}
+
+check_healthz "$CONTROL_BASE/api/v1/control/healthz"
+check_healthz "$RUNTIME_BASE/api/v1/runtime/healthz"
 
 python scripts/quality/smoke_quality_gate.py \
   --tenant-id demo \
