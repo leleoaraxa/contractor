@@ -30,8 +30,8 @@ class SQLBuilder:
 
 class PostgresExecution(BaseModel):
     status: str
-    query: str
-    params: dict
+    query: str | None
+    params: dict | None
     results: list[dict]
     row_count: int
     error: str | None = None
@@ -46,6 +46,17 @@ class PostgresExecutor:
             raise ValueError("POSTGRES_DSN environment variable is not set.")
 
     def execute(self, plan: Plan, ctx: TenantContext) -> PostgresExecution:
+        if not plan.entity_id:
+            return PostgresExecution(
+                status="error",
+                query=None,
+                params={},
+                results=[],
+                row_count=0,
+                error="missing entity_id",
+                meta={"executor": "postgres"},
+            )
+
         sql_query = self.sql_builder.build(entity_id=plan.entity_id)
         results = []
         row_count = 0

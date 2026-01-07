@@ -59,3 +59,17 @@ Problemas comuns ao subir o Control Plane + Runtime localmente.
 - **Ação**:
   1. Defina `POSTGRES_DSN` no `.env` (ex.: `postgresql://user:pass@localhost:5432/db`).
   2. Reinicie o runtime.
+
+## smoke rate limit retorna 500
+- **Sintoma**: `scripts/dev/smoke.ps1` ou `scripts/dev/smoke.sh` falha no bloco “Rate limit enforcement” com `500 Internal Server Error`.
+- **Causa provável**: o runtime tentou executar SQL sem `entity_id` no plano (`plan.entity_id` ausente).
+- **Ação**:
+  1. Confirme que o runtime está na versão com guardrail que marca execução como `skipped` quando não há entidade.
+  2. Reexecute o smoke e inspecione o corpo retornado (os scripts agora imprimem o body e, se necessário, o `X-Explain: 1`).
+
+## quality/run falha com HTTP 500 calling runtime
+- **Sintoma**: `quality/run` falha com `HTTP 500 calling http://runtime:8000/api/v1/runtime/ask`.
+- **Causa provável**: plano inválido sem `entity_id`, causando falha na execução SQL.
+- **Ação**:
+  1. Atualize o runtime para ignorar execução SQL em planos `noop`/sem entidade.
+  2. Rode novamente o endpoint `POST /api/v1/control/.../quality/run` e valide que o `execution.status` está `skipped`.

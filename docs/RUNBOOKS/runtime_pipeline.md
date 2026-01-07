@@ -27,6 +27,8 @@ curl -f -H "X-API-Key: ${CONTRACTOR_API_KEYS%%,*}" \
 4. **Planner + Builder**
    - Decisão de intent/entity com `Planner` + `OntologyLoader` (quando disponível).
 5. **Execução SQL real**
+   - Apenas quando o `plan.action` exige SQL e existe `entity_id`.
+   - Caso contrário, o runtime retorna `execution.status=skipped` (sem 500).
    - `PostgresExecutor` usa `POSTGRES_DSN` e executa `SELECT * FROM <entity> LIMIT 10`.
 6. **Formatação + cache**
    - `Formatter` monta resposta e `RuntimeCache` guarda resultado (quando habilitado).

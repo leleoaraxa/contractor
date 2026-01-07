@@ -56,14 +56,19 @@ request_json() {
   local method="$1"
   local url="$2"
   local data="${3:-}"
+  local extra_header="${4:-}"
+  local extra_args=()
+  if [[ -n "$extra_header" ]]; then
+    extra_args=(-H "$extra_header")
+  fi
   RESPONSE_BODY="$(mktemp)"
   if [[ -n "$data" ]]; then
     RESPONSE_STATUS="$(curl -s -w "%{http_code}" -o "$RESPONSE_BODY" \
-      -X "$method" -H "Content-Type: application/json" "${AUTH_HEADER[@]}" \
+      -X "$method" -H "Content-Type: application/json" "${AUTH_HEADER[@]}" "${extra_args[@]}" \
       -d "$data" "$url")"
   else
     RESPONSE_STATUS="$(curl -s -w "%{http_code}" -o "$RESPONSE_BODY" \
-      -X "$method" "${AUTH_HEADER[@]}" "$url")"
+      -X "$method" "${AUTH_HEADER[@]}" "${extra_args[@]}" "$url")"
   fi
 }
 
@@ -134,11 +139,49 @@ echo "Template safety gate OK"
 echo "Rate limit enforcement (bundle 202601050003)..."
 ask_payload='{"tenant_id":"demo","question":"smoke test","bundle_id":"202601050003","release_alias":"current"}'
 request_json POST "$RUNTIME_BASE/api/v1/runtime/ask" "$ask_payload"
-assert_status 200 "first ask"
+if [[ "$RESPONSE_STATUS" != "200" ]]; then
+  echo "Unexpected status for first ask: ${RESPONSE_STATUS} (expected 200)"
+  if [[ -s "$RESPONSE_BODY" ]]; then
+    cat "$RESPONSE_BODY"
+  else
+    echo "<empty>"
+  fi
+  if [[ "$RESPONSE_STATUS" == "500" ]]; then
+    rm -f "$RESPONSE_BODY"
+    request_json POST "$RUNTIME_BASE/api/v1/runtime/ask" "$ask_payload" "X-Explain: 1"
+    echo "X-Explain status: ${RESPONSE_STATUS}"
+    if [[ -s "$RESPONSE_BODY" ]]; then
+      cat "$RESPONSE_BODY"
+    else
+      echo "<empty>"
+    fi
+  fi
+  rm -f "$RESPONSE_BODY"
+  exit 1
+fi
 rm -f "$RESPONSE_BODY"
 
 request_json POST "$RUNTIME_BASE/api/v1/runtime/ask" "$ask_payload"
-assert_status 429 "second ask (rate limit)"
+if [[ "$RESPONSE_STATUS" != "429" ]]; then
+  echo "Unexpected status for second ask (rate limit): ${RESPONSE_STATUS} (expected 429)"
+  if [[ -s "$RESPONSE_BODY" ]]; then
+    cat "$RESPONSE_BODY"
+  else
+    echo "<empty>"
+  fi
+  if [[ "$RESPONSE_STATUS" == "500" ]]; then
+    rm -f "$RESPONSE_BODY"
+    request_json POST "$RUNTIME_BASE/api/v1/runtime/ask" "$ask_payload" "X-Explain: 1"
+    echo "X-Explain status: ${RESPONSE_STATUS}"
+    if [[ -s "$RESPONSE_BODY" ]]; then
+      cat "$RESPONSE_BODY"
+    else
+      echo "<empty>"
+    fi
+  fi
+  rm -f "$RESPONSE_BODY"
+  exit 1
+fi
 python - "$RESPONSE_BODY" <<'PY'
 import json, sys
 data = json.load(open(sys.argv[1]))

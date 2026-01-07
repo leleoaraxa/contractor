@@ -47,7 +47,13 @@ class Formatter:
             "row_count": execution.row_count,
             "results": execution.results,
         }
-        if explain_enabled:
+        if execution.status != "ok":
+            execution_dump["error"] = execution.error
+            execution_dump["query"] = execution.query
+            execution_dump["params"] = execution.params
+            if execution.meta:
+                execution_dump["meta"] = execution.meta
+        elif explain_enabled:
             execution_dump["query"] = execution.query
             execution_dump["params"] = execution.params
             if execution.error:
