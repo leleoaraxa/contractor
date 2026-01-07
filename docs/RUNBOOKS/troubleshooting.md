@@ -66,6 +66,7 @@ Problemas comuns ao subir o Control Plane + Runtime localmente.
 - **Ação**:
   1. Confirme que o runtime está na versão com guardrail que marca execução como `skipped` quando não há entidade.
   2. Reexecute o smoke e inspecione o corpo retornado (os scripts agora imprimem o body e, se necessário, o `X-Explain: 1`).
+  3. O smoke dispara múltiplas chamadas para obter `429`. Se a política estiver muito permissiva, ajuste para determinismo (ex.: `RATE_LIMIT_RPS=1` e `RATE_LIMIT_BURST=1`).
 
 ## quality/run falha com HTTP 500 calling runtime
 - **Sintoma**: `quality/run` falha com `HTTP 500 calling http://runtime:8000/api/v1/runtime/ask`.
