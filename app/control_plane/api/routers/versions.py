@@ -5,16 +5,17 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app.control_plane.domain.bundles.promoter import (
-    Alias,
-    AliasNotFoundError,
-    Promoter,
-)
+from app.control_plane.domain.bundles.promoter import Alias
+from app.control_plane.domain.quality.service import PromotionGateError
+from app.control_plane.domain.tenants.repository import TenantAliasRepository
+from app.control_plane.domain.tenants.service import TenantAliasService
 from app.shared.security.auth import require_api_key
 from app.shared.security.rate_limit import enforce_rate_limit
 from app.shared.utils.ids import validate_tenant_id
 
 router = APIRouter()
+_repo = TenantAliasRepository()
+_svc = TenantAliasService(_repo)
 
 
 class VersionSetPayload(BaseModel):
@@ -35,9 +36,14 @@ def get_aliases(tenant_id: str, request: Request) -> VersionResponse:
     require_api_key(request)
     enforce_rate_limit(tenant_id, "control.get_aliases")
 
-    promoter = Promoter()
-    aliases = promoter.get_aliases_for_tenant(tenant_id)
-    return VersionResponse(aliases=aliases)
+    aliases = _svc.get_aliases(tenant_id)
+    return VersionResponse(
+        aliases={
+            "draft": aliases.draft_bundle_id,
+            "candidate": aliases.candidate_bundle_id,
+            "current": aliases.current_bundle_id,
+        }
+    )
 
 
 @router.put(
@@ -52,9 +58,25 @@ def set_alias(
     require_api_key(request)
     enforce_rate_limit(tenant_id, "control.set_alias")
 
-    promoter = Promoter()
-    aliases = promoter.set_alias(tenant_id, payload.bundle_id, alias)
-    return VersionResponse(aliases=aliases)
+    try:
+        if alias == "current":
+            aliases = _svc.set_current(tenant_id, payload.bundle_id)
+        elif alias == "candidate":
+            aliases = _svc.set_candidate(tenant_id, payload.bundle_id)
+        else:
+            aliases = _svc.set_draft(tenant_id, payload.bundle_id)
+    except PromotionGateError as e:
+        raise HTTPException(status_code=400, detail=_svc.format_gate_error(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return VersionResponse(
+        aliases={
+            "draft": aliases.draft_bundle_id,
+            "candidate": aliases.candidate_bundle_id,
+            "current": aliases.current_bundle_id,
+        }
+    )
 
 
 @router.get(
@@ -67,9 +89,10 @@ def resolve_alias(tenant_id: str, alias: Alias, request: Request) -> dict:
     # require_api_key(request)
     enforce_rate_limit(tenant_id, "control.resolve_alias")
 
-    promoter = Promoter()
     try:
-        bundle_id = promoter.get_alias(tenant_id, alias)
+        bundle_id = _svc.resolve(tenant_id, alias)
+        if not bundle_id:
+            raise HTTPException(status_code=404, detail="alias not set")
         return {"tenant_id": tenant_id, "alias": alias, "bundle_id": bundle_id}
-    except AliasNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise

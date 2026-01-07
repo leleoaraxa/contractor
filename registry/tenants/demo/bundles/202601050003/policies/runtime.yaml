@@ -1,0 +1,4 @@
+rate_limit:
+  enabled: true
+  rps: 1
+  burst: 1

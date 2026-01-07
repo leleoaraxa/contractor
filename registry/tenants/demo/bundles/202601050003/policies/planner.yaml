@@ -1,0 +1,13 @@
+terms:
+  - name: "planner"
+    kind: "policy"
+    scope: "planner"
+    version: 1
+
+planner:
+  min_matches: 1
+  min_score: 1.0
+  on_no_match:
+    intent: null
+    entity: null
+    reason: "no_match"

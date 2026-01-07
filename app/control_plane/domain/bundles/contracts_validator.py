@@ -264,6 +264,45 @@ def validate_policy_planner(path: Path) -> List[ContractValidationError]:
     return errs
 
 
+def validate_policy_runtime(path: Path) -> List[ContractValidationError]:
+    errs: List[ContractValidationError] = []
+    doc = _load_yaml(path)
+
+    rate_limit = doc.get("rate_limit")
+    if not isinstance(rate_limit, dict):
+        errs.append(
+            ContractValidationError(
+                "rate_limit.root", "rate_limit must be an object", str(path)
+            )
+        )
+        return errs
+
+    enabled = rate_limit.get("enabled", True)
+    if not isinstance(enabled, bool):
+        errs.append(
+            ContractValidationError(
+                "rate_limit.enabled", "enabled must be boolean", str(path)
+            )
+        )
+
+    rps = rate_limit.get("rps")
+    burst = rate_limit.get("burst")
+    if not isinstance(rps, int) or rps < 0:
+        errs.append(
+            ContractValidationError(
+                "rate_limit.rps", "rps must be integer >= 0", str(path)
+            )
+        )
+    if not isinstance(burst, int) or burst < 0:
+        errs.append(
+            ContractValidationError(
+                "rate_limit.burst", "burst must be integer >= 0", str(path)
+            )
+        )
+
+    return errs
+
+
 def validate_bundle_contracts(
     bundle_dir: Path, ontology_dir: str, policies_dir: str
 ) -> List[ContractValidationError]:
@@ -276,6 +315,7 @@ def validate_bundle_contracts(
     entities_path = o_dir / "entities.yaml"
     terms_path = o_dir / "terms.yaml"
     planner_path = p_dir / "planner.yaml"
+    runtime_path = p_dir / "runtime.yaml"
 
     # validate ontology files existence (contract-level, not just structural)
     for p in (intents_path, entities_path, terms_path):
@@ -316,5 +356,8 @@ def validate_bundle_contracts(
     # planner policy is optional in Stage 1, but if present must validate
     if planner_path.exists():
         errs.extend(validate_policy_planner(planner_path))
+
+    if runtime_path.exists():
+        errs.extend(validate_policy_runtime(runtime_path))
 
     return errs

@@ -24,6 +24,13 @@ class CachePolicy:
     max_ttl_seconds: int = 300
 
 
+@dataclass(frozen=True)
+class RateLimitPolicy:
+    enabled: bool = True
+    rps: int = 0
+    burst: int = 0
+
+
 class PolicyLoaderError(RuntimeError):
     pass
 
@@ -68,3 +75,19 @@ class PolicyLoader:
             default_ttl_seconds=default_ttl,
             max_ttl_seconds=max_ttl,
         )
+
+    def load_rate_limit_policy(self, bundle_dir: str, policies_dir: str) -> RateLimitPolicy:
+        base = Path(bundle_dir) / policies_dir
+        path = base / "runtime.yaml"
+        if not path.exists():
+            return RateLimitPolicy(enabled=False, rps=0, burst=0)
+
+        doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        rate_limit = doc.get("rate_limit") or {}
+
+        enabled = bool(rate_limit.get("enabled", True))
+        rps = int(rate_limit.get("rps", 0))
+        burst = int(rate_limit.get("burst", max(rps, 0)))
+        burst = max(burst, rps)
+
+        return RateLimitPolicy(enabled=enabled, rps=rps, burst=burst)

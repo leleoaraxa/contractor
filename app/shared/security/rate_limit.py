@@ -118,21 +118,35 @@ class TokenBucketRateLimiter:
                 )
         return _MemoryRateLimitBackend()
 
-    def consume(self, tenant_id: str, scope: str) -> RateLimitResult:
-        if self.rps <= 0 or self.burst <= 0:
+    def consume(
+        self,
+        tenant_id: str,
+        scope: str,
+        rps: float | None = None,
+        burst: float | None = None,
+    ) -> RateLimitResult:
+        use_rps = self.rps if rps is None else max(0.0, float(rps))
+        use_burst = self.burst if burst is None else max(0.0, float(burst))
+
+        if use_rps <= 0 or use_burst <= 0:
             return RateLimitResult(
-                allowed=True, tokens_left=self.burst, retry_after_seconds=0.0
+                allowed=True, tokens_left=use_burst, retry_after_seconds=0.0
             )
 
         key = f"rl|tenant:{tenant_id}|scope:{scope}"
-        return self.backend.consume(key, float(self.rps), float(self.burst))
+        return self.backend.consume(key, use_rps, use_burst)
 
 
 _RL = TokenBucketRateLimiter()
 
 
-def enforce_rate_limit(tenant_id: str, scope: str) -> None:
-    result = _RL.consume(tenant_id=tenant_id, scope=scope)
+def enforce_rate_limit(
+    tenant_id: str,
+    scope: str,
+    rps: float | None = None,
+    burst: float | None = None,
+) -> None:
+    result = _RL.consume(tenant_id=tenant_id, scope=scope, rps=rps, burst=burst)
     if not result.allowed:
         retry_after = max(1, int(math.ceil(result.retry_after_seconds)))
         raise HTTPException(

@@ -16,7 +16,11 @@ from app.runtime.engine.formatter.formatter import Formatter
 from app.runtime.engine.cache.rt_cache import RuntimeCache
 from app.runtime.engine.ontology.ontology_loader import OntologyLoader
 from app.runtime.engine.planner.planner import Planner
-from app.runtime.engine.policies.policy_loader import CachePolicy, PolicyLoader
+from app.runtime.engine.policies.policy_loader import (
+    CachePolicy,
+    PolicyLoader,
+    RateLimitPolicy,
+)
 from app.shared.security.auth import require_api_key
 from app.shared.security.rate_limit import enforce_rate_limit
 
@@ -59,7 +63,6 @@ def ask(req: AskRequest, request: Request) -> AskResponse:
     x_explain = (request.headers.get("X-Explain") or "").strip().lower()
     explain_enabled = x_explain in {"1", "true", "yes", "y", "on"}
     require_api_key(request)
-    enforce_rate_limit(req.tenant_id, "runtime.ask")
 
     # 1) Resolve bundle_id deterministically
     bundle_id = req.bundle_id
@@ -94,6 +97,19 @@ def ask(req: AskRequest, request: Request) -> AskResponse:
     paths = manifest.get("paths") or {}
     ontology_dir = paths.get("ontology_dir")
     policies_dir = paths.get("policies_dir")
+
+    rate_limit_policy = (
+        policy_loader.load_rate_limit_policy(bundle_dir=bundle_dir, policies_dir=policies_dir)
+        if bundle_dir and policies_dir
+        else RateLimitPolicy(enabled=False, rps=0, burst=0)
+    )
+    if rate_limit_policy.enabled and rate_limit_policy.rps > 0 and rate_limit_policy.burst > 0:
+        enforce_rate_limit(
+            req.tenant_id,
+            "runtime.ask",
+            rps=rate_limit_policy.rps,
+            burst=rate_limit_policy.burst,
+        )
 
     # 3) Start with a stable fallback decision (always valid schema)
     decision_full: dict = {

@@ -1,0 +1,6 @@
+version: 1
+entities:
+  - id: "platform_status"
+    title: "Platform Status"
+    description: "Synthetic entity for Stage 1 scaffolding."
+    kind: "synthetic"

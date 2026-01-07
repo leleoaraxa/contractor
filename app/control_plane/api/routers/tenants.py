@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app.control_plane.domain.tenants.repository import TenantAliasRepository
+from app.control_plane.domain.quality.service import PromotionGateError
 from app.control_plane.domain.tenants.service import TenantAliasService
 from app.shared.utils.ids import validate_tenant_id
 from app.shared.security.auth import require_api_key
@@ -41,6 +42,8 @@ def set_current(tenant_id: str, req: SetAliasRequest, request: Request) -> dict:
     enforce_rate_limit(tenant_id, "control.aliases.set_current")
     try:
         a = _svc.set_current(tenant_id, req.bundle_id)
+    except PromotionGateError as e:
+        raise HTTPException(status_code=400, detail=_svc.format_gate_error(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"tenant_id": a.tenant_id, "current": a.current_bundle_id}
@@ -53,6 +56,8 @@ def set_candidate(tenant_id: str, req: SetAliasRequest, request: Request) -> dic
     enforce_rate_limit(tenant_id, "control.aliases.set_candidate")
     try:
         a = _svc.set_candidate(tenant_id, req.bundle_id)
+    except PromotionGateError as e:
+        raise HTTPException(status_code=400, detail=_svc.format_gate_error(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"tenant_id": a.tenant_id, "candidate": a.candidate_bundle_id}
@@ -104,5 +109,7 @@ def set_alias(tenant_id: str, release_alias: str, req: SetAliasRequest, request:
             return {"tenant_id": a.tenant_id, "candidate": a.candidate_bundle_id}
         a = _svc.set_draft(tenant_id, req.bundle_id)
         return {"tenant_id": a.tenant_id, "draft": a.draft_bundle_id}
+    except PromotionGateError as e:
+        raise HTTPException(status_code=400, detail=_svc.format_gate_error(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
