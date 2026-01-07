@@ -12,7 +12,7 @@ class Builder:
     Stage 1 runtime builder (stub).
 
     Converts a planner decision into a deterministic Plan.
-    No domain heuristics are applied; action is constrained to "noop" for now.
+    Only explicit intents may request execution; otherwise defaults to "noop".
     """
 
     def build(self, question: str, decision: Dict, ctx: TenantContext) -> Plan:
@@ -24,7 +24,13 @@ class Builder:
         intent_id = decision.get("intent")
         entity_id = decision.get("entity")
 
-        rationale = "deterministic noop plan (Stage 1 runtime skeleton: planner -> builder)"
+        if intent_id == "health_check" and entity_id:
+            action = "sql"
+            rationale = "health_check plan: execute SQL for platform status"
+        else:
+            rationale = (
+                "deterministic noop plan (Stage 1 runtime skeleton: planner -> builder)"
+            )
 
         return Plan(
             action=action,

@@ -8,11 +8,3 @@ terms:
   - term: "status"
     intents: ["health_check"]
     entities: ["platform_status"]
-
-  - term: "hello"
-    intents: ["health_check"]
-    entities: ["platform_status"]
-
-  - term: "contractor"
-    intents: ["health_check"]
-    entities: ["platform_status"]

@@ -27,6 +27,8 @@ curl -f -H "X-API-Key: ${CONTRACTOR_API_KEYS%%,*}" \
    - `ArtifactLoader` lê o registry local (`BUNDLE_REGISTRY_BASE`).
 4. **Planner + Builder**
    - Decisão de intent/entity com `Planner` + `OntologyLoader` (quando disponível).
+   - Para o bundle demo, apenas termos fortes como `health`/`status` roteiam para `health_check`.
+   - Saudações como `hello contractor` retornam `intent/entity=null` com `reason=no_match`.
 5. **Execução SQL real**
    - Apenas quando o `plan.action` exige SQL e existe `entity_id`.
    - Caso contrário, o runtime retorna `execution.status=skipped` (sem 500).
