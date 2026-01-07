@@ -1,0 +1,53 @@
+{
+  "tenant_id": "demo",
+  "bundle_id": "202601050001",
+  "validate": {
+    "status": "pass",
+    "tenant_id": "demo",
+    "bundle_id": "202601050001",
+    "base_dir": "C:\\Users\\borge\\www\\contractor\\registry\\tenants",
+    "bundle_dir": "C:\\Users\\borge\\www\\contractor\\registry\\tenants\\demo\\bundles\\202601050001",
+    "errors": []
+  },
+  "template_safety": {
+    "status": "pass",
+    "templates_dir": "registry\\tenants\\demo\\bundles\\202601050001\\templates",
+    "templates": [
+      {
+        "template_path": "registry\\tenants\\demo\\bundles\\202601050001\\templates\\platform_status.j2",
+        "status": "pass",
+        "errors": []
+      }
+    ],
+    "errors": []
+  },
+  "required_suites": [
+    "data/quality/suites/demo_routing_candidate_suite.json",
+    "data/quality/suites/demo_thresholds_suite.json"
+  ],
+  "suites": [
+    {
+      "status": "pass",
+      "suite_id": "suite_0",
+      "suite_source": "data/quality/suites/demo_routing_candidate_suite.json",
+      "suite_path": "data/quality/suites/demo_routing_candidate_suite.json",
+      "failures": []
+    },
+    {
+      "status": "pass",
+      "suite_id": "suite_1",
+      "suite_source": "data/quality/suites/demo_thresholds_suite.json",
+      "suite_path": "data/quality/suites/demo_thresholds_suite.json",
+      "failures": []
+    }
+  ],
+  "result": {
+    "status": "pass",
+    "failures": []
+  },
+  "timestamps": {
+    "started_at": "2026-01-07T13:34:47.766617+00:00",
+    "finished_at": "2026-01-07T13:34:47.766617+00:00"
+  },
+  "commit_hash": null
+}

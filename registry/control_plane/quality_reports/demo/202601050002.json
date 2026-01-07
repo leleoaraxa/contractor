@@ -1,0 +1,91 @@
+{
+  "tenant_id": "demo",
+  "bundle_id": "202601050002",
+  "validate": {
+    "status": "pass",
+    "tenant_id": "demo",
+    "bundle_id": "202601050002",
+    "base_dir": "C:\\Users\\borge\\www\\contractor\\registry\\tenants",
+    "bundle_dir": "C:\\Users\\borge\\www\\contractor\\registry\\tenants\\demo\\bundles\\202601050002",
+    "errors": []
+  },
+  "template_safety": {
+    "status": "fail",
+    "templates_dir": "registry\\tenants\\demo\\bundles\\202601050002\\templates",
+    "templates": [
+      {
+        "template_path": "registry\\tenants\\demo\\bundles\\202601050002\\templates\\platform_status.j2",
+        "status": "fail",
+        "errors": [
+          {
+            "code": "template.field_not_allowed",
+            "message": "field 'secret' not allowed by entity schema",
+            "path": "registry\\tenants\\demo\\bundles\\202601050002\\templates\\platform_status.j2"
+          },
+          {
+            "code": "template.render_error",
+            "message": "'dict object' has no attribute 'secret'",
+            "path": "registry\\tenants\\demo\\bundles\\202601050002\\templates\\platform_status.j2"
+          }
+        ]
+      }
+    ],
+    "errors": [
+      {
+        "code": "template.field_not_allowed",
+        "message": "field 'secret' not allowed by entity schema",
+        "path": "registry\\tenants\\demo\\bundles\\202601050002\\templates\\platform_status.j2"
+      },
+      {
+        "code": "template.render_error",
+        "message": "'dict object' has no attribute 'secret'",
+        "path": "registry\\tenants\\demo\\bundles\\202601050002\\templates\\platform_status.j2"
+      }
+    ]
+  },
+  "required_suites": [
+    "data/quality/suites/demo_routing_candidate_suite.json",
+    "data/quality/suites/demo_thresholds_suite.json"
+  ],
+  "suites": [
+    {
+      "status": "pass",
+      "suite_id": "stub",
+      "suite_source": "stub",
+      "suite_path": "stub",
+      "failures": []
+    },
+    {
+      "status": "pass",
+      "suite_id": "stub",
+      "suite_source": "stub",
+      "suite_path": "stub",
+      "failures": []
+    }
+  ],
+  "result": {
+    "status": "fail",
+    "failures": [
+      {
+        "type": "template_safety",
+        "errors": [
+          {
+            "code": "template.field_not_allowed",
+            "message": "field 'secret' not allowed by entity schema",
+            "path": "registry\\tenants\\demo\\bundles\\202601050002\\templates\\platform_status.j2"
+          },
+          {
+            "code": "template.render_error",
+            "message": "'dict object' has no attribute 'secret'",
+            "path": "registry\\tenants\\demo\\bundles\\202601050002\\templates\\platform_status.j2"
+          }
+        ]
+      }
+    ]
+  },
+  "timestamps": {
+    "started_at": "2026-01-07T13:34:47.875616+00:00",
+    "finished_at": "2026-01-07T13:34:47.883569+00:00"
+  },
+  "commit_hash": "2d2bad6ab62f453e73d8a90502b47748613860f5"
+}
