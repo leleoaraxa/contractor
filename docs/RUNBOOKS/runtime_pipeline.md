@@ -19,6 +19,7 @@ curl -f -H "X-API-Key: ${CONTRACTOR_API_KEYS%%,*}" \
 ## Pipeline /ask (resumo)
 
 1. **Autenticação e rate limit**
+   - O rate limiter usa Redis quando a lib `redis` está instalada; se não, cai para in-memory (não recomendado).
    - Se o Redis estiver indisponível, o runtime pode cair para a política in-memory. Isso não invalida o smoke, mas pode alterar o comportamento conforme os thresholds configurados.
 2. **Resolução de bundle_id**
    - Se `bundle_id` não for informado, o runtime resolve via Control Plane:
@@ -55,6 +56,7 @@ Baseado em `.env.example` e `app/shared/config/settings.py`:
 - `RUNTIME_HOST`, `RUNTIME_PORT`, `RUNTIME_BASE_URL`
 - `RUNTIME_REDIS_URL` (cache opcional)
 - `POSTGRES_DSN` (**obrigatório** para `PostgresExecutor`)
+- Dependência Python: `redis` (necessário para o rate limiter usar Redis)
 
 ### Control Plane (necessário para resolução de alias)
 - `CONTROL_BASE_URL`

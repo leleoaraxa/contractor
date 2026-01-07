@@ -82,6 +82,20 @@ Problemas comuns ao subir o Control Plane + Runtime localmente.
   3. O smoke dispara múltiplas chamadas para obter `429`. Se a política estiver muito permissiva, ajuste para determinismo (ex.: `RATE_LIMIT_RPS=1` e `RATE_LIMIT_BURST=1`).
   4. Em respostas `429`, o smoke valida JSON e imprime o body quando inválido para facilitar diagnóstico.
 
+## Rate limiter caiu para in-memory
+- **Sintoma**: log contendo `redis client not available` e fallback para in-memory.
+- **Causa provável**: pacote Python `redis` ausente.
+- **Ação**:
+  1. Adicione `redis>=5.0.0` aos requisitos do runtime.
+  2. Rebuild da imagem e reinicie os serviços.
+
+## smoke.sh falha com pipefail
+- **Sintoma**: `set: pipefail invalid option name` ao executar `scripts/dev/smoke.sh`.
+- **Causa provável**: shell sem suporte a `pipefail` ou ausência de `bash`.
+- **Ação**:
+  1. Garanta que o script use `pipefail` apenas como best-effort.
+  2. Verifique se `bash` está instalado na imagem/contêiner.
+
 ## quality/run falha com HTTP 500 calling runtime
 - **Sintoma**: `quality/run` falha com `HTTP 500 calling http://runtime:8000/api/v1/runtime/ask`.
 - **Causa provável**: plano inválido sem `entity_id`, causando falha na execução SQL.
