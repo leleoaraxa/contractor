@@ -11,7 +11,7 @@
     {
       "id": "t2",
       "question": "hello contractor",
-      "expected": { "intent": "health_check", "entity": "platform_status" }
+      "expected": { "intent": null, "entity": null, "reason": "no_match" }
     },
     {
       "id": "t3_no_match",

@@ -33,6 +33,12 @@ Problemas comuns ao subir o Control Plane + Runtime localmente.
   2. Se estiver rodando via docker-compose, confirme que a porta 8000 está exposta e que o serviço `runtime` está healthy.
   3. Se você passou `--runtime-base` com `/api/v1/runtime`, use apenas a raiz (ex.: `http://localhost:8000`).
 
+## smoke_docker: API key ausente
+- **Sintoma**: `scripts/dev/smoke_docker.ps1` imprime warning sobre fallback `dev-key`.
+- **Ação**:
+  1. Defina `CONTRACTOR_API_KEY(S)` se quiser validar chaves reais.
+  2. Com `CONTRACTOR_AUTH_DISABLED=1`, o header `X-API-Key` é opcional.
+
 ## Manifest ou diretório ausente
 - **Sintoma**: validação falha com `manifest not found` ou `bundle.missing_dir`.
 - **Ação**:
@@ -59,6 +65,13 @@ Problemas comuns ao subir o Control Plane + Runtime localmente.
 - **Ação**:
   1. Defina `POSTGRES_DSN` no `.env` (ex.: `postgresql://user:pass@localhost:5432/db`).
   2. Reinicie o runtime.
+
+## Saudação roteando para health_check
+- **Sintoma**: `hello contractor` cai em `health_check/platform_status` em vez de `no_match`.
+- **Ação**:
+  1. Verifique o arquivo de termos do bundle em `registry/tenants/demo/bundles/<bundle_id>/ontology/terms.yaml`.
+  2. Garanta que apenas termos fortes (`health`, `status`) estão associados ao intent `health_check`.
+  3. Rode novamente as suites `demo_thresholds_suite` e `demo_routing_suite`.
 
 ## smoke rate limit retorna 500
 - **Sintoma**: `scripts/dev/smoke.ps1` ou `scripts/dev/smoke.sh` falha no bloco “Rate limit enforcement” com `500 Internal Server Error`.
