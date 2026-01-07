@@ -24,15 +24,15 @@ Sem critérios formais de qualidade, uma promoção pode:
 
 ## Decision
 
-Adotar **Quality Gates obrigatórios** para promoção de bundles, com critérios mínimos e extensíveis por policy.
+Adotar **Quality Gates obrigatórios** para promoção de bundles, com critérios mínimos e extensíveis por tenant.
 
 Promoção segue o fluxo:
 
 ```
-draft → (validate + test) → candidate → (approve) → current
+draft → (validate) → candidate → (validate + suites) → current
 ```
 
-Nenhum bundle pode ser promovido sem **relatório de qualidade associado**.
+Nenhum bundle pode ser promovido para `candidate` ou `current` sem **relatório de qualidade associado**.
 
 ## Quality Gates (v0)
 
@@ -42,43 +42,34 @@ Nenhum bundle pode ser promovido sem **relatório de qualidade associado**.
 * Schemas compatíveis
 * Ontologia ↔ entidades ↔ templates consistentes
 * Policies referenciadas existem
-* Proibição de constructs inseguros (templates, SQL)
 
-### 2) Routing Quality (blocking)
+### 2) Routing/Threshold Suites (blocking)
 
-Executado via suites de roteamento:
+Executado via suites declaradas em `data/quality/suites/*.json`, por exemplo:
 
-* `routed_rate ≥ 0.98`
-* `top1_accuracy ≥ 0.93` (MVP)
-* `top2_gap_p50 ≥ 0.0` (ou policy-driven)
+* `demo_routing_candidate_suite.json`
+* `demo_thresholds_suite.json`
+* `demo_routing_suite.json`
+* `demo_pipeline_suite.json`
 
-### 3) Entity Execution (blocking)
+A lista de suites exigidas por tenant é definida em `registry/control_plane/promotion_sets/<tenant>.yaml`.
 
-* Pelo menos 1 suite SQL-only por entidade crítica
-* Execução real (LIMITed) sem erro
-* Tipos e campos retornados compatíveis com contratos
+### 3) Execução SQL (blocking quando aplicável)
 
-### 4) Security Checks (blocking)
-
-* Nenhuma entidade privada loga dados brutos
-* Templates passam sandbox validation
-* SQL sempre parametrizado
-* Policies de redaction presentes
-
-### 5) Non-blocking Checks (informational)
-
-* Latência média
-* Cache hit ratio estimado
-* Custo relativo (heurístico, não impeditivo no MVP)
+* Execução real (LIMITed) sem erro via `PostgresExecutor`.
+* Erros de execução interrompem a promoção.
 
 ## Promotion Rules
 
-* Falha em qualquer gate **bloqueia** promoção para `candidate`.
-* `candidate` só pode virar `current` com:
+* `draft` exige apenas validação.
+* `candidate` e `current` exigem validação + suites obrigatórias.
+* A promoção com gate é aplicada nos endpoints `/api/v1/control/tenants/{tenant_id}/aliases/*`.
+* O mapeamento simples de aliases usado pelo runtime fica em `/api/v1/control/tenants/{tenant_id}/versions/*`.
 
-  * aprovação explícita (manual ou policy)
-  * registro em audit log
-* Rollback é permitido a qualquer momento, sem revalidação.
+## Operação e scripts
+
+* `scripts/quality/run_routing_suite.py` executa suites isoladas contra o runtime.
+* `scripts/quality/smoke_quality_gate.py` exercita o fluxo completo (healthz → qualidade → promotion gate).
 
 ## Alternatives Considered
 
@@ -100,6 +91,7 @@ Executado via suites de roteamento:
 
   * `QualityRunner`
   * `QualityReport` versionado por bundle
+  * `PromotionSetRepository` por tenant
 * UI deve mostrar:
 
   * status por gate (pass/fail)
