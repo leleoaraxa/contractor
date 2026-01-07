@@ -3,6 +3,7 @@
 ## Pré-requisitos
 - Docker + Docker Compose
 - Arquivo `.env` criado a partir de `.env.example`
+- `POSTGRES_DSN` configurado no `.env` (runtime executa SQL real)
 
 ## Passo a passo
 1. **Preparar ambiente**
@@ -10,6 +11,7 @@
    cp .env.example .env
    ```
    - Para Redis, mantenha `redis://redis:6379/0` (acesso via serviço `redis` do compose).
+   - Adicione `POSTGRES_DSN` no `.env` (ex.: `postgresql://user:pass@host.docker.internal:5432/db`).
 
 2. **Subir serviços**
    ```bash

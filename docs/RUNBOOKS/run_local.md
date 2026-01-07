@@ -4,6 +4,7 @@
 - Python 3.11+
 - `pip install -e .` na raiz do repositório (usa `pyproject.toml`)
 - Arquivo `.env` criado a partir de `.env.example`
+- `POSTGRES_DSN` configurado no `.env` (runtime executa SQL real)
 
 ## Passo a passo
 1. **Preparar ambiente**
@@ -11,6 +12,7 @@
    cp .env.example .env
    pip install -e .
    ```
+   - Adicione `POSTGRES_DSN` no `.env` (ex.: `postgresql://user:pass@localhost:5432/db`).
 
 2. **Subir Control Plane**
    ```bash
