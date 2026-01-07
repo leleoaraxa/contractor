@@ -15,7 +15,7 @@ services:
       timeout: 3s
       retries: 10
     networks:
-      - zaratustra_default
+      - contractor_net
 
   runtime:
     build: .
@@ -25,7 +25,7 @@ services:
     environment:
       - CONTROL_BASE_URL=http://control:8001
       - BUNDLE_REGISTRY_BASE=registry/tenants
-      - POSTGRES_DSN=postgresql://postgres:SiriosPg2024@postgres:5432/contractor
+      - POSTGRES_DSN=postgresql://postgres:SiriosPg2024@sirios_db:5432/contractor
     volumes:
       - ./:/app
     depends_on:
@@ -37,7 +37,7 @@ services:
       timeout: 3s
       retries: 10
     networks:
-      - zaratustra_default
+      - contractor_net
 
   redis:
     image: redis:7-alpine
@@ -48,8 +48,8 @@ services:
       timeout: 3s
       retries: 10
     networks:
-      - zaratustra_default
+      - contractor_net
 
 networks:
-  zaratustra_default:
+  contractor_net:
     external: true
