@@ -1,0 +1,6 @@
+# tests/conftest.py
+from __future__ import annotations
+
+import os
+
+os.environ.setdefault("RATE_LIMIT_BACKEND", "memory")
