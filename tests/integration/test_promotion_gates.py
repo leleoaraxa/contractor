@@ -5,9 +5,6 @@ import os
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
-import pytest
-from fastapi.testclient import TestClient
-
 # --- Environment variables MUST be set BEFORE application imports ---
 TEST_API_KEY = "test-key-for-promotion-gates"
 os.environ["CONTRACTOR_API_KEY"] = TEST_API_KEY
@@ -20,6 +17,8 @@ from app.shared.config import settings as settings_module
 
 importlib.reload(settings_module)
 
+from fastapi.testclient import TestClient
+
 from app.control_plane.api.main import app as control_plane_app
 from app.control_plane.domain.bundles.validator import validate_bundle
 from app.control_plane.domain.quality.reports import (
@@ -27,6 +26,8 @@ from app.control_plane.domain.quality.reports import (
     QualityReportRepository,
 )
 from app.control_plane.domain.templates.safety import TemplateSafetyValidator
+from app.runtime.api.main import app as runtime_app
+from app.shared.security import rate_limit as rate_limit_module
 
 
 def _utcnow() -> str:
@@ -76,35 +77,25 @@ def _auth_headers() -> dict:
     return {"X-API-Key": TEST_API_KEY}
 
 
-@pytest.fixture
-def runtime_client_rate_limited(monkeypatch) -> TestClient:
+def _configure_rate_limiter_for_test(*, rps: int, burst: int) -> None:
     """
-    Cria um runtime app "fresh" com rate limit determinístico em memória,
-    sem contaminar outros testes (monkeypatch faz rollback automático).
+    Make rate limiter deterministic for tests without relying on env/settings reloads.
+
+    - Forces backend to memory (so we can clear state)
+    - Resets module-level singleton
+    - Overrides rps/burst directly on the singleton instance
+    - Clears in-memory state if present
     """
-    monkeypatch.setenv("RATE_LIMIT_BACKEND", "memory")
-    monkeypatch.setenv("RATE_LIMIT_RPS", "1")
-    monkeypatch.setenv("RATE_LIMIT_BURST", "1")
+    os.environ["RATE_LIMIT_BACKEND"] = "memory"
 
-    # Recarrega settings a partir do módulo correto
-    import app.shared.config.settings as settings_mod
-
-    importlib.reload(settings_mod)
-
-    # Recarrega rate limit e reseta o singleton (_RL)
-    from app.shared.security import rate_limit as rate_limit_module
-
-    importlib.reload(rate_limit_module)
     rate_limit_module._reset_rate_limiter_for_tests()
+
+    # Override numeric policy directly (avoids pydantic settings reload issues)
+    rate_limit_module._RL.rps = int(rps)
+    rate_limit_module._RL.burst = int(burst)
+
     if hasattr(rate_limit_module._RL.backend, "state"):
         rate_limit_module._RL.backend.state.clear()
-
-    # Recarrega o runtime para garantir que as deps leiam o ambiente atualizado
-    import app.runtime.api.main as runtime_main
-
-    importlib.reload(runtime_main)
-
-    return TestClient(runtime_main.app)
 
 
 def test_promotion_gate_pass():
@@ -168,11 +159,15 @@ def test_template_safety_gate_report(monkeypatch):
     assert data["result"]["status"] == "fail"
 
 
-def test_rate_limit_enforced(runtime_client_rate_limited: TestClient):
+def test_rate_limit_enforced():
     tenant_id = "demo"
     bundle_id = "202601050003"
 
-    runtime_client = runtime_client_rate_limited
+    # We want a strict bucket: 1 token total, refills at 1 token/sec.
+    # The runtime pipeline can be slow, so we freeze the clock to make it deterministic.
+    _configure_rate_limiter_for_test(rps=1, burst=1)
+
+    runtime_client = TestClient(runtime_app)
 
     with patch("app.runtime.engine.executor.postgres.psycopg2.connect") as mock_connect:
         mock_cursor = MagicMock()
@@ -190,16 +185,20 @@ def test_rate_limit_enforced(runtime_client_rate_limited: TestClient):
             "release_alias": "current",
         }
 
-        response1 = runtime_client.post(
-            "/api/v1/runtime/ask",
-            headers=_auth_headers(),
-            json=payload,
-        )
-        response2 = runtime_client.post(
-            "/api/v1/runtime/ask",
-            headers=_auth_headers(),
-            json=payload,
-        )
+        # Freeze time inside the rate_limit module so elapsed=0 between calls.
+        with patch(
+            "app.shared.security.rate_limit.time.time", return_value=1_700_000_000.0
+        ):
+            response1 = runtime_client.post(
+                "/api/v1/runtime/ask",
+                headers=_auth_headers(),
+                json=payload,
+            )
+            response2 = runtime_client.post(
+                "/api/v1/runtime/ask",
+                headers=_auth_headers(),
+                json=payload,
+            )
 
     assert response1.status_code == 200
     assert response2.status_code == 429
