@@ -196,28 +196,26 @@ class TokenBucketRateLimiter:
         if not redis_url:
             logger.error("rate limiter redis backend unavailable (url=missing)")
             return _UnavailableRateLimitBackend("redis", "redis url missing")
-        if redis_url:
-            try:
-                return _RedisRateLimitBackend(redis_url)
-            except RateLimitBackendUnavailableError as exc:  # pragma: no cover - defensive
-                safe_url = _redact_redis_url(redis_url)
-                logger.error(
-                    "rate limiter redis backend unavailable (url=%s, error=%s)",
-                    safe_url,
-                    exc.safe_message,
-                )
-                return _UnavailableRateLimitBackend("redis", exc.safe_message)
-            except Exception as exc:  # pragma: no cover - defensive
-                safe_url = _redact_redis_url(redis_url)
-                logger.error(
-                    "rate limiter redis backend unavailable (url=%s, error=%s)",
-                    safe_url,
-                    exc.__class__.__name__,
-                )
-                return _UnavailableRateLimitBackend(
-                    "redis", f"redis backend error ({exc.__class__.__name__})"
-                )
-        return _UnavailableRateLimitBackend("redis", "redis backend unavailable")
+        try:
+            return _RedisRateLimitBackend(redis_url)
+        except RateLimitBackendUnavailableError as exc:  # pragma: no cover - defensive
+            safe_url = _redact_redis_url(redis_url)
+            logger.error(
+                "rate limiter redis backend unavailable (url=%s, error=%s)",
+                safe_url,
+                exc.safe_message,
+            )
+            return _UnavailableRateLimitBackend("redis", exc.safe_message)
+        except Exception as exc:  # pragma: no cover - defensive
+            safe_url = _redact_redis_url(redis_url)
+            logger.error(
+                "rate limiter redis backend unavailable (url=%s, error=%s)",
+                safe_url,
+                exc.__class__.__name__,
+            )
+            return _UnavailableRateLimitBackend(
+                "redis", f"redis backend error ({exc.__class__.__name__})"
+            )
 
     def consume(
         self,
