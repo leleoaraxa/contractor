@@ -23,7 +23,6 @@ from app.control_plane.api.main import app as control_plane_app
 from app.control_plane.domain.bundles.validator import validate_bundle
 from app.control_plane.domain.quality.reports import PromotionSetRepository, QualityReportRepository
 from app.control_plane.domain.templates.safety import TemplateSafetyValidator
-from app.runtime.api.main import app as runtime_app
 
 
 def _utcnow() -> str:
@@ -136,7 +135,26 @@ def test_rate_limit_enforced():
     tenant_id = "demo"
     bundle_id = "202601050003"
 
-    runtime_client = TestClient(runtime_app)
+    os.environ["RATE_LIMIT_BACKEND"] = "memory"
+    os.environ["RATE_LIMIT_RPS"] = "1"
+    os.environ["RATE_LIMIT_BURST"] = "1"
+
+    from app.shared.config import settings as rate_limit_settings
+
+    importlib.reload(rate_limit_settings)
+
+    from app.shared.security import rate_limit as rate_limit_module
+
+    importlib.reload(rate_limit_module)
+    rate_limit_module._reset_rate_limiter_for_tests()
+    if hasattr(rate_limit_module._RL.backend, "state"):
+        rate_limit_module._RL.backend.state.clear()
+
+    import app.runtime.api.main as runtime_main
+
+    importlib.reload(runtime_main)
+
+    runtime_client = TestClient(runtime_main.app)
 
     with patch(
         "app.runtime.engine.executor.postgres.psycopg2.connect"
