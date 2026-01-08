@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-set -euo pipefail 2>/dev/null || set -eu
+set -eu
+(set -o pipefail) 2>/dev/null && set -o pipefail
 is_truthy() {
   local value="$1"
   shopt -s nocasematch

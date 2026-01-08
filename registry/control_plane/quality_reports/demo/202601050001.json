@@ -46,8 +46,8 @@
     "failures": []
   },
   "timestamps": {
-    "started_at": "2026-01-08T12:01:44.777180+00:00",
-    "finished_at": "2026-01-08T12:01:44.777180+00:00"
+    "started_at": "now",
+    "finished_at": "now"
   },
   "commit_hash": null
 }
