@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-set -euo errexit
-(set -o pipefail) 2>/dev/null || true
-
+set -euo pipefail
 is_truthy() {
   local value="$1"
   shopt -s nocasematch
