@@ -34,8 +34,8 @@
       "passed": 4,
       "total": 4,
       "failures": [],
-      "started_at": "2026-01-07T23:40:06.763842+00:00",
-      "finished_at": "2026-01-07T23:40:07.042663+00:00",
+      "started_at": "2026-01-07T23:59:22.352851+00:00",
+      "finished_at": "2026-01-07T23:59:22.650071+00:00",
       "suite_source": "data/quality/suites/demo_routing_candidate_suite.json",
       "suite_path": "/app/data/quality/suites/demo_routing_candidate_suite.json"
     },
@@ -47,8 +47,8 @@
       "passed": 2,
       "total": 2,
       "failures": [],
-      "started_at": "2026-01-07T23:40:07.054162+00:00",
-      "finished_at": "2026-01-07T23:40:07.224109+00:00",
+      "started_at": "2026-01-07T23:59:22.667676+00:00",
+      "finished_at": "2026-01-07T23:59:22.804215+00:00",
       "suite_source": "data/quality/suites/demo_thresholds_suite.json",
       "suite_path": "/app/data/quality/suites/demo_thresholds_suite.json"
     }
@@ -58,8 +58,8 @@
     "failures": []
   },
   "timestamps": {
-    "started_at": "2026-01-07T23:40:06.520005+00:00",
-    "finished_at": "2026-01-07T23:40:07.231919+00:00"
+    "started_at": "2026-01-07T23:59:22.147883+00:00",
+    "finished_at": "2026-01-07T23:59:22.812330+00:00"
   },
   "commit_hash": null
 }
