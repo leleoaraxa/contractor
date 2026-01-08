@@ -5,6 +5,7 @@ import importlib
 import importlib.util
 import logging
 import math
+import os
 import threading
 import time
 from dataclasses import dataclass
@@ -148,6 +149,13 @@ class _UnavailableRateLimitBackend(_BaseRateLimitBackend):
         raise RateLimitBackendUnavailableError(self.backend, self.reason)
 
 
+class _DisabledRateLimitBackend(_BaseRateLimitBackend):
+    name = "disabled"
+
+    def consume(self, key: str, rps: float, burst: float) -> RateLimitResult:
+        return RateLimitResult(allowed=True, tokens_left=burst, retry_after_seconds=0.0)
+
+
 class TokenBucketRateLimiter:
     def __init__(self) -> None:
         self.rps = max(0, settings.rate_limit_rps)
@@ -157,6 +165,37 @@ class TokenBucketRateLimiter:
 
     def _select_backend(self) -> _BaseRateLimitBackend:
         redis_url = settings.rate_limit_redis_url or settings.runtime_redis_url
+        forced_backend = os.getenv("RATE_LIMIT_BACKEND")
+        if forced_backend:
+            forced_backend = forced_backend.strip().lower()
+            if forced_backend == "memory":
+                logger.warning(
+                    "rate limiter backend forced to memory via RATE_LIMIT_BACKEND"
+                )
+                self.using_memory_fallback = True
+                return _MemoryRateLimitBackend()
+            if forced_backend == "disabled":
+                logger.warning(
+                    "rate limiter backend forced to disabled via RATE_LIMIT_BACKEND"
+                )
+                return _DisabledRateLimitBackend()
+            if forced_backend == "redis":
+                return self._create_redis_backend(redis_url)
+            logger.warning(
+                "rate limiter backend %r not recognized; using default selection",
+                forced_backend,
+            )
+
+        if redis_url:
+            return self._create_redis_backend(redis_url)
+        logger.warning("rate limiter: Redis not configured, using in-memory backend")
+        self.using_memory_fallback = True
+        return _MemoryRateLimitBackend()
+
+    def _create_redis_backend(self, redis_url: str | None) -> _BaseRateLimitBackend:
+        if not redis_url:
+            logger.error("rate limiter redis backend unavailable (url=missing)")
+            return _UnavailableRateLimitBackend("redis", "redis url missing")
         if redis_url:
             try:
                 return _RedisRateLimitBackend(redis_url)
@@ -178,9 +217,7 @@ class TokenBucketRateLimiter:
                 return _UnavailableRateLimitBackend(
                     "redis", f"redis backend error ({exc.__class__.__name__})"
                 )
-        logger.warning("rate limiter: Redis not configured, using in-memory backend")
-        self.using_memory_fallback = True
-        return _MemoryRateLimitBackend()
+        return _UnavailableRateLimitBackend("redis", "redis backend unavailable")
 
     def consume(
         self,
@@ -202,6 +239,11 @@ class TokenBucketRateLimiter:
 
 
 _RL = TokenBucketRateLimiter()
+
+
+def _reset_rate_limiter_for_tests() -> None:
+    global _RL
+    _RL = TokenBucketRateLimiter()
 
 
 def enforce_rate_limit(
