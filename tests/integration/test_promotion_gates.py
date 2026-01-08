@@ -5,6 +5,9 @@ import os
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
+import pytest
+from fastapi.testclient import TestClient
+
 # --- Environment variables MUST be set BEFORE application imports ---
 TEST_API_KEY = "test-key-for-promotion-gates"
 os.environ["CONTRACTOR_API_KEY"] = TEST_API_KEY
@@ -17,11 +20,12 @@ from app.shared.config import settings as settings_module
 
 importlib.reload(settings_module)
 
-from fastapi.testclient import TestClient
-
 from app.control_plane.api.main import app as control_plane_app
 from app.control_plane.domain.bundles.validator import validate_bundle
-from app.control_plane.domain.quality.reports import PromotionSetRepository, QualityReportRepository
+from app.control_plane.domain.quality.reports import (
+    PromotionSetRepository,
+    QualityReportRepository,
+)
 from app.control_plane.domain.templates.safety import TemplateSafetyValidator
 
 
@@ -48,7 +52,9 @@ def _write_quality_report(tenant_id: str, bundle_id: str) -> dict:
     if validation.get("status") != "pass":
         failures.append({"type": "validation", "errors": validation.get("errors", [])})
     if template_safety.get("status") != "pass":
-        failures.append({"type": "template_safety", "errors": template_safety.get("errors", [])})
+        failures.append(
+            {"type": "template_safety", "errors": template_safety.get("errors", [])}
+        )
 
     status = "pass" if not failures else "fail"
     report = {
@@ -68,6 +74,37 @@ def _write_quality_report(tenant_id: str, bundle_id: str) -> dict:
 
 def _auth_headers() -> dict:
     return {"X-API-Key": TEST_API_KEY}
+
+
+@pytest.fixture
+def runtime_client_rate_limited(monkeypatch) -> TestClient:
+    """
+    Cria um runtime app "fresh" com rate limit determinístico em memória,
+    sem contaminar outros testes (monkeypatch faz rollback automático).
+    """
+    monkeypatch.setenv("RATE_LIMIT_BACKEND", "memory")
+    monkeypatch.setenv("RATE_LIMIT_RPS", "1")
+    monkeypatch.setenv("RATE_LIMIT_BURST", "1")
+
+    # Recarrega settings a partir do módulo correto
+    import app.shared.config.settings as settings_mod
+
+    importlib.reload(settings_mod)
+
+    # Recarrega rate limit e reseta o singleton (_RL)
+    from app.shared.security import rate_limit as rate_limit_module
+
+    importlib.reload(rate_limit_module)
+    rate_limit_module._reset_rate_limiter_for_tests()
+    if hasattr(rate_limit_module._RL.backend, "state"):
+        rate_limit_module._RL.backend.state.clear()
+
+    # Recarrega o runtime para garantir que as deps leiam o ambiente atualizado
+    import app.runtime.api.main as runtime_main
+
+    importlib.reload(runtime_main)
+
+    return TestClient(runtime_main.app)
 
 
 def test_promotion_gate_pass():
@@ -131,34 +168,13 @@ def test_template_safety_gate_report(monkeypatch):
     assert data["result"]["status"] == "fail"
 
 
-def test_rate_limit_enforced():
+def test_rate_limit_enforced(runtime_client_rate_limited: TestClient):
     tenant_id = "demo"
     bundle_id = "202601050003"
 
-    os.environ["RATE_LIMIT_BACKEND"] = "memory"
-    os.environ["RATE_LIMIT_RPS"] = "1"
-    os.environ["RATE_LIMIT_BURST"] = "1"
+    runtime_client = runtime_client_rate_limited
 
-    from app.shared.config import settings as rate_limit_settings
-
-    importlib.reload(rate_limit_settings)
-
-    from app.shared.security import rate_limit as rate_limit_module
-
-    importlib.reload(rate_limit_module)
-    rate_limit_module._reset_rate_limiter_for_tests()
-    if hasattr(rate_limit_module._RL.backend, "state"):
-        rate_limit_module._RL.backend.state.clear()
-
-    import app.runtime.api.main as runtime_main
-
-    importlib.reload(runtime_main)
-
-    runtime_client = TestClient(runtime_main.app)
-
-    with patch(
-        "app.runtime.engine.executor.postgres.psycopg2.connect"
-    ) as mock_connect:
+    with patch("app.runtime.engine.executor.postgres.psycopg2.connect") as mock_connect:
         mock_cursor = MagicMock()
         mock_cursor.fetchall.return_value = [("value1", "value2")]
         mock_cursor.description = [("col1",), ("col2",)]
