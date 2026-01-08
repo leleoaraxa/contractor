@@ -82,12 +82,13 @@ Problemas comuns ao subir o Control Plane + Runtime localmente.
   3. O smoke dispara múltiplas chamadas para obter `429`. Se a política estiver muito permissiva, ajuste para determinismo (ex.: `RATE_LIMIT_RPS=1` e `RATE_LIMIT_BURST=1`).
   4. Em respostas `429`, o smoke valida JSON e imprime o body quando inválido para facilitar diagnóstico.
 
-## Rate limiter caiu para in-memory
-- **Sintoma**: log contendo `redis client not available` e fallback para in-memory.
-- **Causa provável**: pacote Python `redis` ausente.
+## Rate limiter backend indisponível (Redis)
+- **Sintoma**: `/ask` retorna `503` com `rate_limit_backend_unavailable` e logs informando indisponibilidade do Redis.
+- **Causa provável**: pacote Python `redis` ausente ou Redis inacessível a partir do runtime.
 - **Ação**:
-  1. Adicione `redis>=5.0.0` aos requisitos do runtime.
-  2. Rebuild da imagem e reinicie os serviços.
+  1. Confirme que `RATE_LIMIT_REDIS_URL`/`RUNTIME_REDIS_URL` apontam para o Redis correto.
+  2. Instale a dependência `redis` no runtime e faça rebuild da imagem.
+  3. Verifique conectividade do runtime ao Redis (ex.: `redis-cli ping` dentro do container).
 
 ## smoke.sh falha com pipefail
 - **Sintoma**: `set: pipefail invalid option name` ao executar `scripts/dev/smoke.sh`.

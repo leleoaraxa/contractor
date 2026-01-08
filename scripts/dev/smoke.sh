@@ -200,8 +200,6 @@ if [[ "$rate_limited" -ne 1 ]]; then
   exit 1
 fi
 
-echo "Body:"
-cat "$RESPONSE_BODY"
 python - "$RESPONSE_BODY" <<'PY'
 import json
 import sys

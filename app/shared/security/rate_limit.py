@@ -9,12 +9,37 @@ import threading
 import time
 from dataclasses import dataclass
 from typing import Tuple
+from urllib.parse import urlsplit, urlunsplit
 
 from fastapi import HTTPException, status
 
 from app.shared.config.settings import settings
 
 logger = logging.getLogger(__name__)
+
+
+class RateLimitBackendUnavailableError(RuntimeError):
+    def __init__(self, backend: str, message: str) -> None:
+        super().__init__(message)
+        self.backend = backend
+        self.safe_message = message
+
+
+def _redact_redis_url(url: str) -> str:
+    try:
+        parts = urlsplit(url)
+    except Exception:
+        return "<invalid-url>"
+    netloc = parts.netloc
+    if "@" in netloc:
+        creds, host = netloc.rsplit("@", 1)
+        if ":" in creds:
+            user, _ = creds.split(":", 1)
+            creds = f"{user}:[REDACTED]"
+        else:
+            creds = "[REDACTED]"
+        netloc = f"{creds}@{host}"
+    return urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
 
 
 @dataclass
@@ -64,41 +89,63 @@ class _RedisRateLimitBackend(_BaseRateLimitBackend):
     def __init__(self, url: str) -> None:
         self.url = url
         self.client = self._connect(url)
+        try:
+            self.client.ping()
+        except Exception as exc:  # pragma: no cover - defensive
+            raise RateLimitBackendUnavailableError(
+                "redis", f"redis ping failed ({exc.__class__.__name__})"
+            ) from exc
 
     def _connect(self, url: str):
         redis_spec = importlib.util.find_spec("redis")
         if not redis_spec:
-            raise RuntimeError("redis client not available")
+            raise RateLimitBackendUnavailableError("redis", "redis client not available")
         redis_mod = importlib.import_module("redis")
         return redis_mod.from_url(url, decode_responses=True)
 
     def consume(self, key: str, rps: float, burst: float) -> RateLimitResult:
-        now = time.time()
-        pipe = self.client.pipeline()
-        pipe.hget(key, "tokens")
-        pipe.hget(key, "ts")
-        tokens_raw, ts_raw = pipe.execute()
+        try:
+            now = time.time()
+            pipe = self.client.pipeline()
+            pipe.hget(key, "tokens")
+            pipe.hget(key, "ts")
+            tokens_raw, ts_raw = pipe.execute()
 
-        tokens = float(tokens_raw) if tokens_raw is not None else burst
-        last_ts = float(ts_raw) if ts_raw is not None else now
-        elapsed = max(0.0, now - last_ts)
-        tokens = min(burst, tokens + elapsed * rps)
+            tokens = float(tokens_raw) if tokens_raw is not None else burst
+            last_ts = float(ts_raw) if ts_raw is not None else now
+            elapsed = max(0.0, now - last_ts)
+            tokens = min(burst, tokens + elapsed * rps)
 
-        allowed = tokens >= 1.0
-        if allowed:
-            tokens -= 1.0
+            allowed = tokens >= 1.0
+            if allowed:
+                tokens -= 1.0
 
-        retry_after = 0.0 if allowed else max(0.0, (1.0 - tokens) / rps)
+            retry_after = 0.0 if allowed else max(0.0, (1.0 - tokens) / rps)
 
-        pipe = self.client.pipeline()
-        pipe.hset(key, mapping={"tokens": tokens, "ts": now})
-        ttl_seconds = int(max(math.ceil(burst / rps * 2), 1))
-        pipe.expire(key, ttl_seconds)
-        pipe.execute()
+            pipe = self.client.pipeline()
+            pipe.hset(key, mapping={"tokens": tokens, "ts": now})
+            ttl_seconds = int(max(math.ceil(burst / rps * 2), 1))
+            pipe.expire(key, ttl_seconds)
+            pipe.execute()
 
-        return RateLimitResult(
-            allowed=allowed, tokens_left=tokens, retry_after_seconds=retry_after
-        )
+            return RateLimitResult(
+                allowed=allowed, tokens_left=tokens, retry_after_seconds=retry_after
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            raise RateLimitBackendUnavailableError(
+                "redis", f"redis error ({exc.__class__.__name__})"
+            ) from exc
+
+
+class _UnavailableRateLimitBackend(_BaseRateLimitBackend):
+    name = "unavailable"
+
+    def __init__(self, backend: str, reason: str) -> None:
+        self.backend = backend
+        self.reason = reason
+
+    def consume(self, key: str, rps: float, burst: float) -> RateLimitResult:
+        raise RateLimitBackendUnavailableError(self.backend, self.reason)
 
 
 class TokenBucketRateLimiter:
@@ -113,12 +160,24 @@ class TokenBucketRateLimiter:
         if redis_url:
             try:
                 return _RedisRateLimitBackend(redis_url)
-            except Exception as exc:  # pragma: no cover - defensive
-                logger.warning(
-                    "rate limiter using in-memory backend (redis error: %s)", exc
+            except RateLimitBackendUnavailableError as exc:  # pragma: no cover - defensive
+                safe_url = _redact_redis_url(redis_url)
+                logger.error(
+                    "rate limiter redis backend unavailable (url=%s, error=%s)",
+                    safe_url,
+                    exc.safe_message,
                 )
-                self.using_memory_fallback = True
-                return _MemoryRateLimitBackend()
+                return _UnavailableRateLimitBackend("redis", exc.safe_message)
+            except Exception as exc:  # pragma: no cover - defensive
+                safe_url = _redact_redis_url(redis_url)
+                logger.error(
+                    "rate limiter redis backend unavailable (url=%s, error=%s)",
+                    safe_url,
+                    exc.__class__.__name__,
+                )
+                return _UnavailableRateLimitBackend(
+                    "redis", f"redis backend error ({exc.__class__.__name__})"
+                )
         logger.warning("rate limiter: Redis not configured, using in-memory backend")
         self.using_memory_fallback = True
         return _MemoryRateLimitBackend()
@@ -151,7 +210,22 @@ def enforce_rate_limit(
     rps: float | None = None,
     burst: float | None = None,
 ) -> None:
-    result = _RL.consume(tenant_id=tenant_id, scope=scope, rps=rps, burst=burst)
+    try:
+        result = _RL.consume(tenant_id=tenant_id, scope=scope, rps=rps, burst=burst)
+    except RateLimitBackendUnavailableError as exc:
+        logger.error(
+            "rate limiter backend unavailable (backend=%s, error=%s)",
+            exc.backend,
+            exc.safe_message,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "error": "rate_limit_backend_unavailable",
+                "backend": exc.backend,
+                "message": exc.safe_message,
+            },
+        ) from exc
     if not result.allowed:
         retry_after = max(1, int(math.ceil(result.retry_after_seconds)))
         raise HTTPException(

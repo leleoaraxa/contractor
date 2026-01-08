@@ -23,8 +23,8 @@ Ao executar `scripts/dev/smoke.sh` dentro do container, certifique-se de que a i
 ## Pipeline /ask (resumo)
 
 1. **Autenticação e rate limit**
-   - O rate limiter usa Redis quando a lib `redis` está instalada; se não, cai para in-memory (não recomendado).
-   - Se o Redis estiver indisponível, o runtime pode cair para a política in-memory. Isso não invalida o smoke, mas pode alterar o comportamento conforme os thresholds configurados.
+   - O rate limiter usa Redis quando configurado; se a lib `redis` estiver ausente ou o Redis estiver indisponível, o runtime responde com `rate_limit_backend_unavailable` (sem fallback silencioso).
+   - Se **nenhum** Redis estiver configurado, o runtime usa o backend in-memory com warning explícito (apenas para uso local).
 2. **Resolução de bundle_id**
    - Se `bundle_id` não for informado, o runtime resolve via Control Plane:
      `GET /api/v1/control/tenants/{tenant_id}/versions/{alias}/resolve`

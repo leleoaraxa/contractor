@@ -11,13 +11,15 @@
    cp .env.example .env
    ```
    - Para Redis, mantenha `redis://redis:6379/0` (acesso via serviço `redis` do compose).
-   - Adicione `POSTGRES_DSN` no `.env` (ex.: `postgresql://user:pass@host.docker.internal:5432/db`).
+   - Para usar o Postgres do compose, mantenha `POSTGRES_DSN=postgresql://postgres:contractor@contractor_db:5432/contractor` (default do `.env.example`).
+   - Se quiser usar um Postgres externo, ajuste `POSTGRES_DSN` (ex.: `postgresql://user:pass@host.docker.internal:5432/db`).
+   - Certifique-se de que a rede `contractor_net` exista (`docker network create contractor_net`).
 
 2. **Subir serviços**
    ```bash
    docker compose up --build
    ```
-   - Sobe três contêineres: `control`, `runtime`, `redis` (placeholder).
+   - Sobe quatro contêineres: `control`, `runtime`, `redis`, `contractor_db`.
    - Os diretórios do repositório são montados em `/app` nos contêineres.
 
 3. **Verificar healthchecks**
