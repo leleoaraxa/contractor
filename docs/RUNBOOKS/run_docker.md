@@ -19,7 +19,7 @@
    ```bash
    docker compose up --build
    ```
-   - Sobe quatro contêineres: `control`, `runtime`, `redis`, `contractor_db`.
+   - Sobe cinco contêineres: `control`, `runtime`, `worker`, `redis`, `contractor_db`.
    - Os diretórios do repositório são montados em `/app` nos contêineres.
 
 3. **Verificar healthchecks**
@@ -37,6 +37,21 @@
 5. **Smoke test (dentro do runtime)**
    ```bash
    docker compose exec runtime python -c "import urllib.request; print(urllib.request.urlopen('http://control:8001/api/v1/control/healthz').read().decode())"
+   ```
+
+6. **Async /ask (worker + polling)**
+   ```bash
+   curl -s -X POST -H "Content-Type: application/json" \
+     -H "X-API-Key: ${CONTRACTOR_API_KEYS%%,*}" \
+     -H "X-Async: 1" \
+     -d '{"tenant_id":"demo","question":"health status","release_alias":"current"}' \
+     http://localhost:8000/api/v1/runtime/ask | jq
+   ```
+
+   Em seguida, use o `request_id` para polling:
+   ```bash
+   curl -s -H "X-API-Key: ${CONTRACTOR_API_KEYS%%,*}" \
+     http://localhost:8000/api/v1/runtime/ask/result/<request_id> | jq
    ```
 
 ## Encerrar

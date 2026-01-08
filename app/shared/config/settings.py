@@ -61,6 +61,17 @@ class Settings(BaseSettings):
 
     runtime_redis_url: str | None = None
     rate_limit_redis_url: str | None = None
+    runtime_async_enabled: bool = Field(default=False, validation_alias="RUNTIME_ASYNC_ENABLED")
+    runtime_async_always: bool = Field(default=False, validation_alias="ASYNC_ALWAYS")
+    runtime_async_question_length_threshold: int = Field(
+        default=200, validation_alias="RUNTIME_ASYNC_QUESTION_LENGTH_THRESHOLD"
+    )
+    runtime_async_result_ttl_seconds: int = Field(
+        default=600, validation_alias="RUNTIME_ASYNC_RESULT_TTL_SECONDS"
+    )
+    runtime_async_worker_block_seconds: int = Field(
+        default=5, validation_alias="RUNTIME_ASYNC_WORKER_BLOCK_SECONDS"
+    )
 
     # Local registry base for MVP (filesystem). In AWS stage, this will be S3.
     bundle_registry_base: str = "registry/tenants"

@@ -25,6 +25,7 @@ services:
     environment:
       - CONTROL_BASE_URL=http://control:8001
       - BUNDLE_REGISTRY_BASE=registry/tenants
+      - RUNTIME_REDIS_URL=redis://redis:6379/0
     volumes:
       - ./:/app
     depends_on:
@@ -37,6 +38,24 @@ services:
       interval: 10s
       timeout: 3s
       retries: 10
+    networks:
+      - contractor_net
+
+  worker:
+    build: .
+    command: ["python","-m","app.runtime.worker.main"]
+    env_file: .env
+    environment:
+      - CONTROL_BASE_URL=http://control:8001
+      - BUNDLE_REGISTRY_BASE=registry/tenants
+      - RUNTIME_REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+      runtime:
+        condition: service_healthy
     networks:
       - contractor_net
 
