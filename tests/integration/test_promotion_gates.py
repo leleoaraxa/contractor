@@ -11,6 +11,9 @@ os.environ["CONTRACTOR_API_KEY"] = TEST_API_KEY
 
 MOCK_POSTGRES_DSN = "postgresql://user:pass@host:5432/db"
 os.environ["POSTGRES_DSN"] = MOCK_POSTGRES_DSN
+os.environ["RATE_LIMIT_BACKEND"] = "memory"
+os.environ["RATE_LIMIT_RPS"] = "1"
+os.environ["RATE_LIMIT_BURST"] = "1"
 # --- End of environment variable setup ---
 
 from app.shared.config import settings as settings_module
@@ -25,6 +28,8 @@ from app.control_plane.domain.quality.reports import PromotionSetRepository, Qua
 from app.control_plane.domain.templates.safety import TemplateSafetyValidator
 from app.runtime.api.main import app as runtime_app
 from app.shared.security import rate_limit as rate_limit_module
+
+rate_limit_module._reset_rate_limiter_for_tests()
 
 
 def _utcnow() -> str:
