@@ -16,6 +16,10 @@ curl -f -H "X-API-Key: ${CONTRACTOR_API_KEYS%%,*}" \
 
 > Com `CONTRACTOR_AUTH_DISABLED=1`, o header `X-API-Key` é opcional.
 
+## Como rodar smoke.sh
+
+Ao executar `scripts/dev/smoke.sh` dentro do container, certifique-se de que a imagem tenha `curl` instalado.
+
 ## Pipeline /ask (resumo)
 
 1. **Autenticação e rate limit**
