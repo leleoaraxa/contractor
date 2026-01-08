@@ -105,6 +105,7 @@ class TokenBucketRateLimiter:
     def __init__(self) -> None:
         self.rps = max(0, settings.rate_limit_rps)
         self.burst = max(0, settings.rate_limit_burst)
+        self.using_memory_fallback = False
         self.backend = self._select_backend()
 
     def _select_backend(self) -> _BaseRateLimitBackend:
@@ -116,6 +117,10 @@ class TokenBucketRateLimiter:
                 logger.warning(
                     "rate limiter using in-memory backend (redis error: %s)", exc
                 )
+                self.using_memory_fallback = True
+                return _MemoryRateLimitBackend()
+        logger.warning("rate limiter: Redis not configured, using in-memory backend")
+        self.using_memory_fallback = True
         return _MemoryRateLimitBackend()
 
     def consume(
