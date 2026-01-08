@@ -5,6 +5,7 @@ Este runbook descreve o pipeline atual do runtime, incluindo resolução de alia
 ## Endpoints do runtime
 
 - `POST /api/v1/runtime/ask`
+- `GET /api/v1/runtime/ask/result/{request_id}`
 - `GET /api/v1/runtime/healthz`
 
 ## Como validar runtime healthz
@@ -38,8 +39,28 @@ Ao executar `scripts/dev/smoke.sh` dentro do container, certifique-se de que a i
    - Apenas quando o `plan.action` exige SQL e existe `entity_id`.
    - Caso contrário, o runtime retorna `execution.status=skipped` (sem 500).
    - `PostgresExecutor` usa `POSTGRES_DSN` e executa `SELECT * FROM <entity> LIMIT 10`.
-6. **Formatação + cache**
+6. **Decisão sync vs async (cache miss)**
+   - Se cache hit, responde `200` imediatamente.
+   - Se cache miss e `X-Async: 1` (ou `ASYNC_ALWAYS=1`), o runtime enfileira o job no Redis e retorna `202` com `request_id`.
+   - Se Redis estiver indisponível, o runtime retorna `503` com `detail.error=async_unavailable`.
+7. **Execução + formatação + cache**
    - `Formatter` monta resposta e `RuntimeCache` guarda resultado (quando habilitado).
+
+## Async polling (worker + result store)
+
+Quando o `/ask` retorna `202`, o cliente deve consultar o resultado usando:
+
+```bash
+curl -s -H "X-API-Key: ${CONTRACTOR_API_KEYS%%,*}" \
+  http://localhost:8000/api/v1/runtime/ask/result/<request_id> | jq
+```
+
+Estados possíveis:
+- `404` com `{detail:{error:"not_ready"}}` enquanto o worker não processou.
+- `404` com `{detail:{error:"expired"}}` quando a chave expira.
+- `200` com o mesmo payload do `/ask` síncrono quando pronto.
+
+TTL do resultado é controlado por `RUNTIME_ASYNC_RESULT_TTL_SECONDS` (default: 600).
 
 ## Exemplo de request
 
@@ -58,9 +79,10 @@ Baseado em `.env.example` e `app/shared/config/settings.py`:
 
 ### Runtime
 - `RUNTIME_HOST`, `RUNTIME_PORT`, `RUNTIME_BASE_URL`
-- `RUNTIME_REDIS_URL` (cache opcional)
+- `RUNTIME_REDIS_URL` (cache e fila async)
 - `POSTGRES_DSN` (**obrigatório** para `PostgresExecutor`)
 - Dependência Python: `redis` (necessário para o rate limiter usar Redis)
+- Async: `ASYNC_ALWAYS`, `RUNTIME_ASYNC_ENABLED`, `RUNTIME_ASYNC_QUESTION_LENGTH_THRESHOLD`, `RUNTIME_ASYNC_RESULT_TTL_SECONDS`
 
 ### Control Plane (necessário para resolução de alias)
 - `CONTROL_BASE_URL`
