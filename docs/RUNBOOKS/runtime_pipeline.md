@@ -41,7 +41,7 @@ Ao executar `scripts/dev/smoke.sh` dentro do container, certifique-se de que a i
    - `PostgresExecutor` usa `POSTGRES_DSN` e executa `SELECT * FROM <entity> LIMIT 10`.
 6. **Decisão sync vs async (cache miss)**
    - Se cache hit, responde `200` imediatamente.
-   - Se cache miss e `X-Async: 1` (ou `ASYNC_ALWAYS=1`), o runtime enfileira o job no Redis e retorna `202` com `request_id`.
+   - Se cache miss e `X-Async: 1` (ou `RUNTIME_ASYNC_ALWAYS=1`, alias legado `ASYNC_ALWAYS`), o runtime enfileira o job no Redis e retorna `202` com `request_id`.
    - Se Redis estiver indisponível, o runtime retorna `503` com `detail.error=async_unavailable`.
 7. **Execução + formatação + cache**
    - `Formatter` monta resposta e `RuntimeCache` guarda resultado (quando habilitado).
@@ -82,7 +82,7 @@ Baseado em `.env.example` e `app/shared/config/settings.py`:
 - `RUNTIME_REDIS_URL` (cache e fila async)
 - `POSTGRES_DSN` (**obrigatório** para `PostgresExecutor`)
 - Dependência Python: `redis` (necessário para o rate limiter usar Redis)
-- Async: `ASYNC_ALWAYS`, `RUNTIME_ASYNC_ENABLED`, `RUNTIME_ASYNC_QUESTION_LENGTH_THRESHOLD`, `RUNTIME_ASYNC_RESULT_TTL_SECONDS`
+- Async: `RUNTIME_ASYNC_ALWAYS` (alias legado `ASYNC_ALWAYS`), `RUNTIME_ASYNC_ENABLED`, `RUNTIME_ASYNC_QUESTION_LENGTH_THRESHOLD`, `RUNTIME_ASYNC_RESULT_TTL_SECONDS`, `RUNTIME_ASYNC_WORKER_BLOCK_SECONDS`
 
 ### Control Plane (necessário para resolução de alias)
 - `CONTROL_BASE_URL`

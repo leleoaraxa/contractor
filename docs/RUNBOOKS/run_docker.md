@@ -10,10 +10,11 @@
    ```bash
    cp .env.example .env
    ```
-   - Para Redis, mantenha `redis://redis:6379/0` (acesso via serviço `redis` do compose).
-   - Para usar o Postgres do compose, mantenha `POSTGRES_DSN=postgresql://postgres:contractor@contractor_db:5432/contractor` (default do `.env.example`).
-   - Se quiser usar um Postgres externo, ajuste `POSTGRES_DSN` (ex.: `postgresql://user:pass@host.docker.internal:5432/db`).
-   - Certifique-se de que a rede `contractor_net` exista (`docker network create contractor_net`).
+  - Para Redis, mantenha `redis://redis:6379/0` (acesso via serviço `redis` do compose).
+  - Para usar o Postgres do compose, mantenha `POSTGRES_DSN=postgresql://postgres:contractor@contractor_db:5432/contractor` (default do `.env.example`).
+  - Se quiser usar um Postgres externo, ajuste `POSTGRES_DSN` (ex.: `postgresql://user:pass@host.docker.internal:5432/db`).
+  - Para async /ask, use `RUNTIME_ASYNC_ENABLED=1` e, se necessário, `RUNTIME_ASYNC_ALWAYS=1` (alias legado `ASYNC_ALWAYS`).
+  - Certifique-se de que a rede `contractor_net` exista (`docker network create contractor_net`).
 
 2. **Subir serviços**
    ```bash

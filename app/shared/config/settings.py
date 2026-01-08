@@ -62,7 +62,10 @@ class Settings(BaseSettings):
     runtime_redis_url: str | None = None
     rate_limit_redis_url: str | None = None
     runtime_async_enabled: bool = Field(default=False, validation_alias="RUNTIME_ASYNC_ENABLED")
-    runtime_async_always: bool = Field(default=False, validation_alias="ASYNC_ALWAYS")
+    runtime_async_always: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("RUNTIME_ASYNC_ALWAYS", "ASYNC_ALWAYS"),
+    )
     runtime_async_question_length_threshold: int = Field(
         default=200, validation_alias="RUNTIME_ASYNC_QUESTION_LENGTH_THRESHOLD"
     )

@@ -1,7 +1,8 @@
 # app/runtime/api/main.py
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
+from prometheus_client import CONTENT_TYPE_LATEST, REGISTRY, generate_latest
 
 from app.shared.logging.logger import configure_logging
 from app.runtime.api.routers.healthz import router as healthz_router
@@ -14,6 +15,10 @@ def create_app() -> FastAPI:
 
     app.include_router(healthz_router, prefix="/api/v1/runtime")
     app.include_router(ask_router, prefix="/api/v1/runtime")
+
+    @app.get("/metrics")
+    def metrics() -> Response:
+        return Response(content=generate_latest(REGISTRY), media_type=CONTENT_TYPE_LATEST)
 
     return app
 

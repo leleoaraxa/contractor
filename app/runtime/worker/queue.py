@@ -107,3 +107,8 @@ def queue_depth() -> Optional[int]:
         return int(client.llen(QUEUE_KEY))
     except Exception:
         return None
+
+
+def _reset_redis_client_for_tests() -> None:
+    global _REDIS_CLIENT
+    _REDIS_CLIENT = None

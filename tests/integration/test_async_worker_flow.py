@@ -25,6 +25,7 @@ from app.runtime.worker import queue as queue_module
 
 
 def test_async_flow_returns_result():
+    queue_module._reset_redis_client_for_tests()
     runtime_client = TestClient(runtime_app)
     headers = {"X-API-Key": TEST_API_KEY, "X-Async": "1"}
 
@@ -64,6 +65,9 @@ def test_async_flow_returns_result():
     ), patch(
         "app.runtime.worker.queue.write_result",
         side_effect=fake_write_result,
+    ), patch(
+        "app.runtime.worker.queue.queue_depth",
+        return_value=0,
     ):
         mock_resolve.return_value = ResolveResult(bundle_id=bundle_id, url="mocked", status="ok")
 
