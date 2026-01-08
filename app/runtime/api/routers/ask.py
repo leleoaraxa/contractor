@@ -33,8 +33,15 @@ def _should_run_async(req: AskRequest, request: Request) -> bool:
     return False
 
 
-@router.post("/ask", response_model=AskResponse)
-def ask(req: AskRequest, request: Request) -> AskResponse:
+@router.post(
+    "/ask",
+    response_model=AskResponse,
+    responses={
+        202: {"description": "Accepted"},
+        503: {"description": "Async unavailable"},
+    },
+)
+def ask(req: AskRequest, request: Request) -> AskResponse | JSONResponse:
     x_explain = (request.headers.get("X-Explain") or "").strip().lower()
     explain_enabled = x_explain in {"1", "true", "yes", "y", "on"}
     require_api_key(request)

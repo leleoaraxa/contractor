@@ -2,36 +2,40 @@
 from __future__ import annotations
 
 import time
-from typing import Dict
 
-_ASYNC_METRICS: Dict[str, float] = {
-    "runtime_async_jobs_enqueued_total": 0,
-    "runtime_async_jobs_processed_total_ok": 0,
-    "runtime_async_jobs_processed_total_fail": 0,
-    "runtime_async_job_latency_seconds_total": 0.0,
-    "runtime_async_job_latency_seconds_count": 0,
-    "runtime_async_job_latency_seconds_max": 0.0,
-    "runtime_async_queue_depth": 0,
-}
+from prometheus_client import Counter, Gauge, Histogram
+
+_ASYNC_JOBS_ENQUEUED = Counter(
+    "runtime_async_jobs_enqueued_total",
+    "Total number of async jobs enqueued.",
+)
+_ASYNC_JOBS_PROCESSED = Counter(
+    "runtime_async_jobs_processed_total",
+    "Total number of async jobs processed.",
+    ["outcome"],
+)
+_ASYNC_JOB_LATENCY = Histogram(
+    "runtime_async_job_latency_seconds",
+    "Latency for async job processing.",
+)
+_ASYNC_QUEUE_DEPTH = Gauge(
+    "runtime_async_queue_depth",
+    "Current async queue depth.",
+)
 
 
 def record_enqueue() -> None:
-    _ASYNC_METRICS["runtime_async_jobs_enqueued_total"] += 1
+    _ASYNC_JOBS_ENQUEUED.inc()
 
 
 def record_processed(outcome: str, latency_seconds: float) -> None:
-    if outcome == "ok":
-        _ASYNC_METRICS["runtime_async_jobs_processed_total_ok"] += 1
-    else:
-        _ASYNC_METRICS["runtime_async_jobs_processed_total_fail"] += 1
-    _ASYNC_METRICS["runtime_async_job_latency_seconds_total"] += latency_seconds
-    _ASYNC_METRICS["runtime_async_job_latency_seconds_count"] += 1
-    if latency_seconds > _ASYNC_METRICS["runtime_async_job_latency_seconds_max"]:
-        _ASYNC_METRICS["runtime_async_job_latency_seconds_max"] = latency_seconds
+    label = "ok" if outcome == "ok" else "fail"
+    _ASYNC_JOBS_PROCESSED.labels(outcome=label).inc()
+    _ASYNC_JOB_LATENCY.observe(latency_seconds)
 
 
 def record_queue_depth(depth: int) -> None:
-    _ASYNC_METRICS["runtime_async_queue_depth"] = depth
+    _ASYNC_QUEUE_DEPTH.set(depth)
 
 
 def start_timer() -> float:
@@ -40,7 +44,3 @@ def start_timer() -> float:
 
 def stop_timer(start: float) -> float:
     return max(0.0, time.perf_counter() - start)
-
-
-def snapshot() -> Dict[str, float]:
-    return dict(_ASYNC_METRICS)
