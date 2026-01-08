@@ -96,6 +96,13 @@ Problemas comuns ao subir o Control Plane + Runtime localmente.
   1. Garanta que o script use `pipefail` apenas como best-effort.
   2. Verifique se `bash` está instalado na imagem/contêiner.
 
+## smoke.sh falha com `curl: command not found`
+- **Sintoma**: `curl: command not found` ao executar `scripts/dev/smoke.sh` dentro do container.
+- **Causa provável**: imagem baseada em `python:3.11-slim` sem `curl`.
+- **Ação**:
+  1. Adicione `curl` (e `ca-certificates`) no `Dockerfile`.
+  2. Rebuild da imagem e reinicie os serviços.
+
 ## quality/run falha com HTTP 500 calling runtime
 - **Sintoma**: `quality/run` falha com `HTTP 500 calling http://runtime:8000/api/v1/runtime/ask`.
 - **Causa provável**: plano inválido sem `entity_id`, causando falha na execução SQL.
