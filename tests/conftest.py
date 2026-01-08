@@ -6,8 +6,8 @@ import os
 import pytest
 
 os.environ.setdefault("RATE_LIMIT_BACKEND", "memory")
-os.environ.setdefault("RATE_LIMIT_RPS", "0.001")
-os.environ.setdefault("RATE_LIMIT_BURST", "1")
+os.environ.setdefault("RATE_LIMIT_RPS", "1000")
+os.environ.setdefault("RATE_LIMIT_BURST", "1000")
 
 
 @pytest.fixture(autouse=True)
