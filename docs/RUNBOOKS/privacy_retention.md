@@ -25,22 +25,37 @@
 
 ### 3.2 Audit log (control plane)
 - Arquivo: `registry/control_plane/audit.log`
-- Truncar após o período definido:
+- Procedimento seguro (Stage 2, manual):
+  1. **Pare o serviço do control plane** para evitar escrita concorrente.
+  2. Faça backup do arquivo atual.
+  3. Trunque o arquivo.
+  4. Reinicie o control plane.
+- Exemplo:
   ```bash
-  : > registry/control_plane/audit.log
-  ```
-- Opcional: arquivar antes de truncar
-  ```bash
+  docker compose stop control
   mkdir -p archive/audit
   cp registry/control_plane/audit.log archive/audit/audit-$(date +%F).log
+  : > registry/control_plane/audit.log
+  docker compose start control
+  ```
+- Alternativa (se não for possível parar o serviço): faça backup, trunque rapidamente e valide que o processo reabriu o arquivo; registre a evidência da operação.
+- Truncar após o período definido (apenas se o serviço estiver parado):
+  ```bash
   : > registry/control_plane/audit.log
   ```
 
 ### 3.3 Cache runtime
 - **Redis** (se habilitado via `RUNTIME_REDIS_URL`):
-  ```bash
-  redis-cli --scan --pattern 'tenant:*|bundle:*' | xargs -r redis-cli del
-  ```
+  - **Opção A (dev/test apenas, destrutiva)**: limpar toda a base do Redis usada pelo runtime.
+    ```bash
+    redis-cli FLUSHDB
+    ```
+  - **Opção B (se existir prefixo documentado)**: usar `SCAN` com o prefixo real e **somente** então remover chaves específicas.
+    - Se não houver prefixo documentado, **não** executar purge seletivo para evitar remoções erradas.
+    ```bash
+    # Exemplo genérico — substitua <PREFIXO_REAL_DOCUMENTADO>
+    redis-cli --scan --pattern '<PREFIXO_REAL_DOCUMENTADO>*' | xargs -r redis-cli del
+    ```
 - **In-memory**: reinicie o serviço do runtime para limpar o cache.
   ```bash
   docker compose restart runtime
