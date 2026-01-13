@@ -33,8 +33,8 @@ Problemas comuns ao subir o Control Plane + Runtime localmente.
   2. Se estiver rodando via docker-compose, confirme que a porta 8000 está exposta e que o serviço `runtime` está healthy.
   3. Se você passou `--runtime-base` com `/api/v1/runtime`, use apenas a raiz (ex.: `http://localhost:8000`).
 
-## smoke_docker: API key ausente
-- **Sintoma**: `scripts/dev/smoke_docker.ps1` imprime warning sobre fallback `dev-key`.
+## smoke.sh: API key ausente
+- **Sintoma**: `scripts/dev/smoke.sh` imprime warning sobre fallback `dev-key`.
 - **Ação**:
   1. Defina `CONTRACTOR_API_KEY(S)` se quiser validar chaves reais.
   2. Com `CONTRACTOR_AUTH_DISABLED=1`, o header `X-API-Key` é opcional.
@@ -74,7 +74,7 @@ Problemas comuns ao subir o Control Plane + Runtime localmente.
   3. Rode novamente as suites `demo_thresholds_suite` e `demo_routing_suite`.
 
 ## smoke rate limit retorna 500
-- **Sintoma**: `scripts/dev/smoke.ps1` ou `scripts/dev/smoke.sh` falha no bloco “Rate limit enforcement” com `500 Internal Server Error`.
+- **Sintoma**: `scripts/dev/smoke.sh` falha no bloco “Rate limit enforcement” com `500 Internal Server Error`.
 - **Causa provável**: o runtime tentou executar SQL sem `entity_id` no plano (`plan.entity_id` ausente).
 - **Ação**:
   1. Confirme que o runtime está na versão com guardrail que marca execução como `skipped` quando não há entidade.

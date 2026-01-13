@@ -172,6 +172,33 @@ for ((attempt = 1; attempt <= max_attempts; attempt++)); do
     continue
   fi
   if [[ "$RESPONSE_STATUS" == "429" ]]; then
+    python - "$RESPONSE_BODY" <<'PY'
+import json
+import sys
+
+try:
+    data = json.load(open(sys.argv[1]))
+except json.JSONDecodeError:
+    sys.exit(2)
+
+detail = data.get("detail") or {}
+if detail.get("error") != "rate_limit_exceeded":
+    sys.exit(3)
+PY
+    status=$?
+    if [[ "$status" -eq 2 ]]; then
+      echo "429 received but body is not valid JSON"
+      cat "$RESPONSE_BODY"
+      rm -f "$RESPONSE_BODY"
+      exit 1
+    fi
+    if [[ "$status" -eq 3 ]]; then
+      echo "429 received but detail.error is not rate_limit_exceeded"
+      cat "$RESPONSE_BODY"
+      rm -f "$RESPONSE_BODY"
+      exit 1
+    fi
+    rm -f "$RESPONSE_BODY"
     rate_limited=1
     break
   fi
@@ -200,34 +227,6 @@ if [[ "$rate_limited" -ne 1 ]]; then
   echo "rate limit not triggered; adjust RATE_LIMIT_RPS/RATE_LIMIT_BURST or policy"
   exit 1
 fi
-
-python - "$RESPONSE_BODY" <<'PY'
-import json
-import sys
-
-try:
-    data = json.load(open(sys.argv[1]))
-except json.JSONDecodeError:
-    sys.exit(2)
-
-detail = data.get("detail") or {}
-if detail.get("error") != "rate_limit_exceeded":
-    sys.exit(3)
-PY
-status=$?
-if [[ "$status" -eq 2 ]]; then
-  echo "429 received but body is not valid JSON"
-  cat "$RESPONSE_BODY"
-  rm -f "$RESPONSE_BODY"
-  exit 1
-fi
-if [[ "$status" -eq 3 ]]; then
-  echo "429 received but detail.error is not rate_limit_exceeded"
-  cat "$RESPONSE_BODY"
-  rm -f "$RESPONSE_BODY"
-  exit 1
-fi
-rm -f "$RESPONSE_BODY"
 echo "Rate limit OK"
 
 echo "Smoke test completed"
