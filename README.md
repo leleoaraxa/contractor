@@ -1,177 +1,221 @@
 # CONTRACTOR
 
-CONTRACTOR is a multi-tenant, contract-driven analytics runtime designed to execute
-natural language queries (/ask) over real data sources with determinism, governance,
-and enterprise-grade controls.
-
-It is built around explicit contracts (ontology, entities, policies, templates),
-strong separation of concerns, and a clear control plane vs data plane architecture.
+**A deterministic control plane for governed AI systems**
 
 ---
 
-## Why CONTRACTOR exists
+## Overview
 
-Most “AI over data” systems fail in production because they:
-- mix governance and execution
-- rely on hidden heuristics
-- blur the line between data and explanation
-- lack quality gates, auditability, and rollback
+**CONTRACTOR** is a platform designed to **build, operate, and govern AI-powered systems** with strong guarantees of:
 
-CONTRACTOR was designed to solve these problems from day one.
+* determinism
+* auditability
+* isolation
+* controlled evolution
+
+It was created to solve a recurring problem in modern AI systems:
+
+> *How do you scale AI usage without losing control, compliance, or trust?*
+
+CONTRACTOR treats AI not as an opaque model, but as a **governed execution system**.
 
 ---
 
 ## Core Principles
 
-- **Contracts first**
-  Ontology, entities, policies, templates, and quality suites are the source of truth.
+CONTRACTOR is built around a small set of non-negotiable principles:
 
-- **Determinism by design**
-  Same input + same bundle = same result.
+* **Control before scale**
+* **Determinism before convenience**
+* **Governance before automation**
+* **Explicit maturity stages**
+* **Auditability by design**
 
-- **Control Plane ≠ Data Plane**
-  Governance and execution are isolated by architecture.
-
-- **Compute-on-read**
-  CONTRACTOR executes real queries against customer data.
-  It does not persist domain data.
-
-- **Multi-tenant, enterprise-ready**
-  Isolation, observability, security, and billing are first-class concerns.
+These principles are enforced through architecture, not policy alone.
 
 ---
 
-## Architecture Overview
+## What CONTRACTOR Is
 
-### Control Plane
-Responsible for:
-- tenant management
-- artifact registry (bundles)
-- validation and quality gates
-- version promotion (draft → candidate → current)
-- secrets and connections
-- audit logs
+CONTRACTOR is:
 
-### Data Plane (Runtime)
-Responsible for:
-- executing /ask
-- resolving ontology and planner decisions
-- generating SQL
-- executing queries
-- formatting responses
-- enforcing policies (cache, rate limits, RAG boundaries)
-
-The runtime is stateless and tenant-aware.
+* a **Control Plane + Runtime architecture**
+* a **bundle-driven execution system**
+* a **multi-tenant, stage-aware platform**
+* a foundation for **enterprise-grade AI operations**
+* a future **ecosystem platform** for governed AI artifacts
 
 ---
 
-## Artifact Model
+## What CONTRACTOR Is Not
 
-All behavior is defined by **Bundles**, which are immutable sets of artifacts:
+CONTRACTOR is **not**:
 
-- ontology
-- entity catalog and contracts
-- policies (cache, quality, rag, security, limits)
-- templates
-- quality suites
+* a general-purpose AI chatbot
+* a black-box LLM wrapper
+* a prompt playground
+* a low-code AI builder
+* a data storage platform
 
-Each bundle has a unique `bundle_id`.
-Aliases (`draft`, `candidate`, `current`) point to bundles atomically.
-
----
-
-## Multi-Tenant Model
-
-- Every request is scoped by `tenant_id`
-- Cache, metrics, limits, and secrets are tenant-scoped
-- Runtime supports:
-  - shared pool (default)
-  - dedicated runtime (enterprise)
+If you are looking for fast experimentation without governance, CONTRACTOR is not the right tool.
 
 ---
 
-## Security & Privacy
+## Architecture (High-Level)
 
-- Privacy-by-design (LGPD/GDPR aligned)
-- No persistence of customer domain data
-- Mandatory redaction in logs and traces
-- Secrets managed via secure backends (KMS/Secrets Manager)
-- Templates executed in sandboxed environments
+At a high level, CONTRACTOR separates concerns explicitly:
 
----
+* **Control Plane**
 
-## Quality & Reliability
+  * governance
+  * versioning
+  * promotion and rollback
+  * policy enforcement
+  * audit logging
 
-- Quality Gates are mandatory for promotion
-- Routing accuracy, execution validity, and security checks are enforced
-- SLOs and Incident Management are defined explicitly
-- Rollback is a first-class operation
+* **Runtime**
 
----
+  * deterministic execution
+  * request isolation
+  * cache and rate limits
+  * policy-resolved behavior
 
-## Maturity Stages
+Artifacts are packaged as **immutable bundles** and promoted through explicit quality gates.
 
-CONTRACTOR evolves through explicit stages:
-
-- Stage 0 — Foundation
-- Stage 1 — MVP (Early Adopters)
-- Stage 2 — Production Ready
-- Stage 3 — Enterprise Ready
-- Stage 4 — Platform Ecosystem
-
-Features cannot skip stages.
+No bundle is ever modified in place.
 
 ---
 
-## Reference Tenant
+## Maturity Model
 
-Araquem is used as the **reference tenant (tenant zero)**:
-- regression testing
-- benchmark
-- architectural validation
+CONTRACTOR evolves through **explicit maturity stages**, defined in `ADR 0021`.
 
-The platform never depends on Araquem, but Araquem validates the platform.
+| Stage   | Name               | Status   |
+| ------- | ------------------ | -------- |
+| Stage 0 | Foundation         | Complete |
+| Stage 1 | MVP                | Complete |
+| Stage 2 | Production Ready   | Complete |
+| Stage 3 | Enterprise Ready   | Defined  |
+| Stage 4 | Platform Ecosystem | Defined  |
+
+Each stage has:
+
+* clear entry criteria
+* clear exit criteria
+* enforced scope boundaries
+
+No feature may skip a stage.
 
 ---
 
-## Documentation
+## Governance by Design
 
-- `docs/FOUNDATION.md` — Guardrails v0
-- `docs/ADR/` — Architecture Decision Records
-- `docs/C4/` — Architecture diagrams
-- `docs/RUNBOOKS/` — Operação (local, docker, promoção, troubleshooting)
-- `docs/SECURITY.md` — Threat model and security baseline
+Governance in CONTRACTOR is not an afterthought.
+
+The platform enforces:
+
+* immutable artifacts
+* explicit promotion flows
+* auditable decisions
+* incident management
+* rollback as a first-class operation
+* privacy-by-design and minimal retention
+
+All architectural decisions are documented as **ADRs (Architecture Decision Records)**.
 
 ---
 
-## Non-Goals
+## Privacy and Data Responsibility
 
-- No heuristic-based behavior
-- No hidden business logic in code
-- No domain-specific assumptions
-- No persistence of customer data
+CONTRACTOR is designed to operate under **LGPD/GDPR principles**.
+
+Key guarantees:
+
+* CONTRACTOR acts as **Data Processor**
+* tenants remain **Data Controllers**
+* no customer domain data is persisted
+* execution data is ephemeral by default
+* retention is explicit and configurable
+* API keys and secrets are never logged
+
+See `ADR 0018` for details.
+
+---
+
+## Enterprise Readiness
+
+At the Enterprise stage, CONTRACTOR supports:
+
+* dedicated runtimes
+* strict tenant isolation
+* enterprise SLAs
+* tenant-level observability
+* escalation and incident models
+* data residency boundaries
+* identity and access segregation
+
+Enterprise capabilities are unlocked **only after Stage 3 completion**.
+
+---
+
+## Ecosystem Vision
+
+CONTRACTOR is designed to evolve into a governed ecosystem:
+
+* bundle marketplace
+* partner and integrator programs
+* quality enforcement
+* reputation and trust systems
+* commercial and legal abstraction
+* controlled platform exit and sunset
+
+This vision is documented in ADRs 0029–0038.
+
+---
+
+## What We Will Never Do
+
+CONTRACTOR has explicit guardrails.
+
+We will never:
+
+* store customer domain data
+* bypass quality gates
+* allow mutable production artifacts
+* make non-auditable decisions
+* promise enterprise guarantees prematurely
+* lock tenants into the platform
+
+These guardrails protect both operators and customers.
 
 ---
 
 ## Status
 
-Current stage: **Stage 0 — Foundation**
+CONTRACTOR is:
 
-CONTRACTOR is under active development and not yet a commercial product.
+* architecturally complete through Stage 2
+* enterprise-ready by design
+* actively evolving toward Stage 3
+
+The roadmap is explicit, documented, and enforced.
 
 ---
 
-## How to run
+## Documentation
 
-- **Local (sem Docker):** siga `docs/RUNBOOKS/run_local.md` para preparar `.env`, instalar dependências (`pip install -e .`) e iniciar Control Plane + Runtime via scripts em `scripts/dev/`.
-- **Docker Compose:** siga `docs/RUNBOOKS/run_docker.md` para subir `control`, `runtime` e o placeholder `redis` com `docker compose up --build`.
-- **Smoke test:** `./scripts/dev/smoke.sh` após os serviços estarem no ar (local ou Docker).
+* `docs/ADR/` — Architecture Decision Records
+* `docs/STATUS/` — maturity and readiness documents
+* `docs/RUNBOOKS/` — operational procedures
+* `docs/GUARDRAILS/` — non-negotiable constraints
+* `docs/AUDIT/` — audit and compliance readiness
 
-## Stage 0 Exit Criteria
+---
 
-Para declarar Stage 0 concluído:
-- Control Plane e Runtime sobem localmente ou via Docker (`healthz` ok) e consomem o registry filesystem.
-- Um bundle mínimo é validado e promovido para `current` (ex.: demo `202601050001`).
-- `/ask` responde de forma determinística usando `tenant_id` + alias atual, sem hardcodes de domínio.
-- Licença, `.env.example`, ADRs e diagramas C4 estão presentes e atualizados.
-- Runbooks documentam execução, promoção/rollback e troubleshooting inicial.
+## Final Note
+
+CONTRACTOR is not built to move fast at any cost.
+
+It is built to **move correctly**, then scale with confidence.
+
+---
