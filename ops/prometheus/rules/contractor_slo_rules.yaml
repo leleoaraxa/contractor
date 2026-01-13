@@ -1,0 +1,14 @@
+groups:
+  - name: contractor.slo.recording
+    interval: 30s
+    rules:
+      - record: contractor:http_requests:rate5m
+        expr: sum by (service, path, status_code) (rate(http_requests_total[5m]))
+      - record: contractor:http_requests:rate30m
+        expr: sum by (service, path, status_code) (rate(http_requests_total[30m]))
+      - record: contractor:http_requests:rate1h
+        expr: sum by (service, path, status_code) (rate(http_requests_total[1h]))
+      - record: contractor:http_requests:rate6h
+        expr: sum by (service, path, status_code) (rate(http_requests_total[6h]))
+      - record: contractor:http_requests:increase30d
+        expr: sum by (service, path, status_code) (increase(http_requests_total[30d]))
