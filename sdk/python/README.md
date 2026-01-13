@@ -36,6 +36,7 @@ cd sdk/python
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .
+python -c "import contractor_sdk; print(contractor_sdk.__version__)"
 ```
 
 ## Configuração
@@ -59,12 +60,10 @@ control = ControlClient(client)
 ### Runtime: /ask
 
 ```python
-response = runtime.ask(
-    {
-        "tenant_id": "tenant-123",
-        "question": "Explain Stage 2 SDKs",
-        "bundle_id": "bundle-abc",
-    }
+response = runtime.ask_question(
+    tenant_id="tenant-123",
+    question="Explain Stage 2 SDKs",
+    bundle_id="bundle-abc",
 )
 print(response)
 ```
