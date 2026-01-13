@@ -18,6 +18,6 @@ def instrument_http(app: FastAPI, service: str) -> None:
             service=service,
             method=request.method,
             path=request.url.path,
-            status_code=response.status_code,
+            status_code=str(response.status_code),
         ).inc()
         return response
