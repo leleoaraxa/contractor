@@ -6,14 +6,14 @@ groups:
           (
             sum(contractor:http_requests:rate5m{service="runtime", path="/api/v1/runtime/ask", status_code=~"5.."})
             /
-            sum(contractor:http_requests:rate5m{service="runtime", path="/api/v1/runtime/ask"})
-          ) / contractor:slo_error_budget{service="runtime", path="/api/v1/runtime/ask"} > 14.4
+            clamp_min(sum(contractor:http_requests:rate5m{service="runtime", path="/api/v1/runtime/ask"}), 1)
+          ) / clamp_min(contractor:slo_error_budget{service="runtime", path="/api/v1/runtime/ask"}, 1e-9) > 14.4
           and
           (
             sum(contractor:http_requests:rate1h{service="runtime", path="/api/v1/runtime/ask", status_code=~"5.."})
             /
-            sum(contractor:http_requests:rate1h{service="runtime", path="/api/v1/runtime/ask"})
-          ) / contractor:slo_error_budget{service="runtime", path="/api/v1/runtime/ask"} > 6
+            clamp_min(sum(contractor:http_requests:rate1h{service="runtime", path="/api/v1/runtime/ask"}), 1)
+          ) / clamp_min(contractor:slo_error_budget{service="runtime", path="/api/v1/runtime/ask"}, 1e-9) > 6
         for: 5m
         labels:
           severity: page
@@ -21,19 +21,20 @@ groups:
         annotations:
           summary: "Runtime /ask SLO fast burn"
           description: "Runtime /api/v1/runtime/ask is burning error budget quickly. Check recent 5xx rates and downstream dependencies."
+
       - alert: ContractorRuntimeAskSLOSlowBurn
         expr: |
           (
             sum(contractor:http_requests:rate30m{service="runtime", path="/api/v1/runtime/ask", status_code=~"5.."})
             /
-            sum(contractor:http_requests:rate30m{service="runtime", path="/api/v1/runtime/ask"})
-          ) / contractor:slo_error_budget{service="runtime", path="/api/v1/runtime/ask"} > 3
+            clamp_min(sum(contractor:http_requests:rate30m{service="runtime", path="/api/v1/runtime/ask"}), 1)
+          ) / clamp_min(contractor:slo_error_budget{service="runtime", path="/api/v1/runtime/ask"}, 1e-9) > 3
           and
           (
             sum(contractor:http_requests:rate6h{service="runtime", path="/api/v1/runtime/ask", status_code=~"5.."})
             /
-            sum(contractor:http_requests:rate6h{service="runtime", path="/api/v1/runtime/ask"})
-          ) / contractor:slo_error_budget{service="runtime", path="/api/v1/runtime/ask"} > 1
+            clamp_min(sum(contractor:http_requests:rate6h{service="runtime", path="/api/v1/runtime/ask"}), 1)
+          ) / clamp_min(contractor:slo_error_budget{service="runtime", path="/api/v1/runtime/ask"}, 1e-9) > 1
         for: 30m
         labels:
           severity: ticket
@@ -41,19 +42,20 @@ groups:
         annotations:
           summary: "Runtime /ask SLO slow burn"
           description: "Runtime /api/v1/runtime/ask is burning error budget steadily. Investigate elevated 5xx rates."
+
       - alert: ContractorControlHealthzSLOFastBurn
         expr: |
           (
             sum(contractor:http_requests:rate5m{service="control", path="/api/v1/control/healthz", status_code=~"5.."})
             /
-            sum(contractor:http_requests:rate5m{service="control", path="/api/v1/control/healthz"})
-          ) / contractor:slo_error_budget{service="control", path="/api/v1/control/healthz"} > 14.4
+            clamp_min(sum(contractor:http_requests:rate5m{service="control", path="/api/v1/control/healthz"}), 1)
+          ) / clamp_min(contractor:slo_error_budget{service="control", path="/api/v1/control/healthz"}, 1e-9) > 14.4
           and
           (
             sum(contractor:http_requests:rate1h{service="control", path="/api/v1/control/healthz", status_code=~"5.."})
             /
-            sum(contractor:http_requests:rate1h{service="control", path="/api/v1/control/healthz"})
-          ) / contractor:slo_error_budget{service="control", path="/api/v1/control/healthz"} > 6
+            clamp_min(sum(contractor:http_requests:rate1h{service="control", path="/api/v1/control/healthz"}), 1)
+          ) / clamp_min(contractor:slo_error_budget{service="control", path="/api/v1/control/healthz"}, 1e-9) > 6
         for: 5m
         labels:
           severity: page
@@ -61,19 +63,20 @@ groups:
         annotations:
           summary: "Control /healthz SLO fast burn"
           description: "Control /api/v1/control/healthz is burning error budget quickly. Check control plane health and dependencies."
+
       - alert: ContractorControlHealthzSLOSlowBurn
         expr: |
           (
             sum(contractor:http_requests:rate30m{service="control", path="/api/v1/control/healthz", status_code=~"5.."})
             /
-            sum(contractor:http_requests:rate30m{service="control", path="/api/v1/control/healthz"})
-          ) / contractor:slo_error_budget{service="control", path="/api/v1/control/healthz"} > 3
+            clamp_min(sum(contractor:http_requests:rate30m{service="control", path="/api/v1/control/healthz"}), 1)
+          ) / clamp_min(contractor:slo_error_budget{service="control", path="/api/v1/control/healthz"}, 1e-9) > 3
           and
           (
             sum(contractor:http_requests:rate6h{service="control", path="/api/v1/control/healthz", status_code=~"5.."})
             /
-            sum(contractor:http_requests:rate6h{service="control", path="/api/v1/control/healthz"})
-          ) / contractor:slo_error_budget{service="control", path="/api/v1/control/healthz"} > 1
+            clamp_min(sum(contractor:http_requests:rate6h{service="control", path="/api/v1/control/healthz"}), 1)
+          ) / clamp_min(contractor:slo_error_budget{service="control", path="/api/v1/control/healthz"}, 1e-9) > 1
         for: 30m
         labels:
           severity: ticket

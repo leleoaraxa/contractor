@@ -68,8 +68,8 @@ sum(contractor:http_requests:rate5m{service="runtime", path="/api/v1/runtime/ask
 4) Execute os testes existentes:
 
 ```bash
-scripts/smoke.sh
-pytest tests/e2e
+./scripts/dev/smoke.sh
+pytest -q tests/integration/test_e2e_flow.py
 ```
 
 ## Como interpretar alertas
