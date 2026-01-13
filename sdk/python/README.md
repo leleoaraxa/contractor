@@ -8,7 +8,7 @@ Ele é propositalmente simples, versionado e documentado, sem automações compl
 Endpoints públicos e estáveis cobertos:
 
 **Runtime**
-- `POST /api/v1/runtime/ask`
+- `POST /api/v1/runtime/ask` com payload canônico: `{"tenant_id": "...", "question": "...", "bundle_id": "..."}`.
 
 **Control**
 - `GET /api/v1/control/healthz`
@@ -29,11 +29,13 @@ Endpoints públicos e estáveis cobertos:
 
 Este pacote é local e versionado (não publicado no PyPI neste estágio).
 
+Dependência mínima: `requests`.
+
 ```bash
 cd sdk/python
 python -m venv .venv
 source .venv/bin/activate
-pip install -r ../../requirements.txt
+pip install -e .
 ```
 
 ## Configuração
@@ -59,8 +61,9 @@ control = ControlClient(client)
 ```python
 response = runtime.ask(
     {
-        "prompt": "Explain Stage 2 SDKs",
-        "metadata": {"tenant_id": "tenant-123"},
+        "tenant_id": "tenant-123",
+        "question": "Explain Stage 2 SDKs",
+        "bundle_id": "bundle-abc",
     }
 )
 print(response)
@@ -70,8 +73,7 @@ print(response)
 
 ```python
 payload = {
-    "alias": "stable",
-    "version": "v1.2.3",
+    "bundle_id": "bundle-anterior",
 }
 response = control.set_current_alias("tenant-123", payload)
 print(response)
