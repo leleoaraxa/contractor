@@ -4,14 +4,12 @@ Este runbook implementa os SLOs ativos definidos no **ADR 0021** (`docs/ADR/0021
 
 ## Definições de SLO
 
-Fonte de verdade dos targets e janela: `ops/observability/slo.yaml`.
+Fonte de verdade dos targets efetivamente usados nos alertas: `ops/prometheus/rules/contractor_slo_rules.yaml` (metric `contractor:slo_error_budget{...}`). O arquivo `ops/observability/slo.yaml` é apenas referência documental.
 
 | SLO | Serviço | Endpoint | Indicador | Janela | Target |
 | --- | --- | --- | --- | --- | --- |
 | SLO-1 | runtime | `/api/v1/runtime/ask` | disponibilidade (2xx/total) | 30d | 99.5% (configurável) |
 | SLO-2 | control | `/api/v1/control/healthz` | disponibilidade (2xx/total) | 30d | 99.5% (configurável) |
-
-> **Nota**: os alertas Prometheus referenciam explicitamente o target (0.995). Ajuste `ops/observability/slo.yaml` e os rules em conjunto até existir um mecanismo de templating.
 
 ## Onde ficam as rules e alertas
 
@@ -22,12 +20,12 @@ As métricas são expostas em:
 - Runtime: `http://<runtime-host>:8000/metrics`
 - Control: `http://<control-host>:8001/metrics`
 
-## Como validar localmente
+## Como testar
 
 1) Suba os serviços principais:
 
 ```bash
-docker compose up -d control runtime
+docker compose up -d --build
 ```
 
 2) Verifique as métricas:
@@ -65,6 +63,13 @@ curl -s http://localhost:8001/metrics | head -n 20
 sum(contractor:http_requests:rate5m{service="runtime", path="/api/v1/runtime/ask", status_code=~"5.."})
 /
 sum(contractor:http_requests:rate5m{service="runtime", path="/api/v1/runtime/ask"})
+```
+
+4) Execute os testes existentes:
+
+```bash
+scripts/smoke.sh
+pytest tests/e2e
 ```
 
 ## Como interpretar alertas

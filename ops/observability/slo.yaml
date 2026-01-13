@@ -1,3 +1,5 @@
+# Reference-only configuration. Alerts use contractor:slo_error_budget from
+# ops/prometheus/rules/contractor_slo_rules.yaml as the source of truth.
 slo_window: 30d
 slo_targets:
   runtime:

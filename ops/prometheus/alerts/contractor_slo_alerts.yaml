@@ -7,13 +7,13 @@ groups:
             sum(contractor:http_requests:rate5m{service="runtime", path="/api/v1/runtime/ask", status_code=~"5.."})
             /
             sum(contractor:http_requests:rate5m{service="runtime", path="/api/v1/runtime/ask"})
-          ) / 0.005 > 14.4
+          ) / contractor:slo_error_budget{service="runtime", path="/api/v1/runtime/ask"} > 14.4
           and
           (
             sum(contractor:http_requests:rate1h{service="runtime", path="/api/v1/runtime/ask", status_code=~"5.."})
             /
             sum(contractor:http_requests:rate1h{service="runtime", path="/api/v1/runtime/ask"})
-          ) / 0.005 > 6
+          ) / contractor:slo_error_budget{service="runtime", path="/api/v1/runtime/ask"} > 6
         for: 5m
         labels:
           severity: page
@@ -27,13 +27,13 @@ groups:
             sum(contractor:http_requests:rate30m{service="runtime", path="/api/v1/runtime/ask", status_code=~"5.."})
             /
             sum(contractor:http_requests:rate30m{service="runtime", path="/api/v1/runtime/ask"})
-          ) / 0.005 > 3
+          ) / contractor:slo_error_budget{service="runtime", path="/api/v1/runtime/ask"} > 3
           and
           (
             sum(contractor:http_requests:rate6h{service="runtime", path="/api/v1/runtime/ask", status_code=~"5.."})
             /
             sum(contractor:http_requests:rate6h{service="runtime", path="/api/v1/runtime/ask"})
-          ) / 0.005 > 1
+          ) / contractor:slo_error_budget{service="runtime", path="/api/v1/runtime/ask"} > 1
         for: 30m
         labels:
           severity: ticket
@@ -47,13 +47,13 @@ groups:
             sum(contractor:http_requests:rate5m{service="control", path="/api/v1/control/healthz", status_code=~"5.."})
             /
             sum(contractor:http_requests:rate5m{service="control", path="/api/v1/control/healthz"})
-          ) / 0.005 > 14.4
+          ) / contractor:slo_error_budget{service="control", path="/api/v1/control/healthz"} > 14.4
           and
           (
             sum(contractor:http_requests:rate1h{service="control", path="/api/v1/control/healthz", status_code=~"5.."})
             /
             sum(contractor:http_requests:rate1h{service="control", path="/api/v1/control/healthz"})
-          ) / 0.005 > 6
+          ) / contractor:slo_error_budget{service="control", path="/api/v1/control/healthz"} > 6
         for: 5m
         labels:
           severity: page
@@ -67,13 +67,13 @@ groups:
             sum(contractor:http_requests:rate30m{service="control", path="/api/v1/control/healthz", status_code=~"5.."})
             /
             sum(contractor:http_requests:rate30m{service="control", path="/api/v1/control/healthz"})
-          ) / 0.005 > 3
+          ) / contractor:slo_error_budget{service="control", path="/api/v1/control/healthz"} > 3
           and
           (
             sum(contractor:http_requests:rate6h{service="control", path="/api/v1/control/healthz", status_code=~"5.."})
             /
             sum(contractor:http_requests:rate6h{service="control", path="/api/v1/control/healthz"})
-          ) / 0.005 > 1
+          ) / contractor:slo_error_budget{service="control", path="/api/v1/control/healthz"} > 1
         for: 30m
         labels:
           severity: ticket
