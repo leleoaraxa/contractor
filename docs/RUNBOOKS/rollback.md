@@ -3,8 +3,8 @@
 Este runbook formaliza o **rollback completo** exigido no Stage 2 pelo ADR 0021
 (`docs/ADR/0021-product-roadmap-and-maturity-stages.md`). Ele descreve como
 reverter o sistema para um estado funcional anterior usando **os mecanismos já
-existentes** (bundles versionados + aliases `draft/candidate/current` + quality
- gates). Não introduz automação nova.
+existentes** (bundles versionados + aliases `draft/candidate/current` + quality gates).
+Não introduz automação nova.
 
 > **Integração com Incident Management:** para SEV-1, rollback é a ação padrão de
 > mitigação. Consulte `docs/RUNBOOKS/incident_management.md`.
@@ -76,6 +76,8 @@ curl -s -X POST -H "Content-Type: application/json" \
 
 > Alternativa: o endpoint `/versions/{alias}` também funciona, mas `aliases/*`
 > é o caminho recomendado por aplicar gates de qualidade.
+
+⚠️ Executar rollback fora de janelas de pico quando possível.
 
 ### 5.4 Validar resolução do alias após rollback
 
