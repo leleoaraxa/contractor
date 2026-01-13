@@ -1,0 +1,10 @@
+slo_window: 30d
+slo_targets:
+  runtime:
+    ask:
+      path: /api/v1/runtime/ask
+      availability_target: 0.995
+  control:
+    healthz:
+      path: /api/v1/control/healthz
+      availability_target: 0.995
