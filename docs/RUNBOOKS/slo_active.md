@@ -62,7 +62,7 @@ curl -s http://localhost:8001/metrics | head -n 20
 ```promql
 sum(contractor:http_requests:rate5m{service="runtime", path="/api/v1/runtime/ask", status_code=~"5.."})
 /
-sum(contractor:http_requests:rate5m{service="runtime", path="/api/v1/runtime/ask"})
+clamp_min(sum(contractor:http_requests:rate5m{service="runtime", path="/api/v1/runtime/ask"}), 1)
 ```
 
 4) Execute os testes existentes:
