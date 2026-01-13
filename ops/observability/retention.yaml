@@ -1,0 +1,18 @@
+# Stage 2 retention defaults (ADR 0021)
+logs:
+  retention_days: 30
+  notes: "Applies to stdout/container logs; configure in runtime log driver or logrotate."
+audit_logs:
+  retention_days: 90
+  path: registry/control_plane/audit.log
+metrics:
+  retention_days: 30
+  notes: "Configure Prometheus --storage.tsdb.retention.time."
+traces:
+  retention_days: 7
+  notes: "Only if tracing backend is enabled."
+cache:
+  retention_notes: "TTL-driven; no long-term retention."
+artifacts:
+  retention: "indefinite"
+  notes: "Bundles/artifacts are immutable; deletions require governance approval."
