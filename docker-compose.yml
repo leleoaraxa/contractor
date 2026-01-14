@@ -7,6 +7,7 @@ services:
     environment:
       - BUNDLE_REGISTRY_BASE=registry/tenants
       - RUNTIME_BASE_URL=http://runtime:8000
+      - RATE_LIMIT_REDIS_URL=redis://redis_runtime:6379/0
     volumes:
       - ./:/app
     healthcheck:
@@ -28,6 +29,7 @@ services:
       - CONTROL_BASE_URL=http://control:8001
       - BUNDLE_REGISTRY_BASE=registry/tenants
       - RUNTIME_REDIS_URL=redis://redis_runtime:6379/0
+      - RATE_LIMIT_REDIS_URL=redis://redis_runtime:6379/0
     volumes:
       - ./:/app
     depends_on:
@@ -53,6 +55,7 @@ services:
       - CONTROL_BASE_URL=http://control:8001
       - BUNDLE_REGISTRY_BASE=registry/tenants
       - RUNTIME_REDIS_URL=redis://redis_runtime:6379/0
+      - RATE_LIMIT_REDIS_URL=redis://redis_runtime:6379/0
     volumes:
       - ./:/app
     depends_on:
