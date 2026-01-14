@@ -25,6 +25,9 @@ def _build_client(
         "app.runtime.api.main",
         "app.runtime.api.routers.ask",
         "app.runtime.api.routers.healthz",
+        "app.runtime.engine.ask_handler",
+        "app.runtime.engine.runtime_identity",
+        "app.shared.config.settings",
     ):
         if module_name in sys.modules:
             del sys.modules[module_name]
