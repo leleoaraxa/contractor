@@ -15,7 +15,7 @@ from app.runtime.worker import metrics as async_metrics
 from app.runtime.worker import queue as async_queue
 from app.runtime.engine.runtime_identity import get_runtime_identity
 from app.shared.config.settings import settings
-from app.shared.security.auth import require_api_key
+from app.shared.security.auth import enforce_tenant_scope, require_api_key
 
 router = APIRouter()
 logger = logging.getLogger("runtime.ask")
@@ -71,7 +71,8 @@ def _enforce_dedicated_tenant(req: AskRequest) -> None:
 def ask(req: AskRequest, request: Request) -> AskResponse | JSONResponse:
     x_explain = (request.headers.get("X-Explain") or "").strip().lower()
     explain_enabled = x_explain in {"1", "true", "yes", "y", "on"}
-    require_api_key(request)
+    identity = require_api_key(request)
+    enforce_tenant_scope(identity, req.tenant_id, allowed_roles={"tenant_runtime_client"})
     _enforce_dedicated_tenant(req)
     start_time = time.perf_counter()
     status_code: int | None = None

@@ -1,26 +1,51 @@
 # app/shared/security/auth.py
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from fastapi import HTTPException, Request, status
 
 from app.shared.config.settings import settings
 
 
-def _normalized_keys() -> set[str]:
+@dataclass(frozen=True)
+class ApiKeyIdentity:
+    key: str
+    tenant_id: str | None
+    role: str | None
+
+
+def _parse_key_entry(entry: str) -> ApiKeyIdentity:
+    parts = [part.strip() for part in str(entry).split(":") if part.strip()]
+    if not parts:
+        return ApiKeyIdentity(key="", tenant_id=None, role=None)
+    if len(parts) == 1:
+        return ApiKeyIdentity(key=parts[0], tenant_id=None, role=None)
+    if len(parts) == 2:
+        return ApiKeyIdentity(key=parts[1], tenant_id=parts[0], role=None)
+    return ApiKeyIdentity(key=":".join(parts[2:]), tenant_id=parts[0], role=parts[1])
+
+
+def _normalized_keys() -> list[ApiKeyIdentity]:
     raw = settings.contractor_api_keys or []
-    return {str(k).strip() for k in raw if str(k).strip()}
+    identities: list[ApiKeyIdentity] = []
+    for entry in raw:
+        parsed = _parse_key_entry(entry)
+        if parsed.key:
+            identities.append(parsed)
+    return identities
 
 
 def auth_disabled() -> bool:
     return bool(settings.contractor_auth_disabled)
 
 
-def require_api_key(request: Request) -> None:
+def require_api_key(request: Request) -> ApiKeyIdentity | None:
     if auth_disabled():
-        return
+        return None
 
-    allowed_keys = _normalized_keys()
-    if not allowed_keys:
+    allowed_identities = _normalized_keys()
+    if not allowed_identities:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="authentication required: configure CONTRACTOR_API_KEYS",
@@ -32,9 +57,33 @@ def require_api_key(request: Request) -> None:
             status_code=status.HTTP_401_UNAUTHORIZED, detail="missing X-API-Key"
         )
 
-    if provided not in allowed_keys:
+    matched = next(
+        (identity for identity in allowed_identities if identity.key == provided), None
+    )
+    if not matched:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="invalid API key"
+        )
+    return matched
+
+
+def enforce_tenant_scope(
+    identity: ApiKeyIdentity | None,
+    tenant_id: str,
+    *,
+    allowed_roles: set[str] | None = None,
+) -> None:
+    if identity is None:
+        return
+    if identity.tenant_id and identity.tenant_id != tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"error": "tenant_scope_mismatch"},
+        )
+    if allowed_roles and identity.role and identity.role not in allowed_roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"error": "identity_role_not_allowed"},
         )
 
 
@@ -42,9 +91,9 @@ def outbound_auth_headers() -> dict[str, str]:
     if auth_disabled():
         return {}
 
-    allowed_keys = _normalized_keys()
-    if not allowed_keys:
+    allowed_identities = _normalized_keys()
+    if not allowed_identities:
         return {}
     # deterministic selection of the first key
-    key = sorted(allowed_keys)[0]
-    return {"X-API-Key": key}
+    identity = sorted(allowed_identities, key=lambda item: item.key)[0]
+    return {"X-API-Key": identity.key}
