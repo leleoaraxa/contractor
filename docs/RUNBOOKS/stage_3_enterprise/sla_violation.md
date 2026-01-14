@@ -30,7 +30,7 @@ Métricas por tenant (ADR 0024):
 - **Latência p95 mensal acima do contrato:**
   ```promql
   histogram_quantile(0.95,
-    sum(rate(runtime_tenant_http_request_latency_seconds_bucket{tenant_id="<tenant_id>", status_code=~"2.."}[30d])) by (le)
+    sum(increase(runtime_tenant_http_request_latency_seconds_bucket{tenant_id="<tenant_id>", status_code=~"2.."}[30d])) by (le)
   ) > <contract_p95_seconds>
   ```
 - **Burn rate acelerado (risco de violação):**
