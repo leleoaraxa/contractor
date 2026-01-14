@@ -1,6 +1,6 @@
 # Stage 3 Readiness Audit Report (ADR 0028)
 
-**Date:** 2026-01-13
+**Generated at:** 2026-01-14
 **Scope:** Stage 3 (Enterprise Ready) readiness audit per ADR 0028.
 **Primary source:** `docs/ADR/0028-stage-3-completion-and-readiness-checklist.md`
 **Reference ADRs:** 0018, 0021–0027
@@ -18,39 +18,69 @@ Este relatório audita o checklist do ADR 0028 para o Stage 3 (Enterprise Ready)
 
 **ADRs 0018 e 0021–0027 (referência obrigatória)**
 - `docs/ADR/0018-data-privacy-lgpd-gdpr-and-retention-policies.md`
+  - Evidence note: define privacidade, classificação de dados e políticas de retenção (LGPD/GDPR).
 - `docs/ADR/0021-product-roadmap-and-maturity-stages.md`
+  - Evidence note: descreve o roadmap e critérios dos estágios de maturidade (Stage 0–4).
 - `docs/ADR/0022-dedicated-runtime-and-isolation-model.md`
+  - Evidence note: ADR (Draft) do modelo de runtime dedicado e isolamento por tenant.
 - `docs/ADR/0023-enterprise-sla-model.md`
+  - Evidence note: ADR (Draft) do modelo de SLA enterprise com SLOs e penalidades.
 - `docs/ADR/0024-tenant-level-observability.md`
+  - Evidence note: ADR (Draft) define observabilidade por tenant (métricas/logs/traces).
 - `docs/ADR/0025-enterprise-incident-and-escalation-model.md`
+  - Evidence note: ADR (Draft) de incidentes enterprise com severidades e escalonamento.
 - `docs/ADR/0026-enterprise-data-residency-and-compliance-boundaries.md`
+  - Evidence note: ADR (Draft) de residency e limites de compliance por região/tenant.
 - `docs/ADR/0027-enterprise-access-control-and-identity-boundaries.md`
+  - Evidence note: ADR (Draft) de identidade e acesso com escopos e papéis por tenant.
 
 **Testes de integração relevantes**
 - `tests/integration/test_dedicated_runtime_mode.py`
+  - Evidence note: valida runtime dedicado com tenant correto e bloqueio de mismatch.
 - `tests/integration/test_runtime_identity_contract.py`
+  - Evidence note: verifica meta de identidade do runtime em modos dedicado e compartilhado.
 - `tests/integration/test_runtime_access_control.py`
+  - Evidence note: cobre chaves por tenant e rejeição por papel/escopo inválido.
 - `tests/integration/test_runtime_data_residency.py`
+  - Evidence note: valida metadata e enforcement de residency no runtime dedicado.
 - `tests/integration/test_runtime_tenant_observability.py`
+  - Evidence note: garante métricas do runtime com label de tenant em `runtime_tenant_http_requests_total`.
 - `tests/integration/test_promotion_gates.py`
+  - Evidence note: exercita gates de promoção (validation, template safety, rate limit).
 
 **Scripts de smoke/promotion/rollback e quality gates**
 - `scripts/dev/smoke.sh`
+  - Evidence note: smoke test com health checks e promoção de bundles via control/runtime.
 - `scripts/quality/smoke_quality_gate.py`
+  - Evidence note: script CLI para validar o fluxo de quality gates via HTTP.
 - `scripts/release/promote_candidate_to_current.ps1`
+  - Evidence note: script PowerShell para promover candidate → current com validação.
 
 **Runbooks (incluindo Stage 3 enterprise)**
 - `docs/RUNBOOKS/incident_management.md`
+  - Evidence note: define processo de incidentes, severidades e gatilhos Stage 2.
 - `docs/RUNBOOKS/rollback.md`
+  - Evidence note: descreve rollback manual completo via aliases e validações.
 - `docs/RUNBOOKS/privacy_retention.md`
+  - Evidence note: orienta retenção/purge e aponta caminho de audit log.
 - `docs/RUNBOOKS/slo_active.md`
+  - Evidence note: define SLOs ativos e consultas PromQL (métricas gerais `contractor:*`).
 - `docs/RUNBOOKS/release_promotion.md`
+  - Evidence note: fluxo de promoção/rollback com endpoints e nota de audit log.
 - `docs/RUNBOOKS/stage_3_enterprise/*` (D6 runbooks)
+  - Evidence note: runbooks enterprise (runtime down, suspected breach, SLA violation) + cobertura D6.
 
 **Arquitetura / deployment / runtime control**
 - `docs/C4/stage-3/context.md`
+  - Evidence note: diagrama de contexto Stage 3 com boundaries por tenant.
 - `docs/C4/stage-3/container.md`
+  - Evidence note: visão de contêineres com runtime dedicado e observabilidade.
 - `docs/C4/stage-3/deployment.md`
+  - Evidence note: visão de deployment com residência regional e runtimes por tenant.
+
+### Unverified references / TODOs
+
+Nenhuma referência não verificada no inventário acima.
 
 ---
 
@@ -85,8 +115,8 @@ Este relatório audita o checklist do ADR 0028 para o Stage 3 (Enterprise Ready)
 
 | Item (ADR 0028) | Status | Evidência | Notas / Gap | Ação mínima para fechar (se ❌) |
 | --- | --- | --- | --- | --- |
-| SLOs mensuráveis e auditáveis | ✅ | `docs/RUNBOOKS/slo_active.md`; `ops/prometheus/rules/contractor_slo_rules.yaml` | SLOs com métricas oficiais e regras de cálculo. | — |
-| Métrica de disponibilidade oficial | ✅ | `docs/RUNBOOKS/slo_active.md` | Métrica de disponibilidade definida para runtime e control. | — |
+| SLOs mensuráveis e auditáveis | ✅ | `docs/RUNBOOKS/slo_active.md` | SLOs definidos no runbook; métricas `contractor:*` são **future/general (not yet evidenced)** para Stage 3 tenant-level. | — |
+| Métrica de disponibilidade oficial | ✅ | `docs/RUNBOOKS/slo_active.md` | Fórmula de disponibilidade documentada; dependência atual em métricas `contractor:*` é **future/general (not yet evidenced)**. | — |
 | Processo de cálculo e apuração definido | ✅ | ADR 0023; `docs/RUNBOOKS/slo_active.md` | Fórmulas e janelas descritas. | — |
 | Penalidades e créditos documentados | ✅ | ADR 0023 | Modelo de penalidades por SLA descrito. | — |
 | Modelo documentado (ADR 0023) | ✅ | ADR 0023 | Documento Stage 3 SLA. | — |
@@ -151,7 +181,7 @@ Este relatório audita o checklist do ADR 0028 para o Stage 3 (Enterprise Ready)
 | Runbooks operacionais completos | ✅ | `docs/RUNBOOKS/*`; `docs/RUNBOOKS/stage_3_enterprise/*` | Runbooks principais estão versionados. | — |
 | Status público do produto atualizado | ❌ | `docs/STATUS/STAGE_3_ENTERPRISE_READY.md` (Draft) | Documento Stage 3 não finalizado e não há evidência de publicação pública. | Atualizar status e publicar documento oficial. |
 | Limitações do Stage 3 documentadas | ✅ | ADRs 0022–0027 (non-goals); `docs/STATUS/STAGE_3_ENTERPRISE_READY.md` | Limitações explícitas. | — |
-| Roadmap Stage 4 não iniciado | ❌ | `docs/ADR/0029-stage-4-platform-ecosystem-vision.md` | Stage 4 já está documentado (mesmo que visionário). | Congelar/adiar Stage 4 ou documentar exceção de governança. |
+| Roadmap Stage 4 não iniciado | ⚠️ | `docs/ADR/0029-stage-4-platform-ecosystem-vision.md` | Apenas ADRs visionários/roadmap (sem evidência de execução Stage 4 competindo com Stage 3). | Manter acompanhamento para evitar início de execução antes do fechamento do Stage 3. |
 
 ---
 
