@@ -140,11 +140,17 @@ Nenhuma referência não verificada no inventário acima.
 
 | Item (ADR 0028) | Status | Evidência | Notas / Gap | Ação mínima para fechar (se ❌) |
 | --- | --- | --- | --- | --- |
-| Rollback completo validado em produção | ❌ | — | Sem evidência de rollback em produção. | Executar rollback em ambiente prod e registrar evidência (logs, postmortem, change record). |
+| Rollback completo validado em produção | ❌ | — | Rollback não executado por **ausência de produção ativa**; o fluxo existe, está documentado e foi validado tecnicamente até o limite do ambiente disponível, **sem evidência falsa ou simulada**. | Executar rollback em ambiente prod e registrar evidência (logs, postmortem, change record). |
 | Procedimento manual documentado | ✅ | `docs/RUNBOOKS/rollback.md`; `docs/RUNBOOKS/release_promotion.md` | Procedimento manual via alias. | — |
 | Evidência de teste de rollback | ❌ | — | Não há teste automatizado de rollback. | Adicionar teste/registro de execução de rollback (evidência). |
 | Sem rollback automático não auditado | ✅ | `docs/RUNBOOKS/rollback.md` | Runbook explicita rollback manual. | — |
 | Dependência explícita do Control Plane | ✅ | `docs/RUNBOOKS/rollback.md` | Rollback via alias no control plane. | — |
+
+---
+
+#### Governance Exception — Production Rollback Validation
+
+O item **Rollback completo validado em produção** permanece aberto porque **exige produção real** e não pode ser encerrado sem um tenant enterprise ativo. Esta condição não representa desvio técnico, e sim uma **limitação operacional atual**: o fluxo está documentado e validado no limite do ambiente disponível, porém **não há evidência de execução em produção**. O fechamento deste item é **obrigatório e não opcional** e ocorrerá no **primeiro tenant enterprise em produção**, com evidência registrada em `docs/EVIDENCE/stage_3/`.
 
 ---
 
@@ -187,7 +193,7 @@ Nenhuma referência não verificada no inventário acima.
 
 ## Open Gaps (priorizados)
 
-1. **Rollback validado em produção + evidência registrada.**
+1. **Rollback validado em produção + evidência registrada (bloqueador nº1; depende de evento real de go-live enterprise, não de desenvolvimento adicional).**
 2. **Isolamento de recursos (CPU/memória/cache) por runtime dedicado.**
 3. **Dashboards por tenant versionados (observabilidade enterprise).**
 4. **Garantia de logs sem payload sensível (redaction + teste).**

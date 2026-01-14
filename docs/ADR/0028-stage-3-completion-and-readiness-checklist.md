@@ -42,6 +42,12 @@ Sem 100% deste checklist atendido:
 
 ---
 
+## Governance Notes / Interpretation
+
+Alguns itens do Stage 3 **dependem necessariamente de produção real** e **não podem ser artificialmente validados** sem violar princípios de governança. O item **“Rollback completo validado em produção”** permanece **obrigatório** e deve ser validado **no primeiro tenant enterprise ativo**, sem reclassificar o Stage 3 antes disso. Esta abordagem protege engenharia, protege contratos, evita promessas implícitas e mantém o Stage 3 **defensável e honesto**.
+
+---
+
 ## Stage 3 Readiness Checklist
 
 ### 1. Runtime & Isolation
