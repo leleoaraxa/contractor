@@ -1,6 +1,6 @@
-# Evidência — Observability Enterprise Mínima (Stage 3)
+# Evidência — Observabilidade Enterprise Mínima (Stage 3)
 
-**Objetivo:** documentar a observability mínima exigida no Stage 3 (Enterprise Ready) para auditoria do item 2 (Observability) do ADR 0028, **sem** avançar para Stage 4.
+**Objetivo:** documentar a observabilidade mínima exigida no Stage 3 (Enterprise Ready) para auditoria do item 2 (Observability) do ADR 0028, **sem** avançar para Stage 4.
 
 **Escopo:** somente métricas já existentes (`runtime_tenant_*`, `contractor:*`), logs estruturados sem payload, e evidências documentais/runbooks. Nenhum dashboard versionado foi criado neste artefato.
 
@@ -12,7 +12,7 @@
 | **2.2 Dashboards dedicados por tenant** | Não há dashboards versionados em `ops/` ou `docs/`. | **FAIL** | Dashboards por tenant **ainda não versionados**; métricas existentes permitem criação futura sem refatoração. |
 | **2.3 Logs sem payload sensível** | ADR 0018 define telemetria como **logs redigidos** e ausência de payload; `docs/RUNBOOKS/privacy_retention.md` orienta evitar logging de payload. | **FAIL** | Não há teste automatizado ou evidência operacional que comprove logs estruturados sem payload em runtime dedicado; evidência atual é normativa (política), não comprobatória. |
 | **2.4 Retenção configurável por tenant/plano** | `ops/observability/retention.yaml` documenta defaults globais de retenção. | **FAIL** | Não existe override por tenant/plano documentado ou aplicado; somente defaults globais. |
-| **2.5 Modelo documentado (ADR 0024)** | `docs/ADR/0024-tenant-level-observability.md` define métricas, logs, traces e princípios por tenant. | **PASS** | Documento está em status Draft; requer aprovação formal para fechamento de Stage 3. |
+| **2.5 Modelo documentado (ADR 0024)** | `docs/ADR/0024-tenant-level-observability.md` define métricas, logs, traces e princípios por tenant. | **PASS** | ADR 0024 em Draft impede fechar **apenas** o item 2.5 (“Modelo documentado”) até aprovação formal; itens 2.2–2.4 permanecem **FAIL** por ausência de implementação/evidência. |
 
 ## Notas de auditoria (sem ambiguidade)
 
@@ -26,5 +26,5 @@
 - ADR 0024 — Tenant-Level Observability.
 - ADR 0028 — Stage 3 Completion & Readiness Checklist.
 - ADR 0018 — Data Privacy, LGPD/GDPR and Retention Policies.
-- Runbook — Privacidade e retenção (Stage 2).
+- Runbook vigente/base — Privacidade e retenção.
 - Teste de integração — `tests/integration/test_runtime_tenant_observability.py`.
