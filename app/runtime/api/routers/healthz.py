@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from app.runtime.engine.data_residency import get_residency_contract
 from app.runtime.engine.runtime_identity import get_runtime_identity
 
 router = APIRouter()
@@ -16,4 +17,5 @@ def healthz() -> dict:
         "component": "runtime",
         "runtime_mode": identity.runtime_mode,
         "tenant_scope": identity.tenant_scope,
+        "data_residency": get_residency_contract(),
     }
