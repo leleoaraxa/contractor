@@ -12,6 +12,7 @@ from app.runtime.engine.ask_handler import execute_prepared_ask, prepare_ask
 from app.runtime.engine.ask_models import AskRequest, AskResponse
 from app.runtime.worker import metrics as async_metrics
 from app.runtime.worker import queue as async_queue
+from app.runtime.engine.runtime_identity import get_runtime_identity
 from app.shared.config.settings import settings
 from app.shared.security.auth import require_api_key
 
@@ -37,11 +38,7 @@ def _should_run_async(req: AskRequest, request: Request) -> bool:
 
 
 def _dedicated_tenant_id() -> str | None:
-    configured = getattr(settings, "runtime_dedicated_tenant_id", None)
-    if configured is None:
-        return None
-    configured = str(configured).strip()
-    return configured or None
+    return get_runtime_identity().dedicated_tenant_id
 
 
 def _enforce_dedicated_tenant(req: AskRequest) -> None:
