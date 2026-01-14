@@ -31,8 +31,8 @@ Métricas e sinais auditáveis (ADR 0024), **sem payload**:
   ```
 - **Latência anômala por tenant (p95):**
   ```promql
-  quantile_over_time(0.95,
-    runtime_tenant_http_request_latency_seconds{tenant_id="<tenant_id>", status_code=~"2.."}[5m]
+  histogram_quantile(0.95,
+    sum(rate(runtime_tenant_http_request_latency_seconds_bucket{tenant_id="<tenant_id>", status_code=~"2.."}[5m])) by (le)
   ) > <baseline_p95_seconds>
   ```
 - **Mudanças administrativas inesperadas** (logs de auditoria):
