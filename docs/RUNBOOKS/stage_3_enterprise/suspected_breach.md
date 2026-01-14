@@ -21,12 +21,19 @@ Métricas e sinais auditáveis (ADR 0024), **sem payload**:
 
 - **Picos anômalos de autenticação falha** por tenant:
   ```promql
-  sum(rate(contractor_auth_failures_total{tenant_id="<tenant_id>"}[5m])) > <baseline_threshold>
+  sum(rate(runtime_tenant_http_requests_total{tenant_id="<tenant_id>", status_code=~"401|403"}[5m]))
+  > <baseline_threshold>
   ```
 - **Aumento abrupto de requisições** fora do padrão de uso:
   ```promql
-  sum(rate(contractor_http_requests_total{service="runtime", tenant_id="<tenant_id>"}[5m]))
+  sum(rate(runtime_tenant_http_requests_total{tenant_id="<tenant_id>"}[5m]))
   > <baseline_multiplier>
+  ```
+- **Latência anômala por tenant (p95):**
+  ```promql
+  quantile_over_time(0.95,
+    runtime_tenant_http_request_latency_seconds{tenant_id="<tenant_id>", status_code=~"2.."}[5m]
+  ) > <baseline_p95_seconds>
   ```
 - **Mudanças administrativas inesperadas** (logs de auditoria):
   - rotação de credenciais fora de janela
@@ -81,7 +88,7 @@ Aplicar rollback quando:
 Passos mínimos:
 
 1. validar versão anterior no control plane
-2. executar rollback manual (`docs/RUNBOOKS/rollback.md`)
+2. executar rollback manual ([docs/RUNBOOKS/rollback.md](../rollback.md))
 3. revalidar isolamento do runtime dedicado
 4. registrar versão revertida e horário
 
@@ -92,7 +99,7 @@ Obrigatório para:
 - **SEV-1**
 - **SEV-2 com impacto mensurável**
 
-Template: `docs/incidents/_template.md` (versão sanitizada). Incluir causa raiz, impacto, ações corretivas e timeline.
+Template: [docs/incidents/_template.md](../../incidents/_template.md) (versão sanitizada). Incluir causa raiz, impacto, ações corretivas e timeline.
 
 ## 10) SLA Accounting (ADR 0023)
 
