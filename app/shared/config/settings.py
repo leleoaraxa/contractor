@@ -75,6 +75,9 @@ class Settings(BaseSettings):
     runtime_async_worker_block_seconds: int = Field(
         default=5, validation_alias="RUNTIME_ASYNC_WORKER_BLOCK_SECONDS"
     )
+    runtime_dedicated_tenant_id: str | None = Field(
+        default=None, validation_alias="RUNTIME_DEDICATED_TENANT_ID"
+    )
 
     # Local registry base for MVP (filesystem). In AWS stage, this will be S3.
     bundle_registry_base: str = "registry/tenants"
