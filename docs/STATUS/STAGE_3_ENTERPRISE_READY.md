@@ -208,7 +208,7 @@ Esse ADR será o **primeiro ADR legítimo do Stage 3**.
 
 **Como testar localmente:**
 
-* `RUNTIME_DEDICATED_TENANT_ID=tenant-alpha CONTRACTOR_API_KEY=dev-key pytest tests/integration/test_dedicated_runtime_mode.py`
+* `RUNTIME_DEDICATED_TENANT_ID=tenant-alpha CONTRACTOR_API_KEYS=dev-key pytest tests/integration/test_dedicated_runtime_mode.py`
 * `curl -s -X POST http://localhost:8000/api/v1/runtime/ask -H 'X-API-Key: dev-key' -H 'Content-Type: application/json' -d '{"tenant_id":"tenant-alpha","question":"ping"}'`
 * `curl -s -o /dev/null -w '%{http_code}\n' -X POST http://localhost:8000/api/v1/runtime/ask -H 'X-API-Key: dev-key' -H 'Content-Type: application/json' -d '{"tenant_id":"tenant-beta","question":"ping"}'`
 
