@@ -2,29 +2,37 @@
 from __future__ import annotations
 
 import importlib
-import os
+import sys
 from unittest.mock import patch
 
+import pytest
 from fastapi.testclient import TestClient
 
-# --- Environment variables MUST be set BEFORE application imports ---
-TEST_API_KEY = "test-key-dedicated-runtime"
-os.environ["CONTRACTOR_API_KEY"] = TEST_API_KEY
-os.environ["RUNTIME_DEDICATED_TENANT_ID"] = "tenant-alpha"
-# --- End of environment variable setup ---
-
-from app.shared.config import settings as settings_module
-
-importlib.reload(settings_module)
-
-from app.runtime.api.main import app as runtime_app
 from app.runtime.engine.ask_models import AskResponse
 
 
-client = TestClient(runtime_app)
+TEST_API_KEY = "test-key-dedicated-runtime"
 
 
-def test_dedicated_runtime_accepts_matching_tenant() -> None:
+@pytest.fixture()
+def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
+    monkeypatch.setenv("CONTRACTOR_API_KEYS", TEST_API_KEY)
+    monkeypatch.setenv("RUNTIME_DEDICATED_TENANT_ID", "tenant-alpha")
+
+    for module_name in ("app.runtime.api.main", "app.runtime.api.routers.ask"):
+        if module_name in sys.modules:
+            del sys.modules[module_name]
+
+    import app.shared.config.settings as settings_module
+
+    importlib.reload(settings_module)
+
+    from app.runtime.api.main import app as runtime_app
+
+    return TestClient(runtime_app)
+
+
+def test_dedicated_runtime_accepts_matching_tenant(client: TestClient) -> None:
     ask_payload = {"tenant_id": "tenant-alpha", "question": "ping"}
     with patch("app.runtime.api.routers.ask.prepare_ask") as mock_prepare:
         mock_prepare.return_value = (AskResponse(answer="ok", meta={}), None)
@@ -40,7 +48,7 @@ def test_dedicated_runtime_accepts_matching_tenant() -> None:
     mock_prepare.assert_called_once()
 
 
-def test_dedicated_runtime_rejects_mismatched_tenant() -> None:
+def test_dedicated_runtime_rejects_mismatched_tenant(client: TestClient) -> None:
     ask_payload = {"tenant_id": "tenant-beta", "question": "ping"}
     with patch("app.runtime.api.routers.ask.prepare_ask") as mock_prepare:
         response = client.post(
