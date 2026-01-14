@@ -1,8 +1,6 @@
 # app/runtime/engine/data_residency.py
 from __future__ import annotations
 
-from app.shared.config.settings import settings
-
 RESIDENCY_APPLIES_TO = [
     "platform_metadata",
     "operational_telemetry",
@@ -24,6 +22,8 @@ DATA_CLASSES = {
 
 
 def get_runtime_region() -> str | None:
+    from app.shared.config.settings import settings
+
     raw_region = getattr(settings, "runtime_region", None)
     if raw_region is None:
         return None
@@ -32,6 +32,8 @@ def get_runtime_region() -> str | None:
 
 
 def get_tenant_required_region(tenant_id: str) -> str | None:
+    from app.shared.config.settings import settings
+
     mapping = getattr(settings, "runtime_tenant_residency_requirements", None) or {}
     required = mapping.get(tenant_id)
     if required is None:
