@@ -90,7 +90,7 @@ services:
 
 networks:
   contractor_net:
-    external: true
+    driver: bridge
 
 volumes:
   contractor_pgdata:
