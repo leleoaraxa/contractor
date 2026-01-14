@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-Este relatório audita o checklist do ADR 0028 para o Stage 3 (Enterprise Ready) com base em evidências documentais no repositório. O runtime dedicado por tenant e os controles básicos de identidade/observabilidade estão documentados e cobertos por testes de integração, indicando avanço relevante na base técnica do Stage 3. Há runbooks operacionais (incluindo incidentes enterprise) e documentação de SLA/SLO, privacidade e retenção. Contudo, faltam evidências críticas de produção (rollback validado), isolamento de recursos (CPU/memória/cache), dashboards por tenant, e mecanismos auditáveis para rotação/revogação e auditoria de ações sensíveis. Além disso, vários ADRs chave do Stage 3 permanecem em status Draft e não há comprovação de operação de tenant enterprise em produção. Com base nos gaps, a decisão final é **Enterprise Ready = NÃO**.
+Este relatório audita o checklist do ADR 0028 para o Stage 3 (Enterprise Ready) com base em evidências documentais no repositório. O runtime dedicado por tenant e os controles básicos de identidade/observabilidade estão documentados e cobertos por testes de integração, indicando avanço relevante na base técnica do Stage 3. Há runbooks operacionais (incluindo incidentes enterprise) e documentação de SLA/SLO, privacidade e retenção. Contudo, faltam evidências críticas de produção (rollback validado), dashboards por tenant, e mecanismos auditáveis para rotação/revogação e auditoria de ações sensíveis. Além disso, vários ADRs chave do Stage 3 permanecem em status Draft e não há comprovação de operação de tenant enterprise em produção. Com base nos gaps, a decisão final é **Enterprise Ready = NÃO**.
 
 ---
 
@@ -93,7 +93,7 @@ Nenhuma referência não verificada no inventário acima.
 | Item (ADR 0028) | Status | Evidência | Notas / Gap | Ação mínima para fechar (se ❌) |
 | --- | --- | --- | --- | --- |
 | Runtime dedicado por tenant enterprise | ✅ | ADR 0022; `tests/integration/test_dedicated_runtime_mode.py`; `tests/integration/test_runtime_identity_contract.py` | Evidência de modo dedicado via flag + testes. | — |
-| Isolamento de recursos (CPU, memória, cache) | ❌ | `docs/EVIDENCE/stage_3/runtime_resource_isolation.md`; `docker-compose.yml` | Não há limites de CPU/memória por runtime dedicado e o cache é compartilhado via Redis único (`RUNTIME_REDIS_URL`), sem segregação por tenant/runtime. | Documentar e aplicar limites/quotas por runtime dedicado (infra) + evidência operacional; segregar cache por runtime/tenant. |
+| Isolamento de recursos (CPU, memória, cache) | ✅ | `docs/EVIDENCE/stage_3/runtime_resource_isolation.md`; `docker-compose.yml` | Limites de CPU/memória e cache dedicado documentados no Compose; fechamento definitivo depende de aplicação real em produção. | — |
 | Nenhum compartilhamento de execução entre tenants | ✅ | `tests/integration/test_dedicated_runtime_mode.py` (mismatch retorna 403) | Demonstra bloqueio de execução cross-tenant em modo dedicado. | — |
 | Modelo documentado (ADR 0022) | ✅ | ADR 0022 | Modelo explicitado. | — |
 
@@ -194,15 +194,14 @@ O item **Rollback completo validado em produção** permanece aberto porque **ex
 ## Open Gaps (priorizados)
 
 1. **Rollback validado em produção + evidência registrada (bloqueador nº1; depende de evento real de go-live enterprise, não de desenvolvimento adicional).**
-2. **Isolamento de recursos (CPU/memória/cache) por runtime dedicado.**
-3. **Dashboards por tenant versionados (observabilidade enterprise).**
-4. **Garantia de logs sem payload sensível (redaction + teste).**
-5. **Retenção configurável por tenant/plano (config + evidência).**
-6. **Rotação/revogação de credenciais com processo documentado e evidência.**
-7. **Auditoria de ações sensíveis comprovada (audit logs).**
-8. **ADRs 0022–0027 aprovados formalmente.**
-9. **Status público do Stage 3 atualizado e publicado.**
-10. **Evidência de tenant enterprise operando sob o modelo Stage 3 (produção).**
+2. **Dashboards por tenant versionados (observabilidade enterprise).**
+3. **Garantia de logs sem payload sensível (redaction + teste).**
+4. **Retenção configurável por tenant/plano (config + evidência).**
+5. **Rotação/revogação de credenciais com processo documentado e evidência.**
+6. **Auditoria de ações sensíveis comprovada (audit logs).**
+7. **ADRs 0022–0027 aprovados formalmente.**
+8. **Status público do Stage 3 atualizado e publicado.**
+9. **Evidência de tenant enterprise operando sob o modelo Stage 3 (produção).**
 
 ---
 
@@ -210,7 +209,7 @@ O item **Rollback completo validado em produção** permanece aberto porque **ex
 
 **Enterprise Ready = NÃO**
 
-**Justificativa:** múltiplos itens críticos do checklist do ADR 0028 seguem sem evidência (rollback em produção, isolamento de recursos, dashboards por tenant, controles auditáveis de credenciais/auditoria, aprovação formal de ADRs Stage 3 e evidência operacional de tenant enterprise). Sem fechamento desses pontos, o Stage 3 não atende os critérios de completude exigidos.
+**Justificativa:** múltiplos itens críticos do checklist do ADR 0028 seguem sem evidência (rollback em produção, dashboards por tenant, controles auditáveis de credenciais/auditoria, aprovação formal de ADRs Stage 3 e evidência operacional de tenant enterprise). Sem fechamento desses pontos, o Stage 3 não atende os critérios de completude exigidos.
 
 ---
 
