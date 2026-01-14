@@ -69,6 +69,8 @@ Este relatório audita o checklist do ADR 0028 para o Stage 3 (Enterprise Ready)
   - Evidence note: fluxo de promoção/rollback com endpoints e nota de audit log.
 - `docs/RUNBOOKS/stage_3_enterprise/*` (D6 runbooks)
   - Evidence note: runbooks enterprise (runtime down, suspected breach, SLA violation) + cobertura D6.
+- `docs/EVIDENCE/stage_3/observability_enterprise_minimum.md`
+  - Evidence note: evidência mínima auditável para Observability (ADR 0028, seção 2).
 
 **Arquitetura / deployment / runtime control**
 - `docs/C4/stage-3/context.md`
