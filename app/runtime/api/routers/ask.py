@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, HTTPException, Request
+import logging
+
+from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 
 from app.runtime.engine.ask_handler import execute_prepared_ask, prepare_ask
@@ -14,6 +16,7 @@ from app.shared.config.settings import settings
 from app.shared.security.auth import require_api_key
 
 router = APIRouter()
+logger = logging.getLogger("runtime.ask")
 
 
 def _is_truthy(value: str | None) -> bool:
@@ -33,6 +36,32 @@ def _should_run_async(req: AskRequest, request: Request) -> bool:
     return False
 
 
+def _dedicated_tenant_id() -> str | None:
+    configured = getattr(settings, "runtime_dedicated_tenant_id", None)
+    if configured is None:
+        return None
+    configured = str(configured).strip()
+    return configured or None
+
+
+def _enforce_dedicated_tenant(req: AskRequest) -> None:
+    dedicated_tenant_id = _dedicated_tenant_id()
+    if not dedicated_tenant_id:
+        return
+    if req.tenant_id != dedicated_tenant_id:
+        logger.warning(
+            "runtime.ask.dedicated_tenant_mismatch",
+            extra={
+                "tenant_id": req.tenant_id,
+                "dedicated_tenant_id": dedicated_tenant_id,
+            },
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"error": "dedicated_tenant_mismatch"},
+        )
+
+
 @router.post(
     "/ask",
     response_model=AskResponse,
@@ -45,6 +74,7 @@ def ask(req: AskRequest, request: Request) -> AskResponse | JSONResponse:
     x_explain = (request.headers.get("X-Explain") or "").strip().lower()
     explain_enabled = x_explain in {"1", "true", "yes", "y", "on"}
     require_api_key(request)
+    _enforce_dedicated_tenant(req)
 
     cached_response, prep = prepare_ask(req, explain_enabled)
     if cached_response:

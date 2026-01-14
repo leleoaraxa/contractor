@@ -188,3 +188,28 @@ Após este STATUS estar aprovado e versionado:
 Esse ADR será o **primeiro ADR legítimo do Stage 3**.
 
 ---
+
+## 10. D1 — Dedicated Runtime Mode (Single-Tenant Enforcement)
+
+**Objetivo (D1):**
+
+* Habilitar um modo de runtime dedicado a um único tenant, com bloqueio explícito de requests para outros tenants.
+
+**Flag de configuração:**
+
+* `RUNTIME_DEDICATED_TENANT_ID=<tenant_id>` (quando setada, o runtime passa a operar em modo dedicado).
+
+**Critérios de aceite:**
+
+* Requests para `/api/v1/runtime/ask` com `tenant_id` diferente do tenant dedicado retornam **403** com erro estruturado.
+* Requests com `tenant_id` igual ao tenant dedicado seguem o fluxo normal.
+* Em modo default (flag ausente), não há mudança de comportamento.
+* Testes específicos cobrem o modo dedicado.
+
+**Como testar localmente:**
+
+* `RUNTIME_DEDICATED_TENANT_ID=tenant-alpha CONTRACTOR_API_KEY=dev-key pytest tests/integration/test_dedicated_runtime_mode.py`
+* `curl -s -X POST http://localhost:8000/api/v1/runtime/ask -H 'X-API-Key: dev-key' -H 'Content-Type: application/json' -d '{"tenant_id":"tenant-alpha","question":"ping"}'`
+* `curl -s -o /dev/null -w '%{http_code}\n' -X POST http://localhost:8000/api/v1/runtime/ask -H 'X-API-Key: dev-key' -H 'Content-Type: application/json' -d '{"tenant_id":"tenant-beta","question":"ping"}'`
+
+---
