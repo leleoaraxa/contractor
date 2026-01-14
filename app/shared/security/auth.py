@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import importlib
 
 from fastapi import HTTPException, Request, status
 
-from app.shared.config.settings import settings
+def _get_settings():
+    settings_module = importlib.import_module("app.shared.config.settings")
+    return settings_module.settings
 
 
 @dataclass(frozen=True)
@@ -27,7 +30,7 @@ def _parse_key_entry(entry: str) -> ApiKeyIdentity:
 
 
 def _normalized_keys() -> list[ApiKeyIdentity]:
-    raw = settings.contractor_api_keys or []
+    raw = _get_settings().contractor_api_keys or []
     identities: list[ApiKeyIdentity] = []
     for entry in raw:
         parsed = _parse_key_entry(entry)
@@ -36,8 +39,12 @@ def _normalized_keys() -> list[ApiKeyIdentity]:
     return identities
 
 
+def _has_tenant_scoped_keys() -> bool:
+    return any(identity.tenant_id for identity in _normalized_keys())
+
+
 def auth_disabled() -> bool:
-    return bool(settings.contractor_auth_disabled)
+    return bool(_get_settings().contractor_auth_disabled)
 
 
 def require_api_key(request: Request) -> ApiKeyIdentity | None:
@@ -77,6 +84,8 @@ def enforce_tenant_scope(
         return
     if allowed_roles:
         if identity.tenant_id is None:
+            if not _has_tenant_scoped_keys():
+                return
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={"error": "tenant_scope_required"},
