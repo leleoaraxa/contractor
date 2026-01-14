@@ -12,6 +12,10 @@ Este documento responde ao item **1.2 do checklist do ADR 0028** (“Isolamento 
 | Memória | **PASS** | `docker-compose.yml` define limites explícitos de memória por runtime dedicado: `runtime` (`mem_limit: "1g"`), `worker` (`mem_limit: "512m"`) e cache dedicado `redis_runtime` (`mem_limit: "256m"`). | Nenhum gap técnico identificado no baseline de Compose; requer aplicação em ambiente real para fechar o item 1.2 do ADR 0028. |
 | Cache / Shared State | **PASS** | Cache não é mais compartilhado: `runtime` e `worker` usam `RUNTIME_REDIS_URL=redis://redis_runtime:6379/0` e o Redis dedicado (`redis_runtime`) é isolado do restante dos serviços. | Para múltiplos runtimes dedicados, cada instância deve manter seu Redis dedicado equivalente. |
 
+## Redis (Compose-only, sem porta no host)
+
+O Redis dedicado (`redis_runtime`) não expõe `ports` no host para evitar conflitos com serviços legados na máquina do operador e manter o cache interno ao network do Compose. Esse baseline reduz falhas de bind em `0.0.0.0:6379` quando há containers órfãos ou Redis local ativo. Para diagnosticar sobras de serviços antigos, use `docker compose down --remove-orphans` antes de subir o stack. 
+
 ## OOM Behavior (expected)
 
 Quando o limite de memória é atingido (`mem_limit`), o kernel encerra o container por OOM. Sem uma política explícita de restart no Compose, espera-se que o container do runtime dedicado permaneça parado até intervenção manual (reinício/replace pelo operador). O impacto é isolado ao runtime dedicado afetado.
