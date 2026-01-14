@@ -22,23 +22,23 @@ Métricas por tenant (ADR 0024):
 - **Disponibilidade mensal abaixo do target (SLA breach):**
   ```promql
   1 - (
-    sum(increase(contractor_http_requests_total{service="runtime", path="/api/v1/runtime/ask", status_code=~"5..", tenant_id="<tenant_id>"}[30d]))
+    sum(increase(runtime_tenant_http_requests_total{tenant_id="<tenant_id>", status_code=~"5.."}[30d]))
     /
-    sum(increase(contractor_http_requests_total{service="runtime", path="/api/v1/runtime/ask", tenant_id="<tenant_id>"}[30d]))
+    sum(increase(runtime_tenant_http_requests_total{tenant_id="<tenant_id>"}[30d]))
   ) < 0.999
   ```
 - **Latência p95 mensal acima do contrato:**
   ```promql
-  histogram_quantile(0.95,
-    sum(rate(contractor_http_request_duration_seconds_bucket{service="runtime", path="/api/v1/runtime/ask", tenant_id="<tenant_id>"}[30d])) by (le)
+  quantile_over_time(0.95,
+    runtime_tenant_http_request_latency_seconds{tenant_id="<tenant_id>", status_code=~"2.."}[30d]
   ) > <contract_p95_seconds>
   ```
 - **Burn rate acelerado (risco de violação):**
   ```promql
   (
-    sum(rate(contractor_http_requests_total{service="runtime", path="/api/v1/runtime/ask", status_code=~"5..", tenant_id="<tenant_id>"}[5m]))
+    sum(rate(runtime_tenant_http_requests_total{tenant_id="<tenant_id>", status_code=~"5.."}[5m]))
     /
-    sum(rate(contractor_http_requests_total{service="runtime", path="/api/v1/runtime/ask", tenant_id="<tenant_id>"}[5m]))
+    sum(rate(runtime_tenant_http_requests_total{tenant_id="<tenant_id>"}[5m]))
   ) > <error_budget_burn_threshold>
   ```
 
@@ -91,7 +91,7 @@ Quando aplicar rollback:
 Passos:
 
 1. validar versão anterior no control plane
-2. executar rollback manual (`docs/RUNBOOKS/rollback.md`)
+2. executar rollback manual ([docs/RUNBOOKS/rollback.md](../rollback.md))
 3. validar métricas por tenant
 4. registrar versão e horário
 
@@ -102,7 +102,7 @@ Obrigatório para:
 - **SEV-1**
 - **SEV-2 com impacto mensurável**
 
-Template: `docs/incidents/_template.md` (versão sanitizada). Incluir linha do tempo, impacto no SLA e ações preventivas.
+Template: [docs/incidents/_template.md](../../incidents/_template.md) (versão sanitizada). Incluir linha do tempo, impacto no SLA e ações preventivas.
 
 ## 10) SLA Accounting (ADR 0023)
 

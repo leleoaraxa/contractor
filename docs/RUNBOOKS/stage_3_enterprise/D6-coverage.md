@@ -4,9 +4,9 @@ Este documento mapeia itens do **ADR 0028** (seção “Incident Management”) 
 
 ## Runbooks Stage 3 (links)
 
-- `runtime_tenant_down.md`
-- `suspected_breach.md`
-- `sla_violation.md`
+- [runtime_tenant_down.md](runtime_tenant_down.md)
+- [suspected_breach.md](suspected_breach.md)
+- [sla_violation.md](sla_violation.md)
 
 ## Mapeamento ADR 0028 → Runbooks
 

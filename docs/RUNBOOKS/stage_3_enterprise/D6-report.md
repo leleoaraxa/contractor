@@ -27,3 +27,9 @@ O mapeamento detalhado da seção “Incident Management” do ADR 0028 está em
 
 - `docs/RUNBOOKS/stage_3_enterprise/D6-coverage.md`
 
+## Atualizações D6.1 (doc-only hardening)
+
+- Links clicáveis na cobertura D6.
+- Triggers ajustados para métricas Stage 3 `runtime_tenant_*`.
+- Referências a rollback e template de incidentes normalizadas com links relativos.
+- **TODOs:** nenhum (paths confirmados no repositório).
