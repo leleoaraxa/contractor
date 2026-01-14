@@ -36,8 +36,8 @@ Métricas por tenant (ADR 0024) **rotuladas por `tenant_id`**. Exemplos:
   ```
 - **Latência p95 acima do contrato:**
   ```promql
-  quantile_over_time(0.95,
-    runtime_tenant_http_request_latency_seconds{tenant_id="<tenant_id>", status_code=~"2.."}[5m]
+  histogram_quantile(0.95,
+    sum(rate(runtime_tenant_http_request_latency_seconds_bucket{tenant_id="<tenant_id>", status_code=~"2.."}[5m])) by (le)
   ) > <contract_p95_seconds>
   ```
 
