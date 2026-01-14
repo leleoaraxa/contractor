@@ -111,6 +111,9 @@ def ask(req: AskRequest, request: Request) -> AskResponse | JSONResponse:
     except HTTPException as exc:
         status_code = exc.status_code
         raise
+    except Exception:
+        status_code = 500
+        raise
     finally:
         if status_code is not None:
             runtime_metrics.record_tenant_request(

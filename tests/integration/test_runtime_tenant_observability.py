@@ -18,14 +18,17 @@ TEST_API_KEY = "test-key-tenant-observability"
 from app.runtime.engine.ask_models import AskResponse
 
 
-def _build_client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
+def _build_client(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    raise_server_exceptions: bool = True,
+) -> TestClient:
     monkeypatch.setenv("CONTRACTOR_API_KEYS", TEST_API_KEY)
     monkeypatch.setenv("RUNTIME_DEDICATED_TENANT_ID", "tenant-alpha")
 
     for module_name in (
         "app.runtime.api.main",
         "app.runtime.api.routers.ask",
-        "app.runtime.api.metrics",
         "app.runtime.engine.runtime_identity",
         "app.shared.config.settings",
     ):
@@ -38,7 +41,7 @@ def _build_client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
 
     from app.runtime.api.main import app as runtime_app
 
-    return TestClient(runtime_app)
+    return TestClient(runtime_app, raise_server_exceptions=raise_server_exceptions)
 
 
 @pytest.fixture()
@@ -62,5 +65,30 @@ def test_runtime_metrics_include_tenant_label(client: TestClient) -> None:
     assert metrics_response.status_code == 200
     assert (
         'runtime_tenant_http_requests_total{status_code="200",tenant_id="tenant-alpha"}'
+        in metrics_response.text
+    )
+
+
+def test_runtime_metrics_record_500_status(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _build_client(monkeypatch, raise_server_exceptions=False)
+    ask_payload = {"tenant_id": "tenant-alpha", "question": "ping"}
+    with (
+        patch("app.runtime.api.routers.ask.prepare_ask") as mock_prepare,
+        patch("app.runtime.api.routers.ask.execute_prepared_ask") as mock_execute,
+    ):
+        mock_prepare.return_value = (None, "prep")
+        mock_execute.side_effect = RuntimeError("boom")
+        response = client.post(
+            "/api/v1/runtime/ask",
+            headers={"X-API-Key": TEST_API_KEY},
+            json=ask_payload,
+        )
+
+    assert response.status_code == 500
+
+    metrics_response = client.get("/metrics")
+    assert metrics_response.status_code == 200
+    assert (
+        'runtime_tenant_http_requests_total{status_code="500",tenant_id="tenant-alpha"}'
         in metrics_response.text
     )
