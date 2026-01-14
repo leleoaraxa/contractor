@@ -1,15 +1,16 @@
 # app/runtime/api/routers/ask.py
 from __future__ import annotations
 
-import uuid
-
 import logging
+import time
+import uuid
 
 from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 
 from app.runtime.engine.ask_handler import execute_prepared_ask, prepare_ask
 from app.runtime.engine.ask_models import AskRequest, AskResponse
+from app.runtime.api import metrics as runtime_metrics
 from app.runtime.worker import metrics as async_metrics
 from app.runtime.worker import queue as async_queue
 from app.runtime.engine.runtime_identity import get_runtime_identity
@@ -72,35 +73,51 @@ def ask(req: AskRequest, request: Request) -> AskResponse | JSONResponse:
     explain_enabled = x_explain in {"1", "true", "yes", "y", "on"}
     require_api_key(request)
     _enforce_dedicated_tenant(req)
+    start_time = time.perf_counter()
+    status_code: int | None = None
+    try:
+        cached_response, prep = prepare_ask(req, explain_enabled)
+        if cached_response:
+            status_code = 200
+            return cached_response
 
-    cached_response, prep = prepare_ask(req, explain_enabled)
-    if cached_response:
-        return cached_response
-
-    if _should_run_async(req, request):
-        request_id = str(uuid.uuid4())
-        ttl_s = getattr(settings, "runtime_async_result_ttl_seconds", 600)
-        try:
-            if not async_queue.is_available():
-                raise async_queue.RedisUnavailableError("redis not configured or unavailable")
-            job_payload = req.model_dump()
-            job_payload["explain"] = explain_enabled
-            async_queue.enqueue_job(request_id, job_payload, ttl_s)
-        except async_queue.RedisUnavailableError as exc:
-            raise HTTPException(
-                status_code=503,
-                detail={"error": "async_unavailable", "detail": str(exc)},
+        if _should_run_async(req, request):
+            request_id = str(uuid.uuid4())
+            ttl_s = getattr(settings, "runtime_async_result_ttl_seconds", 600)
+            try:
+                if not async_queue.is_available():
+                    raise async_queue.RedisUnavailableError("redis not configured or unavailable")
+                job_payload = req.model_dump()
+                job_payload["explain"] = explain_enabled
+                async_queue.enqueue_job(request_id, job_payload, ttl_s)
+            except async_queue.RedisUnavailableError as exc:
+                raise HTTPException(
+                    status_code=503,
+                    detail={"error": "async_unavailable", "detail": str(exc)},
+                )
+            async_metrics.record_enqueue()
+            depth = async_queue.queue_depth()
+            if depth is not None:
+                async_metrics.record_queue_depth(depth)
+            status_code = 202
+            return JSONResponse(
+                status_code=202,
+                content={"status": {"reason": "accepted"}, "request_id": request_id},
             )
-        async_metrics.record_enqueue()
-        depth = async_queue.queue_depth()
-        if depth is not None:
-            async_metrics.record_queue_depth(depth)
-        return JSONResponse(
-            status_code=202,
-            content={"status": {"reason": "accepted"}, "request_id": request_id},
-        )
 
-    return execute_prepared_ask(prep)
+        response = execute_prepared_ask(prep)
+        status_code = 200
+        return response
+    except HTTPException as exc:
+        status_code = exc.status_code
+        raise
+    finally:
+        if status_code is not None:
+            runtime_metrics.record_tenant_request(
+                tenant_id=req.tenant_id,
+                status_code=status_code,
+                latency_seconds=time.perf_counter() - start_time,
+            )
 
 
 @router.get("/ask/result/{request_id}")
