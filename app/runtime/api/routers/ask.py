@@ -13,6 +13,10 @@ from app.runtime.engine.ask_models import AskRequest, AskResponse
 from app.runtime.api import metrics as runtime_metrics
 from app.runtime.worker import metrics as async_metrics
 from app.runtime.worker import queue as async_queue
+from app.runtime.engine.data_residency import (
+    get_runtime_region,
+    get_tenant_required_region,
+)
 from app.runtime.engine.runtime_identity import get_runtime_identity
 from app.shared.config.settings import settings
 from app.shared.security.auth import enforce_tenant_scope, require_api_key
@@ -60,6 +64,30 @@ def _enforce_dedicated_tenant(req: AskRequest) -> None:
         )
 
 
+def _enforce_residency(req: AskRequest) -> None:
+    identity = get_runtime_identity()
+    if identity.runtime_mode != "dedicated":
+        return
+    required_region = get_tenant_required_region(req.tenant_id)
+    if not required_region:
+        return
+    runtime_region = get_runtime_region()
+    if not runtime_region:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"error": "residency_region_not_configured"},
+        )
+    if runtime_region != required_region:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "error": "residency_region_mismatch",
+                "runtime_region": runtime_region,
+                "required_region": required_region,
+            },
+        )
+
+
 @router.post(
     "/ask",
     response_model=AskResponse,
@@ -74,6 +102,7 @@ def ask(req: AskRequest, request: Request) -> AskResponse | JSONResponse:
     identity = require_api_key(request)
     enforce_tenant_scope(identity, req.tenant_id, allowed_roles={"tenant_runtime_client"})
     _enforce_dedicated_tenant(req)
+    _enforce_residency(req)
     start_time = time.perf_counter()
     status_code: int | None = None
     try:

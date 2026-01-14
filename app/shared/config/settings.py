@@ -29,6 +29,55 @@ def _normalize_api_keys(v):
     return [s] if s else []
 
 
+def _normalize_tenant_residency_requirements(value):
+    if value is None:
+        return {}
+    if isinstance(value, dict):
+        normalized = {}
+        for key, region in value.items():
+            tenant_id = str(key).strip()
+            region_value = str(region).strip()
+            if tenant_id and region_value:
+                normalized[tenant_id] = region_value
+        return normalized
+    if isinstance(value, list):
+        normalized = {}
+        for item in value:
+            if isinstance(item, str):
+                entry = item.strip()
+                if not entry or "=" not in entry:
+                    continue
+                tenant_id, region = entry.split("=", 1)
+                tenant_id = tenant_id.strip()
+                region = region.strip()
+                if tenant_id and region:
+                    normalized[tenant_id] = region
+        return normalized
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return {}
+        if raw.startswith("{"):
+            try:
+                payload = json.loads(raw)
+                if isinstance(payload, dict):
+                    return _normalize_tenant_residency_requirements(payload)
+            except Exception:
+                pass
+        normalized = {}
+        for entry in raw.split(","):
+            entry = entry.strip()
+            if not entry or "=" not in entry:
+                continue
+            tenant_id, region = entry.split("=", 1)
+            tenant_id = tenant_id.strip()
+            region = region.strip()
+            if tenant_id and region:
+                normalized[tenant_id] = region
+        return normalized
+    return {}
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -78,6 +127,11 @@ class Settings(BaseSettings):
     runtime_dedicated_tenant_id: str | None = Field(
         default=None, validation_alias="RUNTIME_DEDICATED_TENANT_ID"
     )
+    runtime_region: str | None = Field(default=None, validation_alias="RUNTIME_REGION")
+    runtime_tenant_residency_requirements: dict[str, str] = Field(
+        default_factory=dict,
+        validation_alias="RUNTIME_TENANT_RESIDENCY_REQUIREMENTS",
+    )
 
     # Local registry base for MVP (filesystem). In AWS stage, this will be S3.
     bundle_registry_base: str = "registry/tenants"
@@ -102,6 +156,18 @@ class Settings(BaseSettings):
         """
         return _normalize_api_keys(v)
 
+    @field_validator("runtime_tenant_residency_requirements", mode="before")
+    @classmethod
+    def _parse_runtime_tenant_residency_requirements(cls, v):
+        """
+        Allow RUNTIME_TENANT_RESIDENCY_REQUIREMENTS to be provided as:
+          - CSV string: "tenant-a=sa-east-1,tenant-b=us-east-1"
+          - JSON dict string: '{"tenant-a":"sa-east-1"}'
+          - list[str] entries: ["tenant-a=sa-east-1"]
+          - dict[str, str] (already parsed)
+        """
+        return _normalize_tenant_residency_requirements(v)
+
     @classmethod
     def settings_customise_sources(
         cls,
@@ -118,7 +184,10 @@ class Settings(BaseSettings):
                         field_name, field, field_value, value_is_complex
                     )
                 except ValueError:
-                    if field_name == "contractor_api_keys":
+                    if field_name in {
+                        "contractor_api_keys",
+                        "runtime_tenant_residency_requirements",
+                    }:
                         return field_value
                     raise
 
@@ -129,7 +198,10 @@ class Settings(BaseSettings):
                         field_name, field, field_value, value_is_complex
                     )
                 except ValueError:
-                    if field_name == "contractor_api_keys":
+                    if field_name in {
+                        "contractor_api_keys",
+                        "runtime_tenant_residency_requirements",
+                    }:
                         return field_value
                     raise
 

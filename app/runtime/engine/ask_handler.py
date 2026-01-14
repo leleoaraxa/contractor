@@ -24,6 +24,7 @@ from app.runtime.engine.policies.policy_loader import (
     PolicyLoader,
     RateLimitPolicy,
 )
+from app.runtime.engine.data_residency import apply_residency_contract
 from app.runtime.engine.runtime_identity import apply_runtime_identity
 from app.shared.security.rate_limit import enforce_rate_limit
 
@@ -69,6 +70,7 @@ def _build_cached_response(
         cache_dump.pop("cache_key", None)
     cached_meta["cache"] = cache_dump
     apply_runtime_identity(cached_meta)
+    apply_residency_contract(cached_meta)
     return AskResponse(answer=cached_payload.get("answer", ""), meta=cached_meta)
 
 
@@ -288,6 +290,7 @@ def execute_prepared_ask(prep: AskPreparation) -> AskResponse:
     )
     formatted.meta["cache"] = final_cache_meta.model_dump(exclude_none=True)
     apply_runtime_identity(formatted.meta)
+    apply_residency_contract(formatted.meta)
 
     return AskResponse(answer=formatted.answer, meta=formatted.meta)
 
