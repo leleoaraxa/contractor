@@ -15,6 +15,7 @@ if str(REPO_ROOT) not in sys.path:
 
 TEST_API_KEYS = ",".join(
     [
+        "legacy-key",
         "tenant-alpha:tenant_runtime_client:alpha-key",
         "tenant-alpha:tenant_operator:operator-key",
         "tenant-beta:tenant_runtime_client:beta-key",
@@ -93,3 +94,16 @@ def test_runtime_rejects_wrong_role(runtime_client: TestClient) -> None:
 
     assert response.status_code == 403
     assert response.json()["detail"]["error"] == "identity_role_not_allowed"
+
+
+def test_runtime_rejects_unscoped_key(runtime_client: TestClient) -> None:
+    ask_payload = {"tenant_id": "tenant-alpha", "question": "ping", "bundle_id": "b1"}
+    with _patch_manifest():
+        response = runtime_client.post(
+            "/api/v1/runtime/ask",
+            headers={"X-API-Key": "legacy-key"},
+            json=ask_payload,
+        )
+
+    assert response.status_code == 403
+    assert response.json()["detail"]["error"] == "tenant_scope_required"

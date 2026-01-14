@@ -75,15 +75,32 @@ def enforce_tenant_scope(
 ) -> None:
     if identity is None:
         return
+    if allowed_roles:
+        if identity.tenant_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"error": "tenant_scope_required"},
+            )
+        if identity.tenant_id != tenant_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"error": "tenant_scope_mismatch"},
+            )
+        if identity.role is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"error": "identity_role_required"},
+            )
+        if identity.role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"error": "identity_role_not_allowed"},
+            )
+        return
     if identity.tenant_id and identity.tenant_id != tenant_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"error": "tenant_scope_mismatch"},
-        )
-    if allowed_roles and identity.role and identity.role not in allowed_roles:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={"error": "identity_role_not_allowed"},
         )
 
 
