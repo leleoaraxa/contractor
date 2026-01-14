@@ -93,7 +93,7 @@ Nenhuma referência não verificada no inventário acima.
 | Item (ADR 0028) | Status | Evidência | Notas / Gap | Ação mínima para fechar (se ❌) |
 | --- | --- | --- | --- | --- |
 | Runtime dedicado por tenant enterprise | ✅ | ADR 0022; `tests/integration/test_dedicated_runtime_mode.py`; `tests/integration/test_runtime_identity_contract.py` | Evidência de modo dedicado via flag + testes. | — |
-| Isolamento de recursos (CPU, memória, cache) | ❌ | — | Não há configuração de isolamento de recursos em infra nem evidência de quotas/limits. | Documentar e aplicar limites/quotas por runtime dedicado (infra) + evidência operacional. |
+| Isolamento de recursos (CPU, memória, cache) | ❌ | `docs/EVIDENCE/stage_3/runtime_resource_isolation.md`; `docker-compose.yml` | Não há limites de CPU/memória por runtime dedicado e o cache é compartilhado via Redis único (`RUNTIME_REDIS_URL`), sem segregação por tenant/runtime. | Documentar e aplicar limites/quotas por runtime dedicado (infra) + evidência operacional; segregar cache por runtime/tenant. |
 | Nenhum compartilhamento de execução entre tenants | ✅ | `tests/integration/test_dedicated_runtime_mode.py` (mismatch retorna 403) | Demonstra bloqueio de execução cross-tenant em modo dedicado. | — |
 | Modelo documentado (ADR 0022) | ✅ | ADR 0022 | Modelo explicitado. | — |
 
