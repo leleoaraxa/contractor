@@ -92,3 +92,38 @@ def test_runtime_metrics_record_500_status(monkeypatch: pytest.MonkeyPatch) -> N
         'runtime_tenant_http_requests_total{status_code="500",tenant_id="tenant-alpha"}'
         in metrics_response.text
     )
+
+
+def test_http_metrics_use_route_template_for_dynamic_paths(client: TestClient) -> None:
+    request_id = "123e4567-e89b-12d3-a456-426614174000"
+    with patch("app.runtime.api.routers.ask.async_queue.read_result") as mock_read_result:
+        mock_read_result.return_value = {"status": "done"}
+        response = client.get(
+            f"/api/v1/runtime/ask/result/{request_id}",
+            headers={"X-API-Key": TEST_API_KEY},
+        )
+
+    assert response.status_code == 200
+
+    metrics_response = client.get("/metrics")
+    assert metrics_response.status_code == 200
+    assert request_id not in metrics_response.text
+    path_template = "/api/v1/runtime/ask/result/{request_id}"
+    matching_metric = None
+    for line in metrics_response.text.splitlines():
+        if not line.startswith("http_requests_total{"):
+            continue
+        labels_str = line.split("{", 1)[1].rsplit("}", 1)[0]
+        labels = {}
+        for item in labels_str.split(","):
+            key, value = item.split("=", 1)
+            labels[key] = value.strip('"')
+        if (
+            labels.get("service") == "runtime"
+            and labels.get("method") == "GET"
+            and labels.get("path") == path_template
+            and labels.get("status_code") == "200"
+        ):
+            matching_metric = line
+            break
+    assert matching_metric is not None
