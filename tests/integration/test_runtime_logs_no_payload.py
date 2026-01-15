@@ -60,11 +60,27 @@ def test_runtime_logs_do_not_include_payload_keys_or_values(
 
     logger = logging.getLogger("runtime.ask")
     caplog.set_level(logging.INFO, logger="runtime.ask")
+    caplog.set_level(logging.INFO)
     caplog.handler.setFormatter(JsonFormatter())
-    logger.addHandler(caplog.handler)
-    try:
-        logger.info(
-            "runtime.request payload=%s",
+    original_propagate = logger.propagate
+    logger.propagate = True
+    logger.info(
+        "runtime.request payload=%s",
+        {
+            "question": "super-secret-payload",
+            "prompt": "do-not-log",
+            "content": "raw-content",
+            "body": {"nested": "payload"},
+            "payload": {"question": "nested-question"},
+        },
+    )
+    record = logger.makeRecord(
+        logger.name,
+        logging.INFO,
+        __file__,
+        0,
+        "runtime.request payload=%s",
+        (
             {
                 "question": "super-secret-payload",
                 "prompt": "do-not-log",
@@ -72,9 +88,11 @@ def test_runtime_logs_do_not_include_payload_keys_or_values(
                 "body": {"nested": "payload"},
                 "payload": {"question": "nested-question"},
             },
-        )
-    finally:
-        logger.removeHandler(caplog.handler)
+        ),
+        None,
+    )
+    caplog.handler.handle(record)
+    logger.propagate = original_propagate
 
     output = caplog.text
     assert output
