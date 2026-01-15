@@ -5,16 +5,16 @@
     "status": "pass",
     "tenant_id": "demo",
     "bundle_id": "202601050001",
-    "base_dir": "/app/registry/tenants",
-    "bundle_dir": "/app/registry/tenants/demo/bundles/202601050001",
+    "base_dir": "C:\\Users\\borge\\www\\contractor\\registry\\tenants",
+    "bundle_dir": "C:\\Users\\borge\\www\\contractor\\registry\\tenants\\demo\\bundles\\202601050001",
     "errors": []
   },
   "template_safety": {
     "status": "pass",
-    "templates_dir": "registry/tenants/demo/bundles/202601050001/templates",
+    "templates_dir": "registry\\tenants\\demo\\bundles\\202601050001\\templates",
     "templates": [
       {
-        "template_path": "registry/tenants/demo/bundles/202601050001/templates/platform_status.j2",
+        "template_path": "registry\\tenants\\demo\\bundles\\202601050001\\templates\\platform_status.j2",
         "status": "pass",
         "errors": []
       }
@@ -28,29 +28,17 @@
   "suites": [
     {
       "status": "pass",
-      "suite_id": "demo_routing_suite",
-      "tenant_id": "demo",
-      "release_alias": "candidate",
-      "passed": 4,
-      "total": 4,
-      "failures": [],
-      "started_at": "2026-01-14T23:57:04.290443+00:00",
-      "finished_at": "2026-01-14T23:57:04.596912+00:00",
+      "suite_id": "suite_0",
       "suite_source": "data/quality/suites/demo_routing_candidate_suite.json",
-      "suite_path": "/app/data/quality/suites/demo_routing_candidate_suite.json"
+      "suite_path": "data/quality/suites/demo_routing_candidate_suite.json",
+      "failures": []
     },
     {
       "status": "pass",
-      "suite_id": "demo_thresholds_suite",
-      "tenant_id": "demo",
-      "release_alias": "candidate",
-      "passed": 2,
-      "total": 2,
-      "failures": [],
-      "started_at": "2026-01-14T23:57:04.602252+00:00",
-      "finished_at": "2026-01-14T23:57:04.689148+00:00",
+      "suite_id": "suite_1",
       "suite_source": "data/quality/suites/demo_thresholds_suite.json",
-      "suite_path": "/app/data/quality/suites/demo_thresholds_suite.json"
+      "suite_path": "data/quality/suites/demo_thresholds_suite.json",
+      "failures": []
     }
   ],
   "result": {
@@ -58,8 +46,8 @@
     "failures": []
   },
   "timestamps": {
-    "started_at": "2026-01-14T23:57:04.125997+00:00",
-    "finished_at": "2026-01-14T23:57:04.693592+00:00"
+    "started_at": "2026-01-15T12:25:06.625238+00:00",
+    "finished_at": "2026-01-15T12:25:06.625238+00:00"
   },
   "commit_hash": null
 }
