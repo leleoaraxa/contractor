@@ -71,6 +71,8 @@ Este relatório audita o checklist do ADR 0028 para o Stage 3 (Enterprise Ready)
   - Evidence note: runbooks enterprise (runtime down, suspected breach, SLA violation) + cobertura D6.
 - `docs/EVIDENCE/stage_3/observability_enterprise_minimum.md`
   - Evidence note: evidência mínima auditável para Observability (ADR 0028, seção 2).
+- `docs/EVIDENCE/stage_3/rollback_validation_nonprod.md`
+  - Evidence note: evidência operacional (compose/local) do fluxo de promoção+rollback via smoke.sh; não-produção.
 
 **Arquitetura / deployment / runtime control**
 - `docs/C4/stage-3/context.md`
@@ -144,7 +146,7 @@ Nenhuma referência não verificada no inventário acima.
 | --- | --- | --- | --- | --- |
 | Rollback completo validado em produção | ❌ | — | Rollback não executado por **ausência de produção ativa**; o fluxo existe, está documentado e foi validado tecnicamente até o limite do ambiente disponível, **sem evidência falsa ou simulada**. | Executar rollback em ambiente prod e registrar evidência (logs, postmortem, change record). |
 | Procedimento manual documentado | ✅ | `docs/RUNBOOKS/rollback.md`; `docs/RUNBOOKS/release_promotion.md` | Procedimento manual via alias. | — |
-| Evidência de teste de rollback | ❌ | — | Não há teste automatizado de rollback. | Adicionar teste/registro de execução de rollback (evidência). |
+| Evidência de teste de rollback | ✅ | `docs/EVIDENCE/stage_3/rollback_validation_nonprod.md`; `scripts/dev/smoke.sh`; `docs/RUNBOOKS/rollback.md` | Evidência **non-prod** (compose/local); produção permanece obrigatória para fechar “rollback em produção”. | Executar rollback em ambiente prod e registrar evidência (logs, postmortem, change record). |
 | Sem rollback automático não auditado | ✅ | `docs/RUNBOOKS/rollback.md` | Runbook explicita rollback manual. | — |
 | Dependência explícita do Control Plane | ✅ | `docs/RUNBOOKS/rollback.md` | Rollback via alias no control plane. | — |
 
@@ -195,7 +197,8 @@ O item **Rollback completo validado em produção** permanece aberto porque **ex
 
 ## Open Gaps (priorizados)
 
-1. **Rollback validado em produção + evidência registrada (bloqueador nº1; depende de evento real de go-live enterprise, não de desenvolvimento adicional).**
+1. **Rollback validado em produção + evidência registrada (bloqueador nº1; depende de evento real de go-live enterprise, não de desenvolvimento adicional).**  
+   - Nota: evidência non-prod registrada; falta produção.
 2. **Dashboards por tenant versionados (observabilidade enterprise).**
 3. **Garantia de logs sem payload sensível (redaction + teste).**
 4. **Retenção configurável por tenant/plano (config + evidência).**
