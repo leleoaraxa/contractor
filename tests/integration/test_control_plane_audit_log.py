@@ -82,5 +82,5 @@ def test_alias_change_emits_audit_log(tmp_path, monkeypatch):
 
     keys: set[str] = set()
     _collect_keys(record, keys)
-    forbidden_keys = {"question", "prompt", "content", "body"}
+    forbidden_keys = {"question", "prompt", "content", "body", "payload"}
     assert not (keys & forbidden_keys)
