@@ -14,10 +14,15 @@ def instrument_http(app: FastAPI, service: str) -> None:
     @app.middleware("http")
     async def _http_metrics_middleware(request: Request, call_next):
         response = await call_next(request)
+        route = request.scope.get("route")
+        if route and hasattr(route, "path"):
+            path = route.path
+        else:
+            path = request.url.path
         HTTP_REQUESTS_TOTAL.labels(
             service=service,
             method=request.method,
-            path=request.url.path,
+            path=path,
             status_code=str(response.status_code),
         ).inc()
         return response
