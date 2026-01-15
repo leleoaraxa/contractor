@@ -13,11 +13,9 @@ TEST_API_KEY = "test-key-for-audit-log"
 
 
 def _reload_control_plane_app():
-    from app.shared.config import settings as settings_module
-
-    importlib.reload(settings_module)
-
     for module_name in [
+        "app.shared.config.settings",
+        "app.control_plane.domain.audit.logger",
         "app.control_plane.api.routers.tenants",
         "app.control_plane.api.routers.versions",
         "app.control_plane.api.routers.bundles",
@@ -25,12 +23,27 @@ def _reload_control_plane_app():
         "app.control_plane.api.routers.healthz",
         "app.control_plane.api.main",
     ]:
-        if module_name in sys.modules:
-            importlib.reload(sys.modules[module_name])
-        else:
-            importlib.import_module(module_name)
+        sys.modules.pop(module_name, None)
 
-    main_module = sys.modules["app.control_plane.api.main"]
+    import app.shared.config.settings as settings_module
+
+    importlib.reload(settings_module)
+
+    audit_logger_module = importlib.import_module(
+        "app.control_plane.domain.audit.logger"
+    )
+    importlib.reload(audit_logger_module)
+
+    for module_name in [
+        "app.control_plane.api.routers.tenants",
+        "app.control_plane.api.routers.versions",
+        "app.control_plane.api.routers.bundles",
+        "app.control_plane.api.routers.quality",
+        "app.control_plane.api.routers.healthz",
+    ]:
+        importlib.reload(importlib.import_module(module_name))
+
+    main_module = importlib.reload(importlib.import_module("app.control_plane.api.main"))
     return main_module.create_app()
 
 
