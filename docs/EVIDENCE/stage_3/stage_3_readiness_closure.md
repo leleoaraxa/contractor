@@ -64,8 +64,8 @@
 | **6.4 Purge manual documentado** | **FAIL** | Nenhuma evidência Stage 3 específica. | Procedimento de purge manual não documentado; Stage 4. |
 | **6.5 Papéis LGPD/GDPR claros** | **FAIL** | Não há evidência Stage 3 específica. | Papéis não explicitados como item auditável; Stage 4. |
 | **6.6 Modelo documentado (ADR 0018)** | **PASS** | `docs/ADR/0018-data-privacy-lgpd-gdpr-and-retention-policies.md` (Status: Accepted). | — |
-| **7.1 Identidades segregadas por tenant** | **FAIL** | Nenhuma evidência operacional registrada. | Segregação por tenant não evidenciada; Stage 4. |
-| **7.2 RBAC explícito e limitado** | **FAIL** | Nenhuma evidência Stage 3 específica. | RBAC enterprise não documentado; Stage 4. |
+| **7.1 Identidades segregadas por tenant** | **PASS** | `tests/integration/test_runtime_identity_contract.py`; `docs/ADR/0027-enterprise-access-control-and-identity-boundaries.md` (Status: Accepted). | Evidência non-prod; sem IdP/IAM externo; sem tenant enterprise em produção. |
+| **7.2 RBAC explícito e limitado** | **PASS** | `tests/integration/test_runtime_access_control.py`; `docs/ADR/0027-enterprise-access-control-and-identity-boundaries.md` (Status: Accepted). | Evidência non-prod; sem IdP/IAM externo; sem tenant enterprise em produção. |
 | **7.3 Rotação e revogação de credenciais** | **PASS** | `docs/EVIDENCE/stage_3/credential_rotation_nonprod.md` | Evidência non-prod; sem IAM externo. |
 | **7.4 Auditoria de ações sensíveis** | **PASS** | `docs/EVIDENCE/stage_3/audit_actions_nonprod.md` | Evidência non-prod. |
 | **7.5 Modelo documentado (ADR 0027)** | **PASS** | `docs/ADR/0027-enterprise-access-control-and-identity-boundaries.md` (Status: Accepted). | — |
