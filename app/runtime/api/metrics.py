@@ -16,12 +16,17 @@ _RUNTIME_TENANT_HTTP_LATENCY = Histogram(
 )
 
 
-def record_tenant_request(tenant_id: str, status_code: int, latency_seconds: float) -> None:
+def record_tenant_request(
+    tenant_id: str, status_code: int, latency_seconds: float
+) -> None:
     identity = get_runtime_identity()
     if not identity.dedicated_tenant_id:
         return
     if tenant_id != identity.dedicated_tenant_id:
         return
-    labels = {"tenant_id": identity.dedicated_tenant_id, "status_code": str(status_code)}
+    labels = {
+        "tenant_id": identity.dedicated_tenant_id,
+        "status_code": str(status_code),
+    }
     _RUNTIME_TENANT_HTTP_REQUESTS.labels(**labels).inc()
     _RUNTIME_TENANT_HTTP_LATENCY.labels(**labels).observe(latency_seconds)

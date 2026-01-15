@@ -21,7 +21,7 @@ tail -n 1 registry/control_plane/audit.log
 ## Observed output
 
 ```json
-{"ts":"2025-01-20T12:00:00+00:00","action":"alias.set","tenant_id":"demo","actor":"key_hash:…","target":{"alias":"draft","bundle_id":"202601050001"},"previous_bundle_id":null}
+{"ts":"…","action":"alias.set","tenant_id":"demo","actor":"key_hash:…","target":{"alias":"draft","bundle_id":"202601050001"},"previous_bundle_id":null}
 ```
 
 ## Automated test

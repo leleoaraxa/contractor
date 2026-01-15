@@ -26,6 +26,7 @@ class AuditLogger:
         record = {
             "ts": datetime.now(tz=timezone.utc).isoformat(),
             "action": event,
+            "event": event,
             **payload,
         }
         safe_record = redact_obj(record)

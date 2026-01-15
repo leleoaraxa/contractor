@@ -50,7 +50,7 @@ def test_alias_change_emits_audit_log(tmp_path, monkeypatch):
 
     monkeypatch.setenv("CONTROL_AUDIT_LOG_PATH", str(audit_path))
     monkeypatch.setenv("CONTROL_ALIAS_STORE_PATH", str(alias_store_path))
-    monkeypatch.setenv("CONTRACTOR_API_KEY", TEST_API_KEY)
+    monkeypatch.setenv("CONTRACTOR_API_KEYS", TEST_API_KEY)
 
     app = _reload_control_plane_app()
     client = TestClient(app)
@@ -70,7 +70,9 @@ def test_alias_change_emits_audit_log(tmp_path, monkeypatch):
     assert lines
     record = json.loads(lines[-1])
 
-    expected_actor = f"key_hash:{hashlib.sha256(TEST_API_KEY.encode('utf-8')).hexdigest()[:12]}"
+    expected_actor = (
+        f"key_hash:{hashlib.sha256(TEST_API_KEY.encode('utf-8')).hexdigest()[:12]}"
+    )
     assert record["action"] == "alias.set"
     assert record["tenant_id"] == tenant_id
     assert record["actor"] == expected_actor
