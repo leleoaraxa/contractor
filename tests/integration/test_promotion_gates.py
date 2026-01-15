@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import importlib
 import os
-import sys
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
@@ -17,11 +16,19 @@ os.environ["POSTGRES_DSN"] = MOCK_POSTGRES_DSN
 
 from fastapi.testclient import TestClient
 
+from app.shared.config import settings as settings_module
+
+importlib.reload(settings_module)
+
+from app.control_plane.api.main import app as control_plane_app
+from app.runtime.api.main import app as runtime_app
 from app.control_plane.domain.bundles.validator import validate_bundle
 from app.control_plane.domain.quality.reports import (
     PromotionSetRepository,
     QualityReportRepository,
 )
+from app.control_plane.domain.quality import runner as runner_module
+from app.control_plane.domain.quality import service as service_module
 from app.control_plane.domain.templates.safety import TemplateSafetyValidator
 from app.shared.security import rate_limit as rate_limit_module
 
@@ -94,53 +101,13 @@ def _configure_rate_limiter_for_test(*, rps: int, burst: int) -> None:
         rate_limit_module._RL.backend.state.clear()
 
 
-def _get_control_plane_app():
-    modules_to_clear = []
-    for name in list(sys.modules):
-        if name in {"app.shared.config", "app.shared.config.settings"} or (
-            name == "app.control_plane" or name.startswith("app.control_plane.")
-        ):
-            modules_to_clear.append(name)
-    for name in modules_to_clear:
-        del sys.modules[name]
-
-    from app.shared.config import settings as settings_module
-
-    importlib.reload(settings_module)
-
-    from app.control_plane.api import main as control_plane_main
-
-    importlib.reload(control_plane_main)
-    return control_plane_main.create_app()
-
-
-def _get_runtime_app():
-    modules_to_clear = []
-    for name in list(sys.modules):
-        if name in {"app.shared.config", "app.shared.config.settings"} or (
-            name == "app.runtime" or name.startswith("app.runtime.")
-        ):
-            modules_to_clear.append(name)
-    for name in modules_to_clear:
-        del sys.modules[name]
-
-    from app.shared.config import settings as settings_module
-
-    importlib.reload(settings_module)
-
-    from app.runtime.api import main as runtime_main
-
-    importlib.reload(runtime_main)
-    return runtime_main.create_app()
-
-
 def test_promotion_gate_pass():
     tenant_id = "demo"
     bundle_id = "202601050001"
 
     _write_quality_report(tenant_id, bundle_id)
 
-    client = TestClient(_get_control_plane_app())
+    client = TestClient(control_plane_app)
     response = client.post(
         f"/api/v1/control/tenants/{tenant_id}/aliases/candidate",
         headers=_auth_headers(),
@@ -157,7 +124,7 @@ def test_promotion_gate_fail_template_safety():
     report = _write_quality_report(tenant_id, bundle_id)
     assert report["template_safety"]["status"] == "fail"
 
-    client = TestClient(_get_control_plane_app())
+    client = TestClient(control_plane_app)
     response = client.post(
         f"/api/v1/control/tenants/{tenant_id}/aliases/candidate",
         headers=_auth_headers(),
@@ -179,10 +146,9 @@ def test_template_safety_gate_report(monkeypatch):
             "failures": [],
         }
 
-    client = TestClient(_get_control_plane_app())
-    monkeypatch.setattr(
-        "app.control_plane.domain.quality.service.run_suite", _run_suite_stub
-    )
+    monkeypatch.setattr(service_module, "run_suite", _run_suite_stub)
+    monkeypatch.setattr(runner_module, "run_suite", _run_suite_stub)
+    client = TestClient(control_plane_app)
     response = client.post(
         "/api/v1/control/tenants/demo/bundles/202601050002/quality/run",
         headers=_auth_headers(),
@@ -202,7 +168,7 @@ def test_rate_limit_enforced():
     # The runtime pipeline can be slow, so we freeze the clock to make it deterministic.
     _configure_rate_limiter_for_test(rps=1, burst=1)
 
-    runtime_client = TestClient(_get_runtime_app())
+    runtime_client = TestClient(runtime_app)
 
     with patch("app.runtime.engine.executor.postgres.psycopg2.connect") as mock_connect:
         mock_cursor = MagicMock()
