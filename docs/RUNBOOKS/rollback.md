@@ -16,6 +16,12 @@ tenant para um **bundle anterior válido**, mantendo a consistência operacional
 entre Control Plane e Runtime. O rollback é **manual** no Stage 2 e ocorre por
 meio da **troca explícita do alias `current`** para um `bundle_id` anterior.
 
+## 1.1) No Automatic Rollback
+
+- Rollback é **sempre manual e auditável** por meio da troca explícita do alias `current`.
+- **Não existe auto-rollback** no baseline atual.
+- **Não existe mecanismo** que reverta automaticamente para bundle anterior sem ação humana.
+
 ## 2) Escopo do rollback
 
 ### O que entra no rollback (rollbackável)
