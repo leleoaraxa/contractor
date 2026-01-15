@@ -60,27 +60,27 @@ def test_runtime_logs_do_not_include_payload_keys_or_values(
 
     logger = logging.getLogger("runtime.ask")
     caplog.set_level(logging.INFO, logger="runtime.ask")
-    caplog.set_level(logging.INFO)
     caplog.handler.setFormatter(JsonFormatter())
     original_propagate = logger.propagate
-    logger.propagate = True
-    logger.info(
-        "runtime.request payload=%s",
-        {
-            "question": "super-secret-payload",
-            "prompt": "do-not-log",
-            "content": "raw-content",
-            "body": {"nested": "payload"},
-            "payload": {"question": "nested-question"},
-        },
-    )
-    record = logger.makeRecord(
-        logger.name,
-        logging.INFO,
-        __file__,
-        0,
-        "runtime.request payload=%s",
-        (
+    parent_logger = logger.parent
+    original_parent_propagate = parent_logger.propagate if parent_logger else None
+    root_logger = logging.getLogger()
+    original_root_level = root_logger.level
+    root_handler = root_logger.handlers[0] if root_logger.handlers else None
+    original_root_handle = root_handler.handle if root_handler else None
+    try:
+        root_logger.setLevel(logging.INFO)
+        logger.propagate = True
+        if parent_logger:
+            parent_logger.propagate = True
+        if root_handler:
+            def _handle(record: logging.LogRecord) -> bool:
+                caplog.handler.handle(record)
+                return original_root_handle(record)  # type: ignore[call-arg]
+
+            root_handler.handle = _handle  # type: ignore[assignment]
+        logger.info(
+            "runtime.request payload=%s",
             {
                 "question": "super-secret-payload",
                 "prompt": "do-not-log",
@@ -88,11 +88,14 @@ def test_runtime_logs_do_not_include_payload_keys_or_values(
                 "body": {"nested": "payload"},
                 "payload": {"question": "nested-question"},
             },
-        ),
-        None,
-    )
-    caplog.handler.handle(record)
-    logger.propagate = original_propagate
+        )
+    finally:
+        if root_handler and original_root_handle:
+            root_handler.handle = original_root_handle  # type: ignore[assignment]
+        logger.propagate = original_propagate
+        if parent_logger:
+            parent_logger.propagate = original_parent_propagate
+        root_logger.setLevel(original_root_level)
 
     output = caplog.text
     assert output
