@@ -56,7 +56,7 @@
 | **5.1 Rollback completo validado em produção** | **FAIL** | `docs/EVIDENCE/stage_3/rollback_production_validation.md` | Produção indisponível no ambiente; Stage 4. |
 | **5.2 Procedimento manual documentado** | **PASS** | `docs/RUNBOOKS/rollback.md` | — |
 | **5.3 Evidência de teste de rollback** | **PASS** | `docs/EVIDENCE/stage_3/rollback_validation_nonprod.md` | Evidência non-prod, sem produção. |
-| **5.4 Sem rollback automático não auditado** | **PASS** | `docs/RUNBOOKS/rollback.md` (rollback manual, sem automação). | — |
+| **5.4 Sem rollback automático não auditado** | **PASS** | `docs/RUNBOOKS/rollback.md` — seção **“No Automatic Rollback”**. | — |
 | **5.5 Dependência explícita do Control Plane** | **PASS** | `docs/RUNBOOKS/rollback.md` | — |
 | **6.1 Inventário de dados documentado** | **FAIL** | Nenhuma evidência Stage 3 específica. | Inventário formal não registrado; Stage 4. |
 | **6.2 Classificação de dados por classe** | **FAIL** | Nenhuma evidência Stage 3 específica. | Classificação formal não registrada; Stage 4. |
@@ -73,7 +73,7 @@
 | **8.2 Runbooks operacionais completos** | **FAIL** | Runbooks existentes são Stage 2/3 parciais. | Completeness enterprise não demonstrada; Stage 4. |
 | **8.3 Status público do produto atualizado** | **FAIL** | Nenhuma evidência registrada. | Status público não documentado; Stage 4. |
 | **8.4 Limitações do Stage 3 documentadas** | **PASS** | `docs/EVIDENCE/stage_3/observability_enterprise_minimum.md` | Limitações explícitas em observability; outras áreas pendentes. |
-| **8.5 Roadmap Stage 4 não iniciado** | **FAIL** | Nenhuma evidência registrada. | Não há declaração formal; Stage 4. |
+| **8.5 Roadmap Stage 4 não iniciado** | **PASS** | Este documento — declaração formal “Stage 4 is not started”. | — |
 
 ---
 
@@ -131,7 +131,12 @@ curl -s http://localhost:8000/metrics | rg "http_requests_total\\{"
 
 Stage 3 está encerrado neste escopo documental.
 
+**Declaração formal:** Stage 4 is not started.
+
+**Critério de início do Stage 4:** Stage 4 só inicia com decisão explícita + novos ADRs + novos prompts + novo conjunto de evidências.
+
 Stage 4 **não pode ser iniciado** sem:
 - decisão explícita;
 - novos ADRs;
 - novos prompts.
+- novo conjunto de evidências.
