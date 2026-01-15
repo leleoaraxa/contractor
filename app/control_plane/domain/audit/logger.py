@@ -25,7 +25,7 @@ class AuditLogger:
     def log(self, event: str, payload: Dict[str, Any]) -> None:
         record = {
             "ts": datetime.now(tz=timezone.utc).isoformat(),
-            "event": event,
+            "action": event,
             **payload,
         }
         safe_record = redact_obj(record)

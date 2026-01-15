@@ -55,16 +55,16 @@ def set_alias(
     tenant_id: str, alias: Alias, payload: VersionSetPayload, request: Request
 ) -> VersionResponse:
     validate_tenant_id(tenant_id)
-    require_api_key(request)
+    identity = require_api_key(request)
     enforce_rate_limit(tenant_id, "control.set_alias")
 
     try:
         if alias == "current":
-            aliases = _svc.set_current(tenant_id, payload.bundle_id)
+            aliases = _svc.set_current(tenant_id, payload.bundle_id, actor=identity)
         elif alias == "candidate":
-            aliases = _svc.set_candidate(tenant_id, payload.bundle_id)
+            aliases = _svc.set_candidate(tenant_id, payload.bundle_id, actor=identity)
         else:
-            aliases = _svc.set_draft(tenant_id, payload.bundle_id)
+            aliases = _svc.set_draft(tenant_id, payload.bundle_id, actor=identity)
     except PromotionGateError as e:
         raise HTTPException(status_code=400, detail=_svc.format_gate_error(e))
     except ValueError as e:
