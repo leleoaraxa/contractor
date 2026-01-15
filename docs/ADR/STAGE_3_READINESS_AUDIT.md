@@ -177,7 +177,7 @@ O item **Rollback completo validado em produção** permanece aberto porque **ex
 | --- | --- | --- | --- | --- |
 | Identidades segregadas por tenant | ✅ | `tests/integration/test_runtime_access_control.py`; ADR 0027 | Chaves por tenant e validação de escopo. | — |
 | RBAC explícito e limitado | ✅ | ADR 0027; `tests/integration/test_runtime_access_control.py` | Papéis definidos e rejeição de role inválida. | — |
-| Rotação e revogação de credenciais | ❌ | `docs/RUNBOOKS/stage_3_enterprise/suspected_breach.md` (revogação) | Revogação é citada, mas sem runbook/fluxo explícito de rotação. | Documentar fluxo de rotação + validar operacionalmente (runbook + evidência). |
+| Rotação e revogação de credenciais | ✅ (non-prod) | `docs/EVIDENCE/stage_3/credential_rotation_nonprod.md`; `docs/RUNBOOKS/stage_3_enterprise/suspected_breach.md` | Evidência **non-prod** via compose/local; produção e automação enterprise pendentes. | Executar rotação/revogação em produção com evidência auditável. |
 | Auditoria de ações sensíveis | ✅ | `docs/EVIDENCE/stage_3/audit_actions_nonprod.md`; `tests/integration/test_control_plane_audit_log.py` | Evidência **non-prod** com teste automatizado; produção ainda sem comprovação explícita. | — |
 | Modelo documentado (ADR 0027) | ✅ | ADR 0027 | Documento Stage 3 de identidade. | — |
 
@@ -202,7 +202,7 @@ O item **Rollback completo validado em produção** permanece aberto porque **ex
 2. **Dashboards por tenant versionados (observabilidade enterprise).**
 3. **Garantia de logs sem payload sensível (redaction + teste).**
 4. **Retenção configurável por tenant/plano (config + evidência).**
-5. **Rotação/revogação de credenciais com processo documentado e evidência.**
+5. **Rotação/revogação de credenciais em produção + automação enterprise (apenas non-prod evidenciado).**
 6. **ADRs 0022–0027 aprovados formalmente.**
 7. **Status público do Stage 3 atualizado e publicado.**
 8. **Evidência de tenant enterprise operando sob o modelo Stage 3 (produção).**
