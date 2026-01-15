@@ -17,6 +17,7 @@ Um incidente é qualquer evento operacional que resulte em:
 - **SEV-1**: runtime indisponível ou burn rápido crítico (fast burn) de SLOs essenciais.
 - **SEV-2**: degradação relevante com burn lento (slow burn) dos SLOs.
 - **SEV-3**: incidentes menores sem impacto direto em SLO (ex.: alarmes auxiliares, falhas intermitentes sem impacto).
+- **SEV-4**: baixo impacto ou informativo, sem risco imediato de SLO/SLA (ex.: anomalias cosméticas, alertas de baixa relevância).
 
 ## Gatilhos de incidente (integração com alertas existentes)
 
@@ -66,6 +67,13 @@ sum(contractor:http_requests:rate5m{service="control", path="/api/v1/control/hea
    - Atualizar stakeholders internos com severidade, impacto e status.
 5) **Encerramento**
    - Validar retorno à estabilidade e registrar postmortem mínimo.
+
+## Customer Communication (Enterprise)
+
+- **Quando comunicar:** SEV-1 e SEV-2. SEV-3 somente se houver impacto direto percebido pelo cliente.
+- **O que comunicar:** status inicial, atualizações de progresso e encerramento; incluir link para postmortem sanitizado quando aplicável.
+- **O que NÃO comunicar:** payload sensível, dados internos, chaves/segredos ou detalhes que exponham arquitetura interna.
+- **Canal:** fora de escopo deste runbook (não fixa ferramenta/processo de envio).
 
 ## Critérios de encerramento
 
