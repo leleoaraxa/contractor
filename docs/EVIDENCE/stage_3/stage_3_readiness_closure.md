@@ -47,9 +47,9 @@
 | **3.2 Métrica de disponibilidade oficial** | **FAIL** | Não há evidência Stage 3 específica. | Métrica oficial para SLA enterprise não registrada; Stage 4. |
 | **3.3 Processo de cálculo e apuração definido** | **FAIL** | Não há evidência Stage 3 específica. | Processo de apuração enterprise não documentado; Stage 4. |
 | **3.4 Penalidades e créditos documentados** | **FAIL** | Não há evidência Stage 3 específica. | Termos contratuais de SLA enterprise não documentados; Stage 4. |
-| **4.1 Classificação SEV-1 a SEV-4** | **FAIL** | `docs/RUNBOOKS/incident_management.md` define SEV-1 a SEV-3. | SEV-4 não definido; Stage 4. |
+| **4.1 Classificação SEV-1 a SEV-4** | **PASS** | `docs/RUNBOOKS/incident_management.md` (SEV-1 a SEV-4). | — |
 | **4.2 Fluxo de escalonamento definido** | **PASS** | `docs/RUNBOOKS/incident_management.md` | Fluxo documentado, sem validação em produção. |
-| **4.3 Comunicação com cliente documentada** | **FAIL** | Runbook menciona comunicação interna apenas. | Comunicação com cliente não documentada; Stage 4. |
+| **4.3 Comunicação com cliente documentada** | **PASS** | `docs/RUNBOOKS/incident_management.md` (seção de comunicação com cliente). | — |
 | **4.4 Postmortem obrigatório** | **PASS** | `docs/RUNBOOKS/incident_management.md` + template em `docs/incidents/_template.md` | Obrigatoriedade documental, sem evidência de execução. |
 | **4.5 Integração com rollback (Stage 2)** | **PASS** | `docs/RUNBOOKS/incident_management.md` referencia rollback; `docs/RUNBOOKS/rollback.md` | Integração documental, sem prova em produção. |
 | **4.6 Modelo documentado (ADR 0025)** | **PASS** | `docs/ADR/0025-enterprise-incident-and-escalation-model.md` (Status: Accepted). | — |
@@ -70,8 +70,8 @@
 | **7.4 Auditoria de ações sensíveis** | **PASS** | `docs/EVIDENCE/stage_3/audit_actions_nonprod.md` | Evidência non-prod. |
 | **7.5 Modelo documentado (ADR 0027)** | **PASS** | `docs/ADR/0027-enterprise-access-control-and-identity-boundaries.md` (Status: Accepted). | — |
 | **8.1 ADRs 0021 → 0027 aprovados** | **PASS** | `docs/ADR/0021-product-roadmap-and-maturity-stages.md`; `docs/ADR/0022-dedicated-runtime-and-isolation-model.md`; `docs/ADR/0023-enterprise-sla-model.md`; `docs/ADR/0024-tenant-level-observability.md`; `docs/ADR/0025-enterprise-incident-and-escalation-model.md`; `docs/ADR/0026-enterprise-data-residency-and-compliance-boundaries.md`; `docs/ADR/0027-enterprise-access-control-and-identity-boundaries.md` | — |
-| **8.2 Runbooks operacionais completos** | **FAIL** | Runbooks existentes são Stage 2/3 parciais. | Completeness enterprise não demonstrada; Stage 4. |
-| **8.3 Status público do produto atualizado** | **FAIL** | Nenhuma evidência registrada. | Status público não documentado; Stage 4. |
+| **8.2 Runbooks operacionais completos** | **FAIL** | `docs/RUNBOOKS/runbooks_stage_3.md` (critério + inventário). | Lacunas abertas: template de comunicação e runbook de status público; sem validação em produção. |
+| **8.3 Status público do produto atualizado** | **PASS** | `docs/PRODUCT_STATUS.md` | — |
 | **8.4 Limitações do Stage 3 documentadas** | **PASS** | `docs/EVIDENCE/stage_3/observability_enterprise_minimum.md` | Limitações explícitas em observability; outras áreas pendentes. |
 | **8.5 Roadmap Stage 4 não iniciado** | **PASS** | Este documento — declaração formal “Stage 4 is not started”. | — |
 
