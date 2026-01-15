@@ -37,12 +37,12 @@
 | **1.1 Runtime dedicado por tenant enterprise** | **FAIL** | Nenhuma evidência operacional ou de provisionamento dedicada registrada. | Não há evidência de runtime dedicado por tenant enterprise; Stage 4. |
 | **1.2 Isolamento de recursos (CPU, memória, cache)** | **PASS** | `docs/EVIDENCE/stage_3/runtime_resource_isolation.md` | — |
 | **1.3 Nenhum compartilhamento de execução entre tenants** | **FAIL** | Nenhuma evidência operacional registrada. | Sem prova de isolamento de execução cross-tenant; Stage 4. |
-| **1.4 Modelo documentado (ADR 0022)** | **FAIL** | `docs/ADR/0022-dedicated-runtime-and-isolation-model.md` (Status: Draft). | ADR não aprovado formalmente; Stage 4. |
+| **1.4 Modelo documentado (ADR 0022)** | **PASS** | `docs/ADR/0022-dedicated-runtime-and-isolation-model.md` (Status: Accepted). | — |
 | **2.1 Métricas segregadas por tenant** | **PASS** | `docs/EVIDENCE/stage_3/observability_enterprise_minimum.md` | — |
 | **2.2 Dashboards dedicados por tenant** | **FAIL** | Ausência de dashboards versionados. | Dashboards por tenant não existem; Stage 4. |
 | **2.3 Logs sem payload sensível** | **FAIL** | `docs/EVIDENCE/stage_3/logs_no_payload_nonprod.md` (non-prod) | Sem evidência operacional/automatizada em runtime dedicado; Stage 4. |
 | **2.4 Retenção configurável por tenant/plano** | **FAIL** | `docs/EVIDENCE/stage_3/observability_enterprise_minimum.md` | Retenção por tenant/plano não implementada; Stage 4. |
-| **2.5 Modelo documentado (ADR 0024)** | **FAIL** | `docs/ADR/0024-tenant-level-observability.md` (Status: Draft). | ADR não aprovado formalmente; Stage 4. |
+| **2.5 Modelo documentado (ADR 0024)** | **PASS** | `docs/ADR/0024-tenant-level-observability.md` (Status: Accepted). | — |
 | **3.1 SLOs mensuráveis e auditáveis** | **FAIL** | Não há evidência Stage 3 específica. | SLOs documentados em Stage 2, sem fechamento enterprise; Stage 4. |
 | **3.2 Métrica de disponibilidade oficial** | **FAIL** | Não há evidência Stage 3 específica. | Métrica oficial para SLA enterprise não registrada; Stage 4. |
 | **3.3 Processo de cálculo e apuração definido** | **FAIL** | Não há evidência Stage 3 específica. | Processo de apuração enterprise não documentado; Stage 4. |
@@ -52,7 +52,7 @@
 | **4.3 Comunicação com cliente documentada** | **FAIL** | Runbook menciona comunicação interna apenas. | Comunicação com cliente não documentada; Stage 4. |
 | **4.4 Postmortem obrigatório** | **PASS** | `docs/RUNBOOKS/incident_management.md` + template em `docs/incidents/_template.md` | Obrigatoriedade documental, sem evidência de execução. |
 | **4.5 Integração com rollback (Stage 2)** | **PASS** | `docs/RUNBOOKS/incident_management.md` referencia rollback; `docs/RUNBOOKS/rollback.md` | Integração documental, sem prova em produção. |
-| **4.6 Modelo documentado (ADR 0025)** | **FAIL** | `docs/ADR/0025-enterprise-incident-and-escalation-model.md` (Status: Draft). | ADR não aprovado formalmente; Stage 4. |
+| **4.6 Modelo documentado (ADR 0025)** | **PASS** | `docs/ADR/0025-enterprise-incident-and-escalation-model.md` (Status: Accepted). | — |
 | **5.1 Rollback completo validado em produção** | **FAIL** | `docs/EVIDENCE/stage_3/rollback_production_validation.md` | Produção indisponível no ambiente; Stage 4. |
 | **5.2 Procedimento manual documentado** | **PASS** | `docs/RUNBOOKS/rollback.md` | — |
 | **5.3 Evidência de teste de rollback** | **PASS** | `docs/EVIDENCE/stage_3/rollback_validation_nonprod.md` | Evidência non-prod, sem produção. |
@@ -63,13 +63,13 @@
 | **6.3 Retenção mínima definida** | **FAIL** | `docs/EVIDENCE/stage_3/observability_enterprise_minimum.md` aponta defaults globais. | Retenção por tenant/plano ausente; Stage 4. |
 | **6.4 Purge manual documentado** | **FAIL** | Nenhuma evidência Stage 3 específica. | Procedimento de purge manual não documentado; Stage 4. |
 | **6.5 Papéis LGPD/GDPR claros** | **FAIL** | Não há evidência Stage 3 específica. | Papéis não explicitados como item auditável; Stage 4. |
-| **6.6 Modelo documentado (ADR 0018)** | **FAIL** | `docs/ADR/0018-data-privacy-lgpd-gdpr-retention.md` (Status: Draft). | ADR não aprovado formalmente; Stage 4. |
+| **6.6 Modelo documentado (ADR 0018)** | **PASS** | `docs/ADR/0018-data-privacy-lgpd-gdpr-and-retention-policies.md` (Status: Accepted). | — |
 | **7.1 Identidades segregadas por tenant** | **FAIL** | Nenhuma evidência operacional registrada. | Segregação por tenant não evidenciada; Stage 4. |
 | **7.2 RBAC explícito e limitado** | **FAIL** | Nenhuma evidência Stage 3 específica. | RBAC enterprise não documentado; Stage 4. |
 | **7.3 Rotação e revogação de credenciais** | **PASS** | `docs/EVIDENCE/stage_3/credential_rotation_nonprod.md` | Evidência non-prod; sem IAM externo. |
 | **7.4 Auditoria de ações sensíveis** | **PASS** | `docs/EVIDENCE/stage_3/audit_actions_nonprod.md` | Evidência non-prod. |
-| **7.5 Modelo documentado (ADR 0027)** | **FAIL** | `docs/ADR/0027-enterprise-access-control-and-identity.md` (Status: Draft). | ADR não aprovado formalmente; Stage 4. |
-| **8.1 ADRs 0021 → 0027 aprovados** | **FAIL** | ADRs 0022–0027 em Draft. | Aprovação formal ausente; Stage 4. |
+| **7.5 Modelo documentado (ADR 0027)** | **PASS** | `docs/ADR/0027-enterprise-access-control-and-identity-boundaries.md` (Status: Accepted). | — |
+| **8.1 ADRs 0021 → 0027 aprovados** | **PASS** | `docs/ADR/0021-product-roadmap-and-maturity-stages.md`; `docs/ADR/0022-dedicated-runtime-and-isolation-model.md`; `docs/ADR/0023-enterprise-sla-model.md`; `docs/ADR/0024-tenant-level-observability.md`; `docs/ADR/0025-enterprise-incident-and-escalation-model.md`; `docs/ADR/0026-enterprise-data-residency-and-compliance-boundaries.md`; `docs/ADR/0027-enterprise-access-control-and-identity-boundaries.md` | — |
 | **8.2 Runbooks operacionais completos** | **FAIL** | Runbooks existentes são Stage 2/3 parciais. | Completeness enterprise não demonstrada; Stage 4. |
 | **8.3 Status público do produto atualizado** | **FAIL** | Nenhuma evidência registrada. | Status público não documentado; Stage 4. |
 | **8.4 Limitações do Stage 3 documentadas** | **PASS** | `docs/EVIDENCE/stage_3/observability_enterprise_minimum.md` | Limitações explícitas em observability; outras áreas pendentes. |
