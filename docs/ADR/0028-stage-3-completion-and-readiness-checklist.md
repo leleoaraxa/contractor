@@ -1,8 +1,8 @@
 # 📘 ADR 0028 — **Stage 3 Completion & Readiness Checklist**
 
-**Status:** Draft
-**Date:** 2026-01-13
-**Stage:** 3 — Enterprise Ready
+**Status:** Accepted  
+**Date:** 2026-01-13  
+**Stage:** 3 — Enterprise Ready  
 **Related:**
 
 * ADR 0021 — Product Roadmap and Maturity Stages
@@ -16,35 +16,17 @@
 
 ---
 
-## Context
+## Rationale
 
-O Stage 3 (Enterprise Ready) introduz capacidades **contratuais, operacionais e técnicas** que não podem ser parcialmente entregues.
-Diferente dos estágios anteriores, **Stage 3 exige fechamento explícito**, evitando:
-
-* promessas enterprise sem lastro
-* vendas fora do escopo
-* dependências implícitas
-* “Stage 3 de fachada”
-
-É necessário um **checklist formal de prontidão**, auditável e inequívoco.
+Esta ADR é ratificada para consolidar o checklist Stage 3 com base nas evidências já registradas, mantendo **todos os gaps explícitos** e sem reclassificar itens FAIL. A aceitação é documental: confirma o critério de prontidão e preserva a auditoria.
 
 ---
 
-## Decision
+## Scope (Stage 3 — Explicit)
 
-Instituir um **Stage 3 Completion & Readiness Checklist**, obrigatório para declarar o CONTRACTOR como **Enterprise Ready**.
-
-Sem 100% deste checklist atendido:
-
-* o produto **não pode** ser comercializado como enterprise
-* SLAs enterprise **não podem** ser assinados
-* features de Stage 4 **não podem** ser priorizadas
-
----
-
-## Governance Notes / Interpretation
-
-Alguns itens do Stage 3 **dependem necessariamente de produção real** e **não podem ser artificialmente validados** sem violar princípios de governança. O item **“Rollback completo validado em produção”** permanece **obrigatório** e deve ser validado **no primeiro tenant enterprise ativo**, sem reclassificar o Stage 3 antes disso. Esta abordagem protege engenharia, protege contratos, evita promessas implícitas e mantém o Stage 3 **defensável e honesto**.
+* Checklist único e auditável para declarar Stage 3.
+* Evidências limitadas a documentação existente em `docs/EVIDENCE/stage_3/`, testes e runbooks atuais.
+* Itens FAIL permanecem FAIL até evidência válida (incluindo produção quando requerido).
 
 ---
 
@@ -131,20 +113,9 @@ Alguns itens do Stage 3 **dependem necessariamente de produção real** e **não
 
 ---
 
-## Acceptance Criteria
-
-O Stage 3 é considerado **formalmente concluído** quando:
-
-1. **Todos os itens acima estão marcados**
-2. Existe evidência documental no repositório
-3. Pelo menos **um tenant enterprise** já operou sob este modelo
-4. Não existem “atalhos” operacionais fora dos ADRs
-
----
-
 ## Explicit Non-Goals
 
-Este checklist **não cobre**:
+Este checklist **não cobre** no Stage 3:
 
 * automação avançada
 * marketplace
@@ -152,26 +123,22 @@ Este checklist **não cobre**:
 * multi-região ativa
 * autoscaling inteligente
 
-Esses itens pertencem ao **Stage 4**.
+---
+
+## Evidence / References
+
+* `docs/EVIDENCE/stage_3/stage_3_readiness_closure.md`
+* `docs/EVIDENCE/stage_3/runtime_resource_isolation.md`
+* `docs/EVIDENCE/stage_3/observability_enterprise_minimum.md`
+* `docs/EVIDENCE/stage_3/credential_rotation_nonprod.md`
+* `docs/EVIDENCE/stage_3/audit_actions_nonprod.md`
+* `docs/EVIDENCE/stage_3/rollback_validation_nonprod.md`
+* `docs/EVIDENCE/stage_3/rollback_production_validation.md`
+* `docs/RUNBOOKS/incident_management.md`
+* `docs/RUNBOOKS/rollback.md`
 
 ---
 
-## Consequences
+## No Forward Commitment
 
-* O produto passa a ser **defensável juridicamente**
-* Vendas enterprise ficam alinhadas à engenharia
-* Operação torna-se previsível
-* A base para escala real é estabelecida
-
----
-
-## Final Statement
-
-> **Stage 3 não é um meio-termo.**
-> Ou está completo, ou não existe.
-
-Este ADR é o **selo de fechamento** do Stage 3.
-
-Somente após sua aceitação formal, o CONTRACTOR está autorizado a evoluir para **Stage 4 — Platform Ecosystem**.
-
----
+“Esta ADR não constitui compromisso de implementação futura além do Stage 3.”
