@@ -21,6 +21,80 @@
 - **Logs sem payload sensível** estão documentados como política (ADR 0018 + runbook), porém **não há prova automática ou operacional** de enforcement no runtime.
 - **Retenção por tenant/plano** não está implementada; há somente defaults globais em `ops/observability/retention.yaml`.
 
+## Stage 3 — Trilha C (Observability): CONCLUÍDA
+
+**Status global:** Trilha C = **DONE**.
+
+**Checklist Trilha C (C1 → C5)**
+
+| Item | Status | Evidência/nota curta |
+| --- | --- | --- |
+| **C1** — Instrumentação HTTP do runtime (`http_requests_total`) | **DONE** | Métrica exposta no runtime com labels de serviço/método/path/status. |
+| **C2** — Labels de tenant nas métricas do runtime | **DONE** | Teste de integração valida `runtime_tenant_http_requests_total` com `tenant_id`. |
+| **C3** — Endpoint `/metrics` disponível no runtime | **DONE** | Evidência operacional local via `curl` no runtime. |
+| **C4** — Teste de integração de observabilidade do runtime | **DONE** | `tests/integration/test_runtime_tenant_observability.py`. |
+| **C5** — Hardening de cardinalidade em métricas HTTP | **DONE** | Alta cardinalidade em métricas HTTP mitigada via route template (sem mudança de contrato). |
+
+**Notas obrigatórias (Trilha C):**
+
+- **Não há registry custom** (usa registry padrão do `prometheus_client`).
+- **Não há alteração de contrato de métricas** (nomes e labels existentes preservados).
+- **Mitigação de cardinalidade via route template** (`path` expõe `/api/v1/runtime/ask/result/{request_id}`).
+- **Referência ADR:** ADR 0024 — Tenant-Level Observability.
+
+### Evidências
+
+#### (a) Evidência de cardinalidade mitigada
+
+**Comandos executados (runtime local):**
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -H 'X-API-Key: dev-key' \
+  http://localhost:8000/api/v1/runtime/ask/result/123e4567-e89b-12d3-a456-426614174000
+curl -s -o /dev/null -w "%{http_code}\n" -H 'X-API-Key: dev-key' \
+  http://localhost:8000/api/v1/runtime/ask/result/123e4567-e89b-12d3-a456-426614174000/raw
+curl -s http://localhost:8000/metrics | rg "http_requests_total\\{"
+```
+
+**Antes (path dinâmico com `request_id` em rota não roteada, sem template):**
+
+```
+http_requests_total{method="GET",path="/api/v1/runtime/ask/result/123e4567-e89b-12d3-a456-426614174000/raw",service="runtime",status_code="404"} 1.0
+```
+
+**Depois (path com template `{request_id}`):**
+
+```
+http_requests_total{method="GET",path="/api/v1/runtime/ask/result/{request_id}",service="runtime",status_code="503"} 1.0
+```
+
+#### (b) Evidência de teste automatizado
+
+- **Teste de integração:** `test_http_metrics_use_route_template_for_dynamic_paths`.
+- **Comando executado:**
+
+```bash
+pytest -q tests/integration/test_runtime_tenant_observability.py -k "http_metrics_use_route_template_for_dynamic_paths"
+```
+
+- **Resultado:**
+
+```
+1 passed, 2 deselected in 0.85s
+```
+
+#### (c) Evidência operacional local (compose)
+
+> **Nota factual:** o ambiente atual não possui `docker`/`docker-compose`. A evidência abaixo foi obtida com o runtime local (equivalente ao serviço `runtime` do compose), mantendo os mesmos endpoints.
+
+**Curl real ao endpoint `/metrics` do runtime:**
+
+```bash
+curl -s http://localhost:8000/metrics | rg "http_requests_total\\{"
+```
+
+**Confirmação:** o label `path` expõe o template `/api/v1/runtime/ask/result/{request_id}` e **não** contém o valor literal de `request_id`.
+
 ## Referências
 
 - ADR 0024 — Tenant-Level Observability.
