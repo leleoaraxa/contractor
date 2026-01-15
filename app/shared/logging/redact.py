@@ -20,10 +20,6 @@ _PATTERNS = [
         re.compile(r"(?i)Authorization:\s*Bearer\s+([^\s]+)"),
         r"Authorization: Bearer [REDACTED]",
     ),
-    (
-        re.compile(r"(?i)\b(question|prompt|content|body|payload)\b"),
-        "[REDACTED_KEY]",
-    ),
 ]
 
 

@@ -15,6 +15,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from app.runtime.engine.ask_models import AskResponse
+from app.shared.logging.logger import JsonFormatter
 
 TEST_API_KEY = "tenant-alpha:tenant_runtime_client:log-test-key"
 
@@ -42,7 +43,7 @@ def _build_client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
 
 
 def test_runtime_logs_do_not_include_payload_keys_or_values(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     client = _build_client(monkeypatch)
     ask_payload = {"tenant_id": "tenant-alpha", "question": "super-secret-payload"}
@@ -58,18 +59,24 @@ def test_runtime_logs_do_not_include_payload_keys_or_values(
     assert response.status_code == 200
 
     logger = logging.getLogger("runtime.ask")
-    logger.info(
-        "runtime.request payload=%s",
-        {
-            "question": "super-secret-payload",
-            "prompt": "do-not-log",
-            "content": "raw-content",
-            "body": {"nested": "payload"},
-            "payload": {"question": "nested-question"},
-        },
-    )
+    caplog.set_level(logging.INFO, logger="runtime.ask")
+    caplog.handler.setFormatter(JsonFormatter())
+    logger.addHandler(caplog.handler)
+    try:
+        logger.info(
+            "runtime.request payload=%s",
+            {
+                "question": "super-secret-payload",
+                "prompt": "do-not-log",
+                "content": "raw-content",
+                "body": {"nested": "payload"},
+                "payload": {"question": "nested-question"},
+            },
+        )
+    finally:
+        logger.removeHandler(caplog.handler)
 
-    output = capsys.readouterr().out
+    output = caplog.text
     assert output
 
     forbidden_keys = {"question", "prompt", "content", "body", "payload"}
