@@ -38,10 +38,10 @@ def get_aliases(tenant_id: str, request: Request) -> dict:
 @router.post("/tenants/{tenant_id}/aliases/current")
 def set_current(tenant_id: str, req: SetAliasRequest, request: Request) -> dict:
     validate_tenant_id(tenant_id)
-    require_api_key(request)
+    identity = require_api_key(request)
     enforce_rate_limit(tenant_id, "control.aliases.set_current")
     try:
-        a = _svc.set_current(tenant_id, req.bundle_id)
+        a = _svc.set_current(tenant_id, req.bundle_id, actor=identity)
     except PromotionGateError as e:
         raise HTTPException(status_code=400, detail=_svc.format_gate_error(e))
     except ValueError as e:
@@ -52,10 +52,10 @@ def set_current(tenant_id: str, req: SetAliasRequest, request: Request) -> dict:
 @router.post("/tenants/{tenant_id}/aliases/candidate")
 def set_candidate(tenant_id: str, req: SetAliasRequest, request: Request) -> dict:
     validate_tenant_id(tenant_id)
-    require_api_key(request)
+    identity = require_api_key(request)
     enforce_rate_limit(tenant_id, "control.aliases.set_candidate")
     try:
-        a = _svc.set_candidate(tenant_id, req.bundle_id)
+        a = _svc.set_candidate(tenant_id, req.bundle_id, actor=identity)
     except PromotionGateError as e:
         raise HTTPException(status_code=400, detail=_svc.format_gate_error(e))
     except ValueError as e:
@@ -66,10 +66,10 @@ def set_candidate(tenant_id: str, req: SetAliasRequest, request: Request) -> dic
 @router.post("/tenants/{tenant_id}/aliases/draft")
 def set_draft(tenant_id: str, req: SetAliasRequest, request: Request) -> dict:
     validate_tenant_id(tenant_id)
-    require_api_key(request)
+    identity = require_api_key(request)
     enforce_rate_limit(tenant_id, "control.aliases.set_draft")
     try:
-        a = _svc.set_draft(tenant_id, req.bundle_id)
+        a = _svc.set_draft(tenant_id, req.bundle_id, actor=identity)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"tenant_id": a.tenant_id, "draft": a.draft_bundle_id}
@@ -95,19 +95,19 @@ def resolve_alias(tenant_id: str, release_alias: str, request: Request) -> dict:
 @router.post("/tenants/{tenant_id}/aliases/{release_alias}")
 def set_alias(tenant_id: str, release_alias: str, req: SetAliasRequest, request: Request) -> dict:
     validate_tenant_id(tenant_id)
-    require_api_key(request)
+    identity = require_api_key(request)
     enforce_rate_limit(tenant_id, "control.aliases.set_alias")
     if release_alias not in {"draft", "candidate", "current"}:
         raise HTTPException(status_code=400, detail="invalid release_alias")
 
     try:
         if release_alias == "current":
-            a = _svc.set_current(tenant_id, req.bundle_id)
+            a = _svc.set_current(tenant_id, req.bundle_id, actor=identity)
             return {"tenant_id": a.tenant_id, "current": a.current_bundle_id}
         if release_alias == "candidate":
-            a = _svc.set_candidate(tenant_id, req.bundle_id)
+            a = _svc.set_candidate(tenant_id, req.bundle_id, actor=identity)
             return {"tenant_id": a.tenant_id, "candidate": a.candidate_bundle_id}
-        a = _svc.set_draft(tenant_id, req.bundle_id)
+        a = _svc.set_draft(tenant_id, req.bundle_id, actor=identity)
         return {"tenant_id": a.tenant_id, "draft": a.draft_bundle_id}
     except PromotionGateError as e:
         raise HTTPException(status_code=400, detail=_svc.format_gate_error(e))
