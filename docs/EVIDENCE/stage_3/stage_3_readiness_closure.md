@@ -56,7 +56,7 @@
 | **5.1 Rollback completo validado em produção** | **FAIL** | `docs/EVIDENCE/stage_3/rollback_production_validation.md` | Produção indisponível no ambiente; Stage 4. |
 | **5.2 Procedimento manual documentado** | **PASS** | `docs/RUNBOOKS/rollback.md` | — |
 | **5.3 Evidência de teste de rollback** | **PASS** | `docs/EVIDENCE/stage_3/rollback_validation_nonprod.md` | Evidência non-prod, sem produção. |
-| **5.4 Sem rollback automático não auditado** | **FAIL** | Nenhuma evidência explícita. | Ausência de declaração/garantia explícita; Stage 4. |
+| **5.4 Sem rollback automático não auditado** | **PASS** | `docs/RUNBOOKS/rollback.md` (rollback manual, sem automação). | — |
 | **5.5 Dependência explícita do Control Plane** | **PASS** | `docs/RUNBOOKS/rollback.md` | — |
 | **6.1 Inventário de dados documentado** | **FAIL** | Nenhuma evidência Stage 3 específica. | Inventário formal não registrado; Stage 4. |
 | **6.2 Classificação de dados por classe** | **FAIL** | Nenhuma evidência Stage 3 específica. | Classificação formal não registrada; Stage 4. |
