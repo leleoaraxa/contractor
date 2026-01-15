@@ -109,7 +109,7 @@ Nenhuma referência não verificada no inventário acima.
 | --- | --- | --- | --- | --- |
 | Métricas segregadas por tenant | ✅ | `tests/integration/test_runtime_tenant_observability.py` | Métrica `runtime_tenant_http_requests_total` com `tenant_id`. | — |
 | Dashboards dedicados por tenant | ❌ | ADR 0024 (non-goal) + ausência de dashboards versionados | Dashboards não estão versionados no repo. | Criar dashboards por tenant (Grafana) versionados em `ops/` e documentar. |
-| Logs sem payload sensível | ❌ | ADR 0024 / runbook de privacidade (diretriz) | Sem teste ou prova de redaction automática. | Implementar e testar redaction + validar amostras de log. |
+| Logs sem payload sensível | ✅ (non-prod) | `docs/EVIDENCE/stage_3/logs_no_payload_nonprod.md`; `tests/integration/test_runtime_logs_no_payload.py`; `tests/integration/test_control_plane_audit_log.py` | Evidência **non-prod** com enforcement e teste; produção permanece pendente. | Registrar evidência equivalente em produção quando disponível. |
 | Retenção configurável por tenant/plano | ❌ | `ops/observability/retention.yaml` (defaults) | Retenção apenas default; sem override por tenant/plano. | Definir config por tenant/plano + documentação e validação. |
 | Modelo documentado (ADR 0024) | ✅ | ADR 0024 | Modelo de observabilidade por tenant documentado. | — |
 
@@ -200,7 +200,7 @@ O item **Rollback completo validado em produção** permanece aberto porque **ex
 1. **Rollback validado em produção + evidência registrada (bloqueador nº1; depende de evento real de go-live enterprise, não de desenvolvimento adicional).**  
    - Nota: evidência non-prod registrada; falta produção.
 2. **Dashboards por tenant versionados (observabilidade enterprise).**
-3. **Garantia de logs sem payload sensível (redaction + teste).**
+3. **Evidência de logs sem payload sensível em produção (atualmente apenas non-prod).**
 4. **Retenção configurável por tenant/plano (config + evidência).**
 5. **Rotação/revogação de credenciais em produção + automação enterprise (apenas non-prod evidenciado).**
 6. **ADRs 0022–0027 aprovados formalmente.**
