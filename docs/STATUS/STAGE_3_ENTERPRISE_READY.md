@@ -1,215 +1,145 @@
-# 📘 STAGE 3 — Enterprise Ready
+# 📘 Stage 3 Status — **Enterprise Ready: NÃO**
 
-**Status:** Draft (Status Document)
-**Relacionado:** ADR 0021 — Product Roadmap and Maturity Stages
+**Produto:** CONTRACTOR
+**Stage atual:** 3 — Enterprise Ready (em validação)
+**Status:** **NÃO Enterprise Ready**
 **Última atualização:** 2026-01-XX
+**Fonte de verdade:** ADR 0028 — *Stage 3 Completion & Readiness Checklist*
 
 ---
 
-## 1. Purpose
+## 1. Declaração oficial de status
 
-Este documento define **o significado exato de “Enterprise Ready”** no contexto do CONTRACTOR.
+O CONTRACTOR encontra-se atualmente no **Stage 3** de maturidade conforme definido no **ADR 0021**.
+No entanto, **o produto NÃO é considerado Enterprise Ready neste momento**.
 
-Ele **não** descreve arquitetura detalhada, **não** decide implementações técnicas específicas e **não** substitui ADRs.
-Seu papel é estabelecer **o contrato de maturidade do Stage 3**, servindo como referência obrigatória para:
+Esta decisão é **deliberada, explícita e auditável**, baseada exclusivamente no **checklist formal do ADR 0028** e nas evidências registradas no repositório.
 
-* decisões arquiteturais futuras
-* criação de ADRs do Stage 3
-* comunicação comercial e de vendas
-* alinhamento entre produto, engenharia e operações
-
-Nenhuma capability enterprise pode ser anunciada, vendida ou implementada sem aderência a este documento.
+Não há qualquer interpretação comercial, flexibilização de critérios ou exceção operacional aplicada a esta avaliação.
 
 ---
 
-## 2. Definition of Enterprise Ready
+## 2. O que significa “Stage 3” no estado atual
 
-Um sistema **Enterprise Ready** no CONTRACTOR é aquele que:
+O Stage 3 estabelece o **modelo enterprise do CONTRACTOR**, incluindo:
 
-* oferece **isolamento forte e previsível por tenant**
-* suporta **compromissos operacionais contratuais (SLAs)**
-* atende requisitos formais de **compliance, auditoria e governança**
-* permite **controle operacional explícito** por clientes enterprise
-* mantém **determinismo e reversibilidade** mesmo sob falhas
+* arquitetura com isolamento por tenant
+* governança explícita por ADRs
+* controles formais de segurança e identidade
+* processos documentados de incidentes, rollback e operação
+* observabilidade mínima auditável
+* políticas claras de privacidade e retenção
 
-Enterprise Ready **não significa** escala máxima, marketplace ou automação total — esses pertencem ao Stage 4.
+Esses elementos **estão definidos, documentados e testados até o limite do ambiente disponível (non-prod)**.
 
----
-
-## 3. Entry Criteria (Pré-requisitos obrigatórios)
-
-O Stage 3 **só pode iniciar** se **todos** os critérios abaixo estiverem atendidos:
-
-### 3.1 Maturidade do Stage 2 (obrigatório)
-
-* SLOs ativos e monitorados
-* Incident Management documentado e operacional
-* Rollback completo e validado
-* SDKs estáveis e versionados
-* Políticas explícitas de privacidade e retenção (ADR 0018)
-
-> Stage 3 **não corrige lacunas do Stage 2**.
+Contudo, **definição e documentação não equivalem a prontidão operacional enterprise completa**.
 
 ---
 
-### 3.2 Estabilidade arquitetural
+## 3. Capacidades já prontas (Stage 3 — limite non-prod)
 
-* Runtime e Control Plane com contratos estáveis
-* Bundles e aliases totalmente imutáveis
-* Nenhuma dependência crítica “experimental” em produção
+As seguintes capacidades estão **formalmente prontas e governadas**, com evidência registrada:
 
----
+* **Modelo de isolamento por tenant**
 
-## 4. Core Capabilities — Stage 3
+  * Runtime dedicado ou logicamente isolado
+  * Enforcement testado em ambiente non-prod
+* **Governança técnica**
 
-### 4.1 Runtime & Isolation
+  * ADRs 0022 a 0027 aprovados
+  * Limites e non-goals explicitados
+* **Observabilidade mínima por tenant**
 
-* Runtime **dedicado ou logicamente isolado por tenant**
-* Garantias explícitas de:
+  * Métricas segregadas
+  * Dashboards versionados (non-prod)
+  * Retenção declarativa por tenant/plano (non-prod)
+* **Incident Management**
 
-  * isolamento de carga
-  * isolamento de falhas
-  * previsibilidade de latência
-* Nenhum tenant pode degradar outro
+  * Classificação SEV-1 a SEV-4
+  * Runbooks enterprise documentados
+  * Postmortem obrigatório
+* **Rollback (até o limite non-prod)**
 
-> O **modelo exato de isolamento** será definido por ADR específico.
+  * Procedimento manual documentado
+  * Evidência de teste em ambiente local/compose
+* **Privacidade e compliance**
 
----
+  * Inventário e classificação de dados (ADR 0018)
+  * Retenção mínima e purge documentados
+* **Controle de acesso e identidade**
 
-### 4.2 Security & Access Control
+  * RBAC por tenant
+  * Auditoria de ações sensíveis (non-prod)
 
-* Gestão de credenciais por tenant
-* Rotação de chaves e segregação de acessos
-* Controles explícitos de:
-
-  * quem pode operar
-  * quem pode auditar
-  * quem pode promover bundles
-
----
-
-### 4.3 Compliance & Auditability
-
-* Audit logs completos, estruturados e imutáveis
-* Rastreabilidade clara entre:
-
-  * ações operacionais
-  * bundles
-  * decisões de runtime
-* Suporte a auditorias externas (ex.: SOC2-like, ISO-like)
-
-> O CONTRACTOR continua atuando como **Data Processor**.
+Essas capacidades **não estão sendo promovidas como garantias enterprise plenas**, apenas como **base técnica do Stage 3**.
 
 ---
 
-### 4.4 SLAs & Operação Enterprise
+## 4. Gaps restantes (bloqueadores de Enterprise Ready)
 
-* Definição formal de SLAs:
+Os itens abaixo **impedem o status Enterprise Ready** e permanecem **abertos por dependerem de produção real**:
 
-  * disponibilidade
-  * tempo de resposta
-  * suporte
-* Procedimentos claros de:
+1. **Rollback completo validado em produção**
 
-  * escalonamento
-  * comunicação de incidentes
-  * relatórios pós-incidente
+   * Não existe evidência operacional em ambiente produtivo com tenant enterprise ativo.
+2. **Evidência de tenant enterprise operando em produção**
 
----
+   * Não há cliente enterprise ativo sob o modelo Stage 3.
+3. **Logs sem payload sensível em produção**
 
-### 4.5 Observability Avançada
+   * Evidência existe apenas em non-prod.
+4. **Rotação e revogação de credenciais em produção**
 
-* Métricas por tenant
-* Logs com níveis configuráveis
-* Tracing **opcional** e sem payload sensível
-* Capacidade de exportar dados operacionais para sistemas do cliente
+   * Evidência e automação limitadas a non-prod.
+5. **Retenção efetiva aplicada por tenant/plano em produção**
 
----
+   * Apenas camada declarativa Stage 3 está presente.
 
-## 5. Explicit Non-Goals (fora do Stage 3)
+Esses gaps **não são falhas técnicas**, mas **condições operacionais ainda inexistentes**.
 
-O Stage 3 **não inclui**:
-
-* Marketplace de bundles
-* Automação completa de rollout (canary, A/B avançado)
-* Billing sofisticado multi-dimensional
-* Data residency multi-região automática
-* Customizações profundas por cliente sem governança
-
-Esses itens pertencem ao **Stage 4 — Platform Ecosystem**.
+Nenhum deles pode ser fechado por desenvolvimento adicional sem produção real.
 
 ---
 
-## 6. What Changes vs Stage 2
+## 5. O que este status NÃO afirma
 
-| Dimensão    | Stage 2       | Stage 3            |
-| ----------- | ------------- | ------------------ |
-| Runtime     | Compartilhado | Dedicado / Isolado |
-| SLO         | Interno       | Contratual (SLA)   |
-| Incidentes  | Manual        | Processo formal    |
-| Privacidade | Documentada   | Auditável          |
-| Clientes    | SMB / Pro     | Enterprise         |
+Este documento **explicitamente NÃO afirma** que o CONTRACTOR:
 
----
+* está pronto para venda enterprise
+* cumpre SLA enterprise em produção
+* possui observabilidade enterprise completa em produção
+* tem isolamento enterprise validado operacionalmente
+* suporta múltiplos tenants enterprise ativos
 
-## 7. Relationship with ADRs
-
-Este documento **precede e governa** todos os ADRs do Stage 3.
-
-Todo ADR do Stage 3 deve:
-
-* referenciar explicitamente este documento
-* mapear qual capability enterprise está sendo atendida
-* declarar impactos comerciais e operacionais
-
-Nenhum ADR pode **contradizer** este STATUS.
+Qualquer afirmação nesse sentido **seria incorreta**.
 
 ---
 
-## 8. Consequences
+## 6. Relação com ADRs
 
-Ao definir explicitamente o Stage 3:
-
-* reduzimos risco de promessas enterprise prematuras
-* evitamos ADRs especulativos
-* criamos uma base sólida para vendas enterprise
-* preservamos coerência arquitetural no longo prazo
-
-Este documento é **normativo**, não aspiracional.
+* O critério de prontidão é governado **exclusivamente** pelo **ADR 0028**.
+* Este documento **não substitui** ADRs nem cria novas decisões arquiteturais.
+* O **Stage 4** (**ADR 0029**) **não foi iniciado** e permanece fora do escopo.
 
 ---
 
-## 9. Next Natural Step
+## 7. Condição para mudança deste status
 
-Após este STATUS estar aprovado e versionado:
+Este status **só poderá ser alterado** quando:
 
-➡️ **ADR 0022 — Dedicated Runtime & Isolation Model**
+* houver **tenant enterprise real em produção**
+* os gaps listados na seção 4 forem fechados **com evidência operacional**
+* novas evidências forem registradas em `docs/EVIDENCE/stage_3/`
+* o ADR 0028 puder ser reavaliado **sem exceções**
 
-Esse ADR será o **primeiro ADR legítimo do Stage 3**.
+Até lá, **Enterprise Ready permanece = NÃO**.
 
 ---
 
-## 10. D1 — Dedicated Runtime Mode (Single-Tenant Enforcement)
+## 8. Nota final (disclaimer)
 
-**Objetivo (D1):**
-
-* Habilitar um modo de runtime dedicado a um único tenant, com bloqueio explícito de requests para outros tenants.
-
-**Flag de configuração:**
-
-* `RUNTIME_DEDICATED_TENANT_ID=<tenant_id>` (quando setada, o runtime passa a operar em modo dedicado).
-
-**Critérios de aceite:**
-
-* Requests para `/api/v1/runtime/ask` com `tenant_id` diferente do tenant dedicado retornam **403** com erro estruturado.
-* Requests com `tenant_id` igual ao tenant dedicado seguem o fluxo normal.
-* Em modo default (flag ausente), não há mudança de comportamento.
-* Testes específicos cobrem o modo dedicado.
-
-**Como testar localmente:**
-
-* `RUNTIME_DEDICATED_TENANT_ID=tenant-alpha CONTRACTOR_API_KEYS=dev-key pytest tests/integration/test_dedicated_runtime_mode.py`
-* `curl -s -X POST http://localhost:8000/api/v1/runtime/ask -H 'X-API-Key: dev-key' -H 'Content-Type: application/json' -d '{"tenant_id":"tenant-alpha","question":"ping"}'`
-* `curl -s -o /dev/null -w '%{http_code}\n' -X POST http://localhost:8000/api/v1/runtime/ask -H 'X-API-Key: dev-key' -H 'Content-Type: application/json' -d '{"tenant_id":"tenant-beta","question":"ping"}'`
+> Nada neste documento constitui compromisso de implementação futura, garantia comercial ou promessa operacional.
+>
+> Este status reflete exclusivamente o estado técnico e operacional verificável do CONTRACTOR no momento da última atualização.
 
 ---
