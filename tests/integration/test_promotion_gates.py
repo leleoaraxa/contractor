@@ -145,7 +145,8 @@ def test_promotion_gate_fail_template_safety():
     assert response.status_code == 400
     detail = response.json()["detail"]
     assert detail["error"] == "promotion_gate_failed"
-    assert detail["gate"] == "template_safety"
+    assert detail["type"] == "validation_error"
+    assert detail["details"]["gate"] == "template_safety"
 
 
 def test_template_safety_gate_report(monkeypatch):
@@ -202,8 +203,9 @@ def test_promotion_gate_rejects_stub_suites(monkeypatch):
     assert response.status_code == 400
     detail = response.json()["detail"]
     assert detail["error"] == "promotion_gate_failed"
-    assert detail["gate"] == "suites"
-    assert "stub suite" in detail["detail"]
+    assert detail["type"] == "validation_error"
+    assert detail["details"]["gate"] == "suites"
+    assert "stub suite" in detail["details"]["detail"]
 
 
 def test_rate_limit_enforced():
@@ -251,3 +253,5 @@ def test_rate_limit_enforced():
     assert response2.status_code == 429
     detail = response2.json()["detail"]
     assert detail["error"] == "rate_limit_exceeded"
+    assert detail["type"] == "rate_limit"
+    assert detail["details"]["retry_after_seconds"] >= 1

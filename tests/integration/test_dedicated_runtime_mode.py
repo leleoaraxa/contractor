@@ -58,7 +58,9 @@ def test_dedicated_runtime_rejects_mismatched_tenant(client: TestClient) -> None
         )
 
     assert response.status_code == 403
-    assert response.json()["detail"] == {"error": "dedicated_tenant_mismatch"}
+    detail = response.json()["detail"]
+    assert detail["error"] == "dedicated_tenant_mismatch"
+    assert detail["type"] == "auth"
     mock_prepare.assert_not_called()
 
 
@@ -72,7 +74,9 @@ def test_dedicated_runtime_enforces_tenant_boundary(client: TestClient) -> None:
         )
 
         assert mismatch_response.status_code == 403
-        assert mismatch_response.json()["detail"] == {"error": "dedicated_tenant_mismatch"}
+        detail = mismatch_response.json()["detail"]
+        assert detail["error"] == "dedicated_tenant_mismatch"
+        assert detail["type"] == "auth"
         mock_prepare.assert_not_called()
 
         mock_prepare.return_value = (AskResponse(answer="ok", meta={}), None)

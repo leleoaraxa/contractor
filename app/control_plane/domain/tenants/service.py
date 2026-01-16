@@ -111,9 +111,15 @@ class TenantAliasService:
 
     @staticmethod
     def format_gate_error(exc: PromotionGateError) -> dict:
-        return {
-            "error": "promotion_gate_failed",
-            "gate": exc.gate,
-            "detail": exc.detail,
-            "report_path": exc.report_path,
-        }
+        from app.shared.errors import error_payload
+
+        return error_payload(
+            error="promotion_gate_failed",
+            type="validation_error",
+            message="promotion gate failed",
+            details={
+                "gate": exc.gate,
+                "detail": exc.detail,
+                "report_path": exc.report_path,
+            },
+        )

@@ -6,6 +6,8 @@ import importlib
 
 from fastapi import HTTPException, Request, status
 
+from app.shared.errors import error_payload
+
 def _get_settings():
     settings_module = importlib.import_module("app.shared.config.settings")
     return settings_module.settings
@@ -55,13 +57,22 @@ def require_api_key(request: Request) -> ApiKeyIdentity | None:
     if not allowed_identities:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="authentication required: configure CONTRACTOR_API_KEYS",
+            detail=error_payload(
+                error="auth_required",
+                type="auth",
+                message="authentication required: configure CONTRACTOR_API_KEYS",
+            ),
         )
 
     provided = (request.headers.get("X-API-Key") or "").strip()
     if not provided:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="missing X-API-Key"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=error_payload(
+                error="missing_api_key",
+                type="auth",
+                message="missing X-API-Key",
+            ),
         )
 
     matched = next(
@@ -69,7 +80,12 @@ def require_api_key(request: Request) -> ApiKeyIdentity | None:
     )
     if not matched:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="invalid API key"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=error_payload(
+                error="invalid_api_key",
+                type="auth",
+                message="invalid API key",
+            ),
         )
     return matched
 
@@ -88,28 +104,48 @@ def enforce_tenant_scope(
                 return
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail={"error": "tenant_scope_required"},
+                detail=error_payload(
+                    error="tenant_scope_required",
+                    type="auth",
+                    message="tenant scope required",
+                ),
             )
         if identity.tenant_id != tenant_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail={"error": "tenant_scope_mismatch"},
+                detail=error_payload(
+                    error="tenant_scope_mismatch",
+                    type="auth",
+                    message="tenant scope mismatch",
+                ),
             )
         if identity.role is None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail={"error": "identity_role_required"},
+                detail=error_payload(
+                    error="identity_role_required",
+                    type="auth",
+                    message="identity role required",
+                ),
             )
         if identity.role not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail={"error": "identity_role_not_allowed"},
+                detail=error_payload(
+                    error="identity_role_not_allowed",
+                    type="auth",
+                    message="identity role not allowed",
+                ),
             )
         return
     if identity.tenant_id and identity.tenant_id != tenant_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail={"error": "tenant_scope_mismatch"},
+            detail=error_payload(
+                error="tenant_scope_mismatch",
+                type="auth",
+                message="tenant scope mismatch",
+            ),
         )
 
 

@@ -99,7 +99,9 @@ def test_async_flow_returns_result():
             headers={"X-API-Key": TEST_API_KEY},
         )
         assert pending_response.status_code == 404
-        assert pending_response.json()["detail"]["error"] == "not_ready"
+        detail = pending_response.json()["detail"]
+        assert detail["error"] == "not_ready"
+        assert detail["type"] == "not_found"
 
         result = handle_ask(AskRequest(**ask_payload), explain_enabled=False)
         fake_write_result(request_id, result.model_dump())
