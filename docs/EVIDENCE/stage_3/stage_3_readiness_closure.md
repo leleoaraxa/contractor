@@ -34,9 +34,9 @@
 
 | Item ADR 0028 | Status | Evidência concreta | Motivo se FAIL |
 | ------------- | ------ | ------------------ | -------------- |
-| **1.1 Runtime dedicado por tenant enterprise** | **FAIL** | Nenhuma evidência operacional ou de provisionamento dedicada registrada. | Não há evidência de runtime dedicado por tenant enterprise; Stage 4. |
+| **1.1 Runtime dedicado por tenant enterprise** | **FAIL** | `docs/EVIDENCE/stage_3/runtime_dedicated_mode_nonprod.md`; `tests/integration/test_dedicated_runtime_mode.py` | Evidência non-prod/local apenas; produção/tenant enterprise pendente (Stage 4). |
 | **1.2 Isolamento de recursos (CPU, memória, cache)** | **PASS** | `docs/EVIDENCE/stage_3/runtime_resource_isolation.md` | — |
-| **1.3 Nenhum compartilhamento de execução entre tenants** | **FAIL** | Nenhuma evidência operacional registrada. | Sem prova de isolamento de execução cross-tenant; Stage 4. |
+| **1.3 Nenhum compartilhamento de execução entre tenants** | **FAIL** | `docs/EVIDENCE/stage_3/runtime_dedicated_mode_nonprod.md`; `tests/integration/test_dedicated_runtime_mode.py` | Evidência non-prod/local apenas; isolamento cross-tenant em produção pendente (Stage 4). |
 | **1.4 Modelo documentado (ADR 0022)** | **PASS** | `docs/ADR/0022-dedicated-runtime-and-isolation-model.md` (Status: Accepted). | — |
 | **2.1 Métricas segregadas por tenant** | **PASS** | `docs/EVIDENCE/stage_3/observability_enterprise_minimum.md` | — |
 | **2.2 Dashboards dedicados por tenant** | **FAIL** | Ausência de dashboards versionados. | Dashboards por tenant não existem; Stage 4. |
