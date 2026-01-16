@@ -1,0 +1,23 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$title: "CONTRACTOR Policies - Runtime"
+$type: object
+$additionalProperties: false
+required:
+  - rate_limit
+properties:
+  rate_limit:
+    type: object
+    additionalProperties: false
+    required:
+      - enabled
+      - rps
+      - burst
+    properties:
+      enabled:
+        type: boolean
+      rps:
+        type: integer
+        minimum: 0
+      burst:
+        type: integer
+        minimum: 0

@@ -1,0 +1,16 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$title: "CONTRACTOR Policies - Output"
+$type: object
+$additionalProperties: false
+required:
+  - output
+properties:
+  output:
+    type: object
+    additionalProperties: false
+    required:
+      - format
+    properties:
+      format:
+        type: string
+        minLength: 1
