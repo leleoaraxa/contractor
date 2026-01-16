@@ -90,5 +90,5 @@ sum(contractor:http_requests:rate5m{service="control", path="/api/v1/control/hea
 ## Estado atual (Stage 2)
 
 - Processo manual/semi-manual (documentado e operacional, sem automação completa).
-- Ferramentas externas (PagerDuty/Opsgenie etc.) são consideradas para Stage 3.
+- Ferramentas externas (ex.: on-call/incident tooling) fora do escopo do baseline atual; avaliar em Stage 4.
 - Não há on-call formal 24x7 neste estágio.
