@@ -10,6 +10,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 
 TEST_API_KEY = "test-key-for-audit-log"
+TEST_TENANT_ID = "demo"
 
 
 def _reload_control_plane_app():
@@ -46,12 +47,15 @@ def test_alias_change_emits_audit_log(tmp_path, monkeypatch):
 
     monkeypatch.setenv("CONTROL_AUDIT_LOG_PATH", str(audit_path))
     monkeypatch.setenv("CONTROL_ALIAS_STORE_PATH", str(alias_store_path))
-    monkeypatch.setenv("CONTRACTOR_API_KEYS", TEST_API_KEY)
+    monkeypatch.setenv(
+        "CONTRACTOR_API_KEYS",
+        f"{TEST_TENANT_ID}:tenant_operator:{TEST_API_KEY}",
+    )
 
     app = _reload_control_plane_app()
     client = TestClient(app)
 
-    tenant_id = "demo"
+    tenant_id = TEST_TENANT_ID
     bundle_id = "202601050001"
 
     response = client.put(

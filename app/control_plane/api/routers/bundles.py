@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
 
+from app.control_plane.api.routers import enforce_tenant_scope
 from app.shared.utils.ids import validate_tenant_id
 from app.control_plane.domain.bundles.validator import (
     ManifestNotFoundError,
@@ -17,7 +18,8 @@ router = APIRouter()
 @router.get("/tenants/{tenant_id}/bundles/{bundle_id}/validate")
 def validate_bundle(tenant_id: str, bundle_id: str, request: Request) -> dict:
     validate_tenant_id(tenant_id)
-    require_api_key(request)
+    identity = require_api_key(request)
+    enforce_tenant_scope(tenant_id, identity)
     enforce_rate_limit(tenant_id, "control.validate_bundle")
     try:
         return validate_bundle_domain(tenant_id, bundle_id)

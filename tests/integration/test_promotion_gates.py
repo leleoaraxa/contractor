@@ -8,12 +8,16 @@ from unittest.mock import MagicMock, patch
 
 # --- Environment variables MUST be set BEFORE application imports ---
 TEST_API_KEY = "test-key-for-promotion-gates"
-os.environ["CONTRACTOR_API_KEYS"] = TEST_API_KEY
+TEST_TENANT_ID = "demo"
+os.environ["CONTRACTOR_API_KEYS"] = (
+    f"{TEST_TENANT_ID}:tenant_runtime_client:{TEST_API_KEY}"
+)
 
 MOCK_POSTGRES_DSN = "postgresql://user:pass@host:5432/db"
 os.environ["POSTGRES_DSN"] = MOCK_POSTGRES_DSN
 # --- End of environment variable setup ---
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.shared.config import settings as settings_module
@@ -99,6 +103,14 @@ def _configure_rate_limiter_for_test(*, rps: int, burst: int) -> None:
 
     if hasattr(rate_limit_module._RL.backend, "state"):
         rate_limit_module._RL.backend.state.clear()
+
+
+@pytest.fixture(autouse=True)
+def _scoped_control_plane_keys(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(
+        "CONTRACTOR_API_KEYS",
+        f"{TEST_TENANT_ID}:tenant_runtime_client:{TEST_API_KEY}",
+    )
 
 
 def test_promotion_gate_pass():

@@ -5,6 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from app.control_plane.api.routers import enforce_tenant_scope
 from app.control_plane.domain.bundles.promoter import Alias
 from app.control_plane.domain.quality.service import PromotionGateError
 from app.control_plane.domain.tenants.repository import TenantAliasRepository
@@ -33,7 +34,8 @@ class VersionResponse(BaseModel):
 )
 def get_aliases(tenant_id: str, request: Request) -> VersionResponse:
     validate_tenant_id(tenant_id)
-    require_api_key(request)
+    identity = require_api_key(request)
+    enforce_tenant_scope(tenant_id, identity)
     enforce_rate_limit(tenant_id, "control.get_aliases")
 
     aliases = _svc.get_aliases(tenant_id)
@@ -56,6 +58,7 @@ def set_alias(
 ) -> VersionResponse:
     validate_tenant_id(tenant_id)
     identity = require_api_key(request)
+    enforce_tenant_scope(tenant_id, identity)
     enforce_rate_limit(tenant_id, "control.set_alias")
 
     try:
