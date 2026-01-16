@@ -4,6 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from app.control_plane.api.routers import enforce_tenant_scope
 from app.control_plane.domain.tenants.repository import TenantAliasRepository
 from app.control_plane.domain.quality.service import PromotionGateError
 from app.control_plane.domain.tenants.service import TenantAliasService
@@ -24,7 +25,8 @@ class SetAliasRequest(BaseModel):
 @router.get("/tenants/{tenant_id}/aliases")
 def get_aliases(tenant_id: str, request: Request) -> dict:
     validate_tenant_id(tenant_id)
-    require_api_key(request)
+    identity = require_api_key(request)
+    enforce_tenant_scope(tenant_id, identity)
     enforce_rate_limit(tenant_id, "control.aliases.get")
     a = _svc.get_aliases(tenant_id)
     return {
@@ -39,6 +41,7 @@ def get_aliases(tenant_id: str, request: Request) -> dict:
 def set_current(tenant_id: str, req: SetAliasRequest, request: Request) -> dict:
     validate_tenant_id(tenant_id)
     identity = require_api_key(request)
+    enforce_tenant_scope(tenant_id, identity)
     enforce_rate_limit(tenant_id, "control.aliases.set_current")
     try:
         a = _svc.set_current(tenant_id, req.bundle_id, actor=identity)
@@ -53,6 +56,7 @@ def set_current(tenant_id: str, req: SetAliasRequest, request: Request) -> dict:
 def set_candidate(tenant_id: str, req: SetAliasRequest, request: Request) -> dict:
     validate_tenant_id(tenant_id)
     identity = require_api_key(request)
+    enforce_tenant_scope(tenant_id, identity)
     enforce_rate_limit(tenant_id, "control.aliases.set_candidate")
     try:
         a = _svc.set_candidate(tenant_id, req.bundle_id, actor=identity)
@@ -67,6 +71,7 @@ def set_candidate(tenant_id: str, req: SetAliasRequest, request: Request) -> dic
 def set_draft(tenant_id: str, req: SetAliasRequest, request: Request) -> dict:
     validate_tenant_id(tenant_id)
     identity = require_api_key(request)
+    enforce_tenant_scope(tenant_id, identity)
     enforce_rate_limit(tenant_id, "control.aliases.set_draft")
     try:
         a = _svc.set_draft(tenant_id, req.bundle_id, actor=identity)
@@ -78,7 +83,8 @@ def set_draft(tenant_id: str, req: SetAliasRequest, request: Request) -> dict:
 @router.get("/tenants/{tenant_id}/resolve/{release_alias}")
 def resolve_alias(tenant_id: str, release_alias: str, request: Request) -> dict:
     validate_tenant_id(tenant_id)
-    require_api_key(request)
+    identity = require_api_key(request)
+    enforce_tenant_scope(tenant_id, identity)
     enforce_rate_limit(tenant_id, "control.aliases.resolve")
     if release_alias not in {"draft", "candidate", "current"}:
         raise HTTPException(status_code=400, detail="invalid release_alias")
@@ -96,6 +102,7 @@ def resolve_alias(tenant_id: str, release_alias: str, request: Request) -> dict:
 def set_alias(tenant_id: str, release_alias: str, req: SetAliasRequest, request: Request) -> dict:
     validate_tenant_id(tenant_id)
     identity = require_api_key(request)
+    enforce_tenant_scope(tenant_id, identity)
     enforce_rate_limit(tenant_id, "control.aliases.set_alias")
     if release_alias not in {"draft", "candidate", "current"}:
         raise HTTPException(status_code=400, detail="invalid release_alias")
