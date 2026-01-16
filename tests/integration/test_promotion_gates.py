@@ -160,6 +160,40 @@ def test_template_safety_gate_report(monkeypatch):
     assert data["result"]["status"] == "fail"
 
 
+def test_promotion_gate_rejects_stub_suites(monkeypatch):
+    def _run_suite_stub(*_args, **_kwargs):
+        suite_path = _kwargs.get("suite_path") or "stub"
+        return {
+            "status": "pass",
+            "suite_id": "stub",
+            "suite_source": suite_path,
+            "suite_path": suite_path,
+            "failures": [],
+        }
+
+    monkeypatch.setattr(service_module, "run_suite", _run_suite_stub)
+    monkeypatch.setattr(runner_module, "run_suite", _run_suite_stub)
+
+    client = TestClient(control_plane_app)
+    response = client.post(
+        "/api/v1/control/tenants/demo/bundles/202601050001/quality/run",
+        headers=_auth_headers(),
+        json={},
+    )
+    assert response.status_code == 200
+
+    response = client.post(
+        "/api/v1/control/tenants/demo/aliases/candidate",
+        headers=_auth_headers(),
+        json={"bundle_id": "202601050001"},
+    )
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["error"] == "promotion_gate_failed"
+    assert detail["gate"] == "suites"
+    assert "stub suite" in detail["detail"]
+
+
 def test_rate_limit_enforced():
     tenant_id = "demo"
     bundle_id = "202601050003"

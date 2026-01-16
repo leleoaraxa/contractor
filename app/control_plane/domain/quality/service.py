@@ -23,6 +23,15 @@ def _utcnow() -> str:
     return datetime.now(tz=timezone.utc).isoformat()
 
 
+def _is_stub_suite(suite_result: Dict) -> bool:
+    markers = {
+        str(suite_result.get("suite_id") or "").strip().lower(),
+        str(suite_result.get("suite_source") or "").strip().lower(),
+        str(suite_result.get("suite_path") or "").strip().lower(),
+    }
+    return "stub" in markers
+
+
 class QualityService:
     def __init__(
         self,
@@ -162,6 +171,14 @@ class QualityService:
                     "template_safety",
                     f"template safety failed for bundle {bundle_id}: "
                     f"{template_gate.get('errors')}",
+                    report_path=self.report_repo.path_for(tenant_id, bundle_id),
+                )
+
+        for suite in report.get("suites") or []:
+            if _is_stub_suite(suite):
+                raise PromotionGateError(
+                    "suites",
+                    "quality report contains stub suite results; rerun suites before promotion",
                     report_path=self.report_repo.path_for(tenant_id, bundle_id),
                 )
 
