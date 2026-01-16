@@ -1,0 +1,31 @@
+# Stage 3 retention overlays by plan (declarative only).
+# Values may extend, never reduce, the global defaults in ops/observability/retention.yaml.
+plans:
+  standard:
+    logs:
+      retention_days: 45
+    audit_logs:
+      retention_days: 120
+    metrics:
+      retention_days: 45
+    traces:
+      retention_days: 14
+    cache:
+      retention_notes: "TTL-driven; unchanged from global defaults."
+    artifacts:
+      retention: "indefinite"
+      notes: "Unchanged from global defaults."
+  enterprise:
+    logs:
+      retention_days: 90
+    audit_logs:
+      retention_days: 365
+    metrics:
+      retention_days: 90
+    traces:
+      retention_days: 30
+    cache:
+      retention_notes: "TTL-driven; unchanged from global defaults."
+    artifacts:
+      retention: "indefinite"
+      notes: "Unchanged from global defaults."
