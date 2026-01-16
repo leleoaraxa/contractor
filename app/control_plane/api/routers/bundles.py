@@ -9,6 +9,7 @@ from app.control_plane.domain.bundles.validator import (
     ManifestNotFoundError,
     validate_bundle as validate_bundle_domain,
 )
+from app.shared.errors import error_payload
 from app.shared.security.auth import require_api_key
 from app.shared.security.rate_limit import enforce_rate_limit
 
@@ -24,4 +25,11 @@ def validate_bundle(tenant_id: str, bundle_id: str, request: Request) -> dict:
     try:
         return validate_bundle_domain(tenant_id, bundle_id)
     except ManifestNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(
+            status_code=404,
+            detail=error_payload(
+                error="manifest_not_found",
+                type="not_found",
+                message=str(e),
+            ),
+        )

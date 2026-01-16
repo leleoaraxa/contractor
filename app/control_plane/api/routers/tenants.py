@@ -9,6 +9,7 @@ from app.control_plane.domain.tenants.repository import TenantAliasRepository
 from app.control_plane.domain.quality.service import PromotionGateError
 from app.control_plane.domain.tenants.service import TenantAliasService
 from app.shared.utils.ids import validate_tenant_id
+from app.shared.errors import error_payload
 from app.shared.security.auth import require_api_key
 from app.shared.security.rate_limit import enforce_rate_limit
 
@@ -48,7 +49,14 @@ def set_current(tenant_id: str, req: SetAliasRequest, request: Request) -> dict:
     except PromotionGateError as e:
         raise HTTPException(status_code=400, detail=_svc.format_gate_error(e))
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=400,
+            detail=error_payload(
+                error="validation_error",
+                type="validation_error",
+                message=str(e),
+            ),
+        )
     return {"tenant_id": a.tenant_id, "current": a.current_bundle_id}
 
 
@@ -63,7 +71,14 @@ def set_candidate(tenant_id: str, req: SetAliasRequest, request: Request) -> dic
     except PromotionGateError as e:
         raise HTTPException(status_code=400, detail=_svc.format_gate_error(e))
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=400,
+            detail=error_payload(
+                error="validation_error",
+                type="validation_error",
+                message=str(e),
+            ),
+        )
     return {"tenant_id": a.tenant_id, "candidate": a.candidate_bundle_id}
 
 
@@ -76,7 +91,14 @@ def set_draft(tenant_id: str, req: SetAliasRequest, request: Request) -> dict:
     try:
         a = _svc.set_draft(tenant_id, req.bundle_id, actor=identity)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=400,
+            detail=error_payload(
+                error="validation_error",
+                type="validation_error",
+                message=str(e),
+            ),
+        )
     return {"tenant_id": a.tenant_id, "draft": a.draft_bundle_id}
 
 
@@ -87,10 +109,24 @@ def resolve_alias(tenant_id: str, release_alias: str, request: Request) -> dict:
     enforce_tenant_scope(tenant_id, identity)
     enforce_rate_limit(tenant_id, "control.aliases.resolve")
     if release_alias not in {"draft", "candidate", "current"}:
-        raise HTTPException(status_code=400, detail="invalid release_alias")
+        raise HTTPException(
+            status_code=400,
+            detail=error_payload(
+                error="invalid_release_alias",
+                type="validation_error",
+                message="invalid release_alias",
+            ),
+        )
     bundle_id = _svc.resolve(tenant_id, release_alias)
     if not bundle_id:
-        raise HTTPException(status_code=404, detail="alias not set")
+        raise HTTPException(
+            status_code=404,
+            detail=error_payload(
+                error="alias_not_set",
+                type="not_found",
+                message="alias not set",
+            ),
+        )
     return {
         "tenant_id": tenant_id,
         "release_alias": release_alias,
@@ -105,7 +141,14 @@ def set_alias(tenant_id: str, release_alias: str, req: SetAliasRequest, request:
     enforce_tenant_scope(tenant_id, identity)
     enforce_rate_limit(tenant_id, "control.aliases.set_alias")
     if release_alias not in {"draft", "candidate", "current"}:
-        raise HTTPException(status_code=400, detail="invalid release_alias")
+        raise HTTPException(
+            status_code=400,
+            detail=error_payload(
+                error="invalid_release_alias",
+                type="validation_error",
+                message="invalid release_alias",
+            ),
+        )
 
     try:
         if release_alias == "current":
@@ -119,4 +162,11 @@ def set_alias(tenant_id: str, release_alias: str, req: SetAliasRequest, request:
     except PromotionGateError as e:
         raise HTTPException(status_code=400, detail=_svc.format_gate_error(e))
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=400,
+            detail=error_payload(
+                error="validation_error",
+                type="validation_error",
+                message=str(e),
+            ),
+        )

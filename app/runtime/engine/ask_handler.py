@@ -26,6 +26,7 @@ from app.runtime.engine.policies.policy_loader import (
 )
 from app.runtime.engine.data_residency import apply_residency_contract
 from app.runtime.engine.runtime_identity import apply_runtime_identity
+from app.shared.errors import error_payload
 from app.shared.security.rate_limit import enforce_rate_limit
 
 
@@ -84,14 +85,18 @@ def prepare_ask(req: AskRequest, explain_enabled: bool) -> Tuple[Optional[AskRes
         if not bundle_id:
             raise HTTPException(
                 status_code=404,
-                detail={
-                    "error": "bundle_id not provided and alias not set",
-                    "control_plane": {
-                        "url": res.url,
-                        "status": res.status,
-                        "detail": res.detail,
+                detail=error_payload(
+                    error="bundle_id_missing",
+                    type="not_found",
+                    message="bundle id not provided and alias not set",
+                    details={
+                        "control_plane": {
+                            "url": res.url,
+                            "status": res.status,
+                            "detail": res.detail,
+                        }
                     },
-                },
+                ),
             )
 
     # 2) Load manifest (bundle registry)
@@ -99,7 +104,14 @@ def prepare_ask(req: AskRequest, explain_enabled: bool) -> Tuple[Optional[AskRes
     try:
         manifest = loader.load_manifest(req.tenant_id, bundle_id)
     except ArtifactLoaderError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(
+            status_code=404,
+            detail=error_payload(
+                error="manifest_not_found",
+                type="not_found",
+                message=str(e),
+            ),
+        )
 
     ctx = TenantContext(tenant_id=req.tenant_id, bundle_id=bundle_id)
     policy_loader = PolicyLoader()

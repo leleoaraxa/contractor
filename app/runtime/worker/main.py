@@ -11,6 +11,7 @@ from app.runtime.engine.ask_models import AskRequest
 from app.runtime.worker import metrics
 from app.runtime.worker import queue
 from app.shared.config.settings import settings
+from app.shared.errors import error_payload
 from app.shared.logging.logger import configure_logging
 
 logger = logging.getLogger("runtime.worker")
@@ -64,7 +65,13 @@ def run() -> None:
                 try:
                     queue.write_result(
                         request_id,
-                        {"detail": {"error": "worker_failed", "message": str(exc)}},
+                        {
+                            "detail": error_payload(
+                                error="worker_failed",
+                                type="internal_error",
+                                message="worker failed",
+                            )
+                        },
                         ttl_s=int(
                             job_payload.get("ttl_s")
                             or getattr(settings, "runtime_async_result_ttl_seconds", 600)

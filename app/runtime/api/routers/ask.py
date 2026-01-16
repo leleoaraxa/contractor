@@ -19,6 +19,7 @@ from app.runtime.engine.data_residency import (
 )
 from app.runtime.engine.runtime_identity import get_runtime_identity
 from app.shared.config.settings import settings
+from app.shared.errors import error_payload
 from app.shared.security.auth import enforce_tenant_scope, require_api_key
 
 router = APIRouter()
@@ -60,7 +61,11 @@ def _enforce_dedicated_tenant(req: AskRequest) -> None:
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail={"error": "dedicated_tenant_mismatch"},
+            detail=error_payload(
+                error="dedicated_tenant_mismatch",
+                type="auth",
+                message="dedicated tenant mismatch",
+            ),
         )
 
 
@@ -75,16 +80,24 @@ def _enforce_residency(req: AskRequest) -> None:
     if not runtime_region:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail={"error": "residency_region_not_configured"},
+            detail=error_payload(
+                error="residency_region_not_configured",
+                type="auth",
+                message="residency region not configured",
+            ),
         )
     if runtime_region != required_region:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail={
-                "error": "residency_region_mismatch",
-                "runtime_region": runtime_region,
-                "required_region": required_region,
-            },
+            detail=error_payload(
+                error="residency_region_mismatch",
+                type="auth",
+                message="residency region mismatch",
+                details={
+                    "runtime_region": runtime_region,
+                    "required_region": required_region,
+                },
+            ),
         )
 
 
@@ -120,10 +133,14 @@ def ask(req: AskRequest, request: Request) -> AskResponse | JSONResponse:
                 job_payload = req.model_dump()
                 job_payload["explain"] = explain_enabled
                 async_queue.enqueue_job(request_id, job_payload, ttl_s)
-            except async_queue.RedisUnavailableError as exc:
+            except async_queue.RedisUnavailableError:
                 raise HTTPException(
                     status_code=503,
-                    detail={"error": "async_unavailable", "detail": str(exc)},
+                    detail=error_payload(
+                        error="async_unavailable",
+                        type="internal_error",
+                        message="async unavailable",
+                    ),
                 )
             async_metrics.record_enqueue()
             depth = async_queue.queue_depth()
@@ -159,9 +176,30 @@ def ask_result(request_id: str, request: Request):
     try:
         payload = async_queue.read_result(request_id)
     except async_queue.ResultNotReady:
-        raise HTTPException(status_code=404, detail={"error": "not_ready"})
+        raise HTTPException(
+            status_code=404,
+            detail=error_payload(
+                error="not_ready",
+                type="not_found",
+                message="result not ready",
+            ),
+        )
     except async_queue.ResultExpired:
-        raise HTTPException(status_code=404, detail={"error": "expired"})
-    except async_queue.RedisUnavailableError as exc:
-        raise HTTPException(status_code=503, detail={"error": "async_unavailable", "detail": str(exc)})
+        raise HTTPException(
+            status_code=404,
+            detail=error_payload(
+                error="expired",
+                type="not_found",
+                message="result expired",
+            ),
+        )
+    except async_queue.RedisUnavailableError:
+        raise HTTPException(
+            status_code=503,
+            detail=error_payload(
+                error="async_unavailable",
+                type="internal_error",
+                message="async unavailable",
+            ),
+        )
     return payload

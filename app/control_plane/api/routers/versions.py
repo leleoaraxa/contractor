@@ -13,6 +13,7 @@ from app.control_plane.domain.tenants.service import TenantAliasService
 from app.shared.security.auth import require_api_key
 from app.shared.security.rate_limit import enforce_rate_limit
 from app.shared.utils.ids import validate_tenant_id
+from app.shared.errors import error_payload
 
 router = APIRouter()
 _repo = TenantAliasRepository()
@@ -71,7 +72,14 @@ def set_alias(
     except PromotionGateError as e:
         raise HTTPException(status_code=400, detail=_svc.format_gate_error(e))
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=400,
+            detail=error_payload(
+                error="validation_error",
+                type="validation_error",
+                message=str(e),
+            ),
+        )
 
     return VersionResponse(
         aliases={
@@ -95,7 +103,14 @@ def resolve_alias(tenant_id: str, alias: Alias, request: Request) -> dict:
     try:
         bundle_id = _svc.resolve(tenant_id, alias)
         if not bundle_id:
-            raise HTTPException(status_code=404, detail="alias not set")
+            raise HTTPException(
+                status_code=404,
+                detail=error_payload(
+                    error="alias_not_set",
+                    type="not_found",
+                    message="alias not set",
+                ),
+            )
         return {"tenant_id": tenant_id, "alias": alias, "bundle_id": bundle_id}
     except HTTPException:
         raise

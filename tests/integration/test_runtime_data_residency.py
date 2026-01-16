@@ -146,8 +146,9 @@ def test_dedicated_residency_rejects_mismatch(monkeypatch: pytest.MonkeyPatch) -
     assert response.status_code == 403
     detail = response.json()["detail"]
     assert detail["error"] == "residency_region_mismatch"
-    assert detail["runtime_region"] == "us-east-1"
-    assert detail["required_region"] == "sa-east-1"
+    assert detail["type"] == "auth"
+    assert detail["details"]["runtime_region"] == "us-east-1"
+    assert detail["details"]["required_region"] == "sa-east-1"
 
 
 def test_dedicated_residency_rejects_missing_runtime_region(
@@ -170,6 +171,7 @@ def test_dedicated_residency_rejects_missing_runtime_region(
     assert response.status_code == 403
     detail = response.json()["detail"]
     assert detail["error"] == "residency_region_not_configured"
+    assert detail["type"] == "auth"
 
 
 def test_shared_runtime_does_not_enforce_residency(monkeypatch: pytest.MonkeyPatch) -> None:

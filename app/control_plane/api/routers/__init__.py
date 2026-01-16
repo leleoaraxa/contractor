@@ -6,6 +6,7 @@ import os
 from fastapi import HTTPException
 
 from app.shared.config.settings import settings
+from app.shared.errors import error_payload
 from app.shared.security.auth import ApiKeyIdentity
 
 
@@ -49,6 +50,20 @@ def enforce_tenant_scope(tenant_id: str, identity: ApiKeyIdentity | None) -> Non
                         tenant_scope = parts[0]
                         break
     if not tenant_scope:
-        raise HTTPException(status_code=403, detail={"error": "tenant_scope_required"})
+        raise HTTPException(
+            status_code=403,
+            detail=error_payload(
+                error="tenant_scope_required",
+                type="auth",
+                message="tenant scope required",
+            ),
+        )
     if str(tenant_scope) != str(tenant_id):
-        raise HTTPException(status_code=403, detail={"error": "tenant_scope_mismatch"})
+        raise HTTPException(
+            status_code=403,
+            detail=error_payload(
+                error="tenant_scope_mismatch",
+                type="auth",
+                message="tenant scope mismatch",
+            ),
+        )
