@@ -1,0 +1,6 @@
+# Example tenant-to-plan mappings for Stage 3 (non-production only).
+tenants:
+  tenant-alpha:
+    plan: standard
+  tenant-beta:
+    plan: enterprise
