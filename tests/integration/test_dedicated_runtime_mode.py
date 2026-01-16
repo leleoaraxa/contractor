@@ -60,3 +60,29 @@ def test_dedicated_runtime_rejects_mismatched_tenant(client: TestClient) -> None
     assert response.status_code == 403
     assert response.json()["detail"] == {"error": "dedicated_tenant_mismatch"}
     mock_prepare.assert_not_called()
+
+
+def test_dedicated_runtime_enforces_tenant_boundary(client: TestClient) -> None:
+    with patch("app.runtime.api.routers.ask.prepare_ask") as mock_prepare:
+        mismatch_payload = {"tenant_id": "tenant-beta", "question": "ping"}
+        mismatch_response = client.post(
+            "/api/v1/runtime/ask",
+            headers={"X-API-Key": TEST_API_KEY},
+            json=mismatch_payload,
+        )
+
+        assert mismatch_response.status_code == 403
+        assert mismatch_response.json()["detail"] == {"error": "dedicated_tenant_mismatch"}
+        mock_prepare.assert_not_called()
+
+        mock_prepare.return_value = (AskResponse(answer="ok", meta={}), None)
+        match_payload = {"tenant_id": "tenant-alpha", "question": "ping"}
+        match_response = client.post(
+            "/api/v1/runtime/ask",
+            headers={"X-API-Key": TEST_API_KEY},
+            json=match_payload,
+        )
+
+    assert match_response.status_code == 200
+    assert match_response.json()["answer"] == "ok"
+    mock_prepare.assert_called_once()
