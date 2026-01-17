@@ -9,7 +9,11 @@ from app.shared.security.auth import ApiKeyIdentity
 def enforce_tenant_scope(tenant_id: str, identity: ApiKeyIdentity | None) -> None:
     if identity is None:
         return
-    tenant_scope = getattr(identity, "tenant_id", None)
+    tenant_scope = (
+        getattr(identity, "tenant_id", None)
+        or getattr(identity, "tenant_scope", None)
+        or getattr(identity, "tenant_ref", None)
+    )
     if not tenant_scope:
         raise HTTPException(status_code=403, detail="tenant scope required")
     if str(tenant_scope) != str(tenant_id):
