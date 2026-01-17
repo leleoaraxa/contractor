@@ -24,12 +24,16 @@ def _utcnow() -> str:
 
 
 def _is_stub_suite(suite_result: Dict) -> bool:
-    markers = {
-        str(suite_result.get("suite_id") or "").strip().lower(),
-        str(suite_result.get("suite_source") or "").strip().lower(),
-        str(suite_result.get("suite_path") or "").strip().lower(),
-    }
-    return "stub" in markers
+    if suite_result.get("is_stub") is True:
+        return True
+
+    for key in ("suite_id", "suite_source", "suite_path"):
+        value = suite_result.get(key)
+        if value is None:
+            continue
+        if "stub" in str(value).lower():
+            return True
+    return False
 
 
 class QualityService:
