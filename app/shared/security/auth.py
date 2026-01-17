@@ -33,17 +33,24 @@ def _parse_key_entry(entry: str) -> ApiKeyIdentity:
 
 
 def _normalized_keys() -> list[ApiKeyIdentity]:
-    raw = list(_get_settings().contractor_api_keys or [])
+    raw_settings = list(_get_settings().contractor_api_keys or [])
     raw_env = os.environ.get("CONTRACTOR_API_KEYS")
     if raw_env is None:
         raw_env = os.environ.get("CONTRACTOR_API_KEY")
-    if raw_env is not None:
-        raw.extend(_normalize_api_keys(raw_env))
+    raw_env_list = _normalize_api_keys(raw_env) if raw_env is not None else []
+    # Prefer ENV keys over SETTINGS keys for deterministic precedence.
+    raw = [*raw_env_list, *raw_settings]
     identities: list[ApiKeyIdentity] = []
+    seen: set[tuple[str, str | None, str | None]] = set()
     for entry in raw:
         parsed = _parse_key_entry(entry)
-        if parsed.key:
-            identities.append(parsed)
+        if not parsed.key:
+            continue
+        identity_key = (parsed.key, parsed.tenant_id, parsed.role)
+        if identity_key in seen:
+            continue
+        seen.add(identity_key)
+        identities.append(parsed)
     return identities
 
 
