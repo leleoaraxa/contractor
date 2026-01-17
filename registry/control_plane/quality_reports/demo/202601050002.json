@@ -50,16 +50,16 @@
   "suites": [
     {
       "status": "pass",
-      "suite_id": "stub",
-      "suite_source": "stub",
-      "suite_path": "stub",
+      "suite_id": "suite_0",
+      "suite_source": "data/quality/suites/demo_routing_candidate_suite.json",
+      "suite_path": "data/quality/suites/demo_routing_candidate_suite.json",
       "failures": []
     },
     {
       "status": "pass",
-      "suite_id": "stub",
-      "suite_source": "stub",
-      "suite_path": "stub",
+      "suite_id": "suite_1",
+      "suite_source": "data/quality/suites/demo_thresholds_suite.json",
+      "suite_path": "data/quality/suites/demo_thresholds_suite.json",
       "failures": []
     }
   ],
@@ -84,8 +84,8 @@
     ]
   },
   "timestamps": {
-    "started_at": "2026-01-16T18:41:10.663269+00:00",
-    "finished_at": "2026-01-16T18:41:10.669189+00:00"
+    "started_at": "2026-01-17T16:45:31.423924+00:00",
+    "finished_at": "2026-01-17T16:45:31.423924+00:00"
   },
-  "commit_hash": "4cb42258dccdc8d58fd86141e57dea5f23a0e2de"
+  "commit_hash": null
 }
