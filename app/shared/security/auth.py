@@ -3,8 +3,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import importlib
+import os
 
 from fastapi import HTTPException, Request, status
+
+from app.shared.config.settings import _normalize_api_keys
 
 def _get_settings():
     settings_module = importlib.import_module("app.shared.config.settings")
@@ -30,7 +33,12 @@ def _parse_key_entry(entry: str) -> ApiKeyIdentity:
 
 
 def _normalized_keys() -> list[ApiKeyIdentity]:
-    raw = _get_settings().contractor_api_keys or []
+    raw = list(_get_settings().contractor_api_keys or [])
+    raw_env = os.environ.get("CONTRACTOR_API_KEYS")
+    if raw_env is None:
+        raw_env = os.environ.get("CONTRACTOR_API_KEY")
+    if raw_env is not None:
+        raw.extend(_normalize_api_keys(raw_env))
     identities: list[ApiKeyIdentity] = []
     for entry in raw:
         parsed = _parse_key_entry(entry)
@@ -65,9 +73,10 @@ def require_api_key(request: Request) -> ApiKeyIdentity | None:
             detail="missing X-API-Key",
         )
 
-    matched = next(
-        (identity for identity in allowed_identities if identity.key == provided), None
-    )
+    matches = [identity for identity in allowed_identities if identity.key == provided]
+    matched = next((identity for identity in matches if identity.tenant_id), None)
+    if not matched and matches:
+        matched = matches[0]
     if not matched:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

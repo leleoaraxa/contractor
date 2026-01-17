@@ -7,9 +7,10 @@ import importlib
 # --- Environment variables MUST be set BEFORE application imports ---
 TEST_API_KEY = "test-key-for-e2e-flow"
 TEST_TENANT_ID = "demo"
+TEST_API_KEYS = f"{TEST_TENANT_ID}:tenant_runtime_client:{TEST_API_KEY}"
 os.environ["CONTRACTOR_API_KEY"] = TEST_API_KEY
 os.environ["CONTRACTOR_API_KEYS"] = (
-    f"{TEST_TENANT_ID}:tenant_runtime_client:{TEST_API_KEY}"
+    TEST_API_KEYS
 )
 
 MOCK_POSTGRES_DSN = "postgresql://user:pass@host:5432/db"
