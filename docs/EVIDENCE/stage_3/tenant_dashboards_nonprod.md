@@ -5,7 +5,7 @@ Documentar a entrega de dashboards Grafana dedicados por tenant, versionados no 
 
 ## Escopo e restrições atendidas
 - Nenhuma métrica nova criada.
-- Nenhuma alteração em runtime/control plane.
+- Alteração limitada a labels em métricas do runtime (adição de `tenant_ref`, mantendo `tenant_id` por compatibilidade).
 - Somente arquivos novos adicionados ao repositório.
 - Conteúdo voltado para uso não produtivo (nonprod).
 
@@ -15,7 +15,7 @@ Documentar a entrega de dashboards Grafana dedicados por tenant, versionados no 
 - `ops/observability/dashboards/tenant/README.md`
 
 ## Detalhes dos dashboards
-- Variável `$tenant` baseada em `tenant_ref` via `label_values(runtime_tenant_http_requests_total, tenant_ref)`.
+- Variável `$tenant` baseada em `tenant_ref` via `label_values(runtime_tenant_http_requests_total, tenant_ref)` (compatível com `tenant_id` preservado).
 - Todas as queries filtram `tenant_ref="$tenant"`.
 - Métricas usadas:
   - `runtime_tenant_http_requests_total`
