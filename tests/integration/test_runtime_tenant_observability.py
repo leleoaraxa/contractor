@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
+import hashlib
 import pytest
 from fastapi.testclient import TestClient
 
@@ -63,10 +64,11 @@ def test_runtime_metrics_include_tenant_label(client: TestClient) -> None:
 
     metrics_response = client.get("/metrics")
     assert metrics_response.status_code == 200
-    assert (
-        'runtime_tenant_http_requests_total{status_code="200",tenant_id="tenant-alpha"}'
-        in metrics_response.text
+    tenant_ref = hashlib.sha256("tenant-alpha".encode("utf-8")).hexdigest()
+    expected = (
+        f'runtime_tenant_http_requests_total{{status_code="200",tenant_ref="{tenant_ref}"}}'
     )
+    assert expected in metrics_response.text
 
 
 def test_runtime_metrics_record_500_status(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -88,10 +90,11 @@ def test_runtime_metrics_record_500_status(monkeypatch: pytest.MonkeyPatch) -> N
 
     metrics_response = client.get("/metrics")
     assert metrics_response.status_code == 200
-    assert (
-        'runtime_tenant_http_requests_total{status_code="500",tenant_id="tenant-alpha"}'
-        in metrics_response.text
+    tenant_ref = hashlib.sha256("tenant-alpha".encode("utf-8")).hexdigest()
+    expected = (
+        f'runtime_tenant_http_requests_total{{status_code="500",tenant_ref="{tenant_ref}"}}'
     )
+    assert expected in metrics_response.text
 
 
 def test_http_metrics_use_route_template_for_dynamic_paths(client: TestClient) -> None:

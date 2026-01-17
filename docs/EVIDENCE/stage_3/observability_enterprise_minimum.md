@@ -8,7 +8,7 @@
 
 | Item (ADR 0028) | Evidência concreta | Status | Limitações explícitas |
 | --- | --- | --- | --- |
-| **2.1 Métricas segregadas por tenant** | `tests/integration/test_runtime_tenant_observability.py` valida o label `tenant_id` na métrica `runtime_tenant_http_requests_total`. | **PASS** | Evidência baseada em teste de integração; não cria métricas novas. |
+| **2.1 Métricas segregadas por tenant** | `tests/integration/test_runtime_tenant_observability.py` valida o label `tenant_ref` na métrica `runtime_tenant_http_requests_total`. | **PASS** | Evidência baseada em teste de integração; não cria métricas novas. |
 | **2.2 Dashboards dedicados por tenant** | Não há dashboards versionados em `ops/` ou `docs/`. | **FAIL** | Dashboards por tenant **ainda não versionados**; métricas existentes permitem criação futura sem refatoração. |
 | **2.3 Logs sem payload sensível** | ADR 0018 define telemetria como **logs redigidos** e ausência de payload; `docs/RUNBOOKS/privacy_retention.md` orienta evitar logging de payload. | **FAIL** | Não há teste automatizado ou evidência operacional que comprove logs estruturados sem payload em runtime dedicado; evidência atual é normativa (política), não comprobatória. |
 | **2.4 Retenção configurável por tenant/plano** | `ops/observability/retention.yaml` documenta defaults globais de retenção. | **FAIL** | Não existe override por tenant/plano documentado ou aplicado; somente defaults globais. |
@@ -30,7 +30,7 @@
 | Item | Status | Evidência/nota curta |
 | --- | --- | --- |
 | **C1** — Instrumentação HTTP do runtime (`http_requests_total`) | **DONE** | Métrica exposta no runtime com labels de serviço/método/path/status. |
-| **C2** — Labels de tenant nas métricas do runtime | **DONE** | Teste de integração valida `runtime_tenant_http_requests_total` com `tenant_id`. |
+| **C2** — Labels de tenant nas métricas do runtime | **DONE** | Teste de integração valida `runtime_tenant_http_requests_total` com `tenant_ref`. |
 | **C3** — Endpoint `/metrics` disponível no runtime | **DONE** | Evidência operacional local via `curl` no runtime. |
 | **C4** — Teste de integração de observabilidade do runtime | **DONE** | `tests/integration/test_runtime_tenant_observability.py`. |
 | **C5** — Hardening de cardinalidade em métricas HTTP | **DONE** | Alta cardinalidade em métricas HTTP mitigada via route template (sem mudança de contrato). |
