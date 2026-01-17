@@ -306,13 +306,6 @@ def validate_policy_runtime(path: Path) -> List[ContractValidationError]:
 def validate_policy_output(path: Path) -> List[ContractValidationError]:
     doc = _load_yaml(path)
     errs: List[ContractValidationError] = []
-    if not isinstance(doc, dict):
-        errs.append(
-            ContractValidationError(
-                "output.root", "output must be an object", str(path)
-            )
-        )
-        return errs
 
     output = doc.get("output")
     if not isinstance(output, dict):
