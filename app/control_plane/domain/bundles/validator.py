@@ -8,7 +8,6 @@ import yaml
 
 from app.control_plane.domain.bundles.contracts_validator import (
     validate_bundle_contracts,
-    validate_manifest,
 )
 from app.shared.config.settings import settings
 
@@ -44,9 +43,6 @@ def validate_bundle(tenant_id: str, bundle_id: str) -> Dict:
     data = _load_manifest(manifest_path)
 
     errors: List[dict] = []
-
-    for ce in validate_manifest(manifest_path):
-        errors.append({"code": ce.code, "message": ce.message, "path": ce.path})
 
     missing = sorted(list(_REQUIRED_KEYS - set(data.keys())))
     if missing:

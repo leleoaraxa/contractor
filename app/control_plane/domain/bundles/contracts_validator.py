@@ -15,147 +15,9 @@ class ContractValidationError:
     path: str
 
 
-CONTRACTS_DIR = Path(__file__).resolve().parents[4] / "contracts"
-MANIFEST_SCHEMA = CONTRACTS_DIR / "bundles" / "manifest.schema.yaml"
-RUNTIME_POLICY_SCHEMA = CONTRACTS_DIR / "policies" / "runtime.schema.yaml"
-OUTPUT_POLICY_SCHEMA = CONTRACTS_DIR / "policies" / "output.schema.yaml"
-
-
 def _load_yaml(path: Path) -> Dict[str, Any]:
     doc = yaml.safe_load(path.read_text(encoding="utf-8"))
     return doc or {}
-
-
-def _load_schema(path: Path) -> Dict[str, Any]:
-    doc = yaml.safe_load(path.read_text(encoding="utf-8"))
-    return doc or {}
-
-
-def _validate_schema(
-    doc: Any, schema_path: Path, data_path: Path, code_prefix: str
-) -> List[ContractValidationError]:
-    errs: List[ContractValidationError] = []
-    schema = _load_schema(schema_path)
-    _validate_schema_value(doc, schema, "", errs, data_path, code_prefix)
-    return errs
-
-
-def _validate_schema_value(
-    value: Any,
-    schema: Dict[str, Any],
-    location: str,
-    errs: List[ContractValidationError],
-    data_path: Path,
-    code_prefix: str,
-) -> None:
-    schema_type = schema.get("type")
-    if schema_type == "object":
-        if not isinstance(value, dict):
-            _schema_error(
-                errs,
-                data_path,
-                code_prefix,
-                f"expected object{_format_location(location)}",
-            )
-            return
-
-        required = schema.get("required") or []
-        properties = schema.get("properties") or {}
-        additional_allowed = schema.get("additionalProperties", True)
-
-        for key in required:
-            if key not in value:
-                _schema_error(
-                    errs,
-                    data_path,
-                    code_prefix,
-                    f"missing required key '{key}'{_format_location(location)}",
-                )
-
-        for key, val in value.items():
-            if key in properties:
-                _validate_schema_value(
-                    val,
-                    properties[key],
-                    _join_location(location, key),
-                    errs,
-                    data_path,
-                    code_prefix,
-                )
-            elif additional_allowed is False:
-                _schema_error(
-                    errs,
-                    data_path,
-                    code_prefix,
-                    f"unexpected key '{key}'{_format_location(location)}",
-                )
-    elif schema_type == "string":
-        if not isinstance(value, str):
-            _schema_error(
-                errs,
-                data_path,
-                code_prefix,
-                f"expected string{_format_location(location)}",
-            )
-            return
-        min_length = schema.get("minLength")
-        if isinstance(min_length, int) and len(value) < min_length:
-            _schema_error(
-                errs,
-                data_path,
-                code_prefix,
-                f"string too short (minLength={min_length}){_format_location(location)}",
-            )
-    elif schema_type == "integer":
-        if not isinstance(value, int):
-            _schema_error(
-                errs,
-                data_path,
-                code_prefix,
-                f"expected integer{_format_location(location)}",
-            )
-            return
-        minimum = schema.get("minimum")
-        if isinstance(minimum, (int, float)) and value < minimum:
-            _schema_error(
-                errs,
-                data_path,
-                code_prefix,
-                f"value must be >= {minimum}{_format_location(location)}",
-            )
-    elif schema_type == "boolean":
-        if not isinstance(value, bool):
-            _schema_error(
-                errs,
-                data_path,
-                code_prefix,
-                f"expected boolean{_format_location(location)}",
-            )
-
-
-def _schema_error(
-    errs: List[ContractValidationError],
-    data_path: Path,
-    code_prefix: str,
-    message: str,
-) -> None:
-    errs.append(ContractValidationError(f"{code_prefix}.schema", message, str(data_path)))
-
-
-def _join_location(base: str, key: str) -> str:
-    return f"{base}.{key}" if base else key
-
-
-def _format_location(location: str) -> str:
-    return f" (path: {location})" if location else ""
-
-
-def validate_manifest(path: Path) -> List[ContractValidationError]:
-    doc = _load_yaml(path)
-    errs: List[ContractValidationError] = []
-    if MANIFEST_SCHEMA.exists():
-        errs.extend(_validate_schema(doc, MANIFEST_SCHEMA, path, "manifest"))
-    return errs
 
 
 def validate_ontology_intents(path: Path) -> List[ContractValidationError]:
@@ -405,8 +267,6 @@ def validate_policy_planner(path: Path) -> List[ContractValidationError]:
 def validate_policy_runtime(path: Path) -> List[ContractValidationError]:
     errs: List[ContractValidationError] = []
     doc = _load_yaml(path)
-    if RUNTIME_POLICY_SCHEMA.exists():
-        errs.extend(_validate_schema(doc, RUNTIME_POLICY_SCHEMA, path, "policy.runtime"))
 
     rate_limit = doc.get("rate_limit")
     if not isinstance(rate_limit, dict):
@@ -446,8 +306,32 @@ def validate_policy_runtime(path: Path) -> List[ContractValidationError]:
 def validate_policy_output(path: Path) -> List[ContractValidationError]:
     doc = _load_yaml(path)
     errs: List[ContractValidationError] = []
-    if OUTPUT_POLICY_SCHEMA.exists():
-        errs.extend(_validate_schema(doc, OUTPUT_POLICY_SCHEMA, path, "policy.output"))
+    if not isinstance(doc, dict):
+        errs.append(
+            ContractValidationError(
+                "output.root", "output must be an object", str(path)
+            )
+        )
+        return errs
+
+    output = doc.get("output")
+    if not isinstance(output, dict):
+        errs.append(
+            ContractValidationError(
+                "output.root", "output must be an object", str(path)
+            )
+        )
+        return errs
+
+    output_format = output.get("format")
+    if not isinstance(output_format, str) or not output_format:
+        errs.append(
+            ContractValidationError(
+                "output.format",
+                "output.format must be non-empty string",
+                str(path),
+            )
+        )
     return errs
 
 
