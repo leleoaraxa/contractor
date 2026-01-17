@@ -19,6 +19,22 @@ TEST_API_KEY = "test-key-tenant-observability"
 from app.runtime.engine.ask_models import AskResponse
 
 
+def _labels_match(
+    line: str,
+    *,
+    metric_name: str,
+    expected_labels: dict[str, str],
+) -> bool:
+    if not line.startswith(f"{metric_name}{{"):
+        return False
+    labels_str = line.split("{", 1)[1].rsplit("}", 1)[0]
+    labels = {}
+    for item in labels_str.split(","):
+        key, value = item.split("=", 1)
+        labels[key] = value.strip('"')
+    return all(labels.get(key) == value for key, value in expected_labels.items())
+
+
 def _build_client(
     monkeypatch: pytest.MonkeyPatch,
     *,
@@ -65,10 +81,18 @@ def test_runtime_metrics_include_tenant_label(client: TestClient) -> None:
     metrics_response = client.get("/metrics")
     assert metrics_response.status_code == 200
     tenant_ref = hashlib.sha256("tenant-alpha".encode("utf-8")).hexdigest()
-    expected = (
-        f'runtime_tenant_http_requests_total{{status_code="200",tenant_ref="{tenant_ref}"}}'
+    assert any(
+        _labels_match(
+            line,
+            metric_name="runtime_tenant_http_requests_total",
+            expected_labels={
+                "tenant_id": "tenant-alpha",
+                "tenant_ref": tenant_ref,
+                "status_code": "200",
+            },
+        )
+        for line in metrics_response.text.splitlines()
     )
-    assert expected in metrics_response.text
 
 
 def test_runtime_metrics_record_500_status(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -91,10 +115,18 @@ def test_runtime_metrics_record_500_status(monkeypatch: pytest.MonkeyPatch) -> N
     metrics_response = client.get("/metrics")
     assert metrics_response.status_code == 200
     tenant_ref = hashlib.sha256("tenant-alpha".encode("utf-8")).hexdigest()
-    expected = (
-        f'runtime_tenant_http_requests_total{{status_code="500",tenant_ref="{tenant_ref}"}}'
+    assert any(
+        _labels_match(
+            line,
+            metric_name="runtime_tenant_http_requests_total",
+            expected_labels={
+                "tenant_id": "tenant-alpha",
+                "tenant_ref": tenant_ref,
+                "status_code": "500",
+            },
+        )
+        for line in metrics_response.text.splitlines()
     )
-    assert expected in metrics_response.text
 
 
 def test_http_metrics_use_route_template_for_dynamic_paths(client: TestClient) -> None:

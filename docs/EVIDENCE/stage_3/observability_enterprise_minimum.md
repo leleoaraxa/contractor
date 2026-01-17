@@ -38,7 +38,8 @@
 **Notas obrigatórias (Trilha C):**
 
 - **Não há registry custom** (usa registry padrão do `prometheus_client`).
-- **Não há alteração de contrato de métricas** (nomes e labels existentes preservados).
+- **Contrato de métricas preservado com extensão compatível:** labels existentes permanecem (`tenant_id`) e foi **adicionado** `tenant_ref` para uso em dashboards.
+- **Hash de `tenant_ref` é determinístico/estável**, mas **não é anonimização forte** (não há segredo; reversível por brute-force de baixa entropia).
 - **Mitigação de cardinalidade via route template** (`path` expõe `/api/v1/runtime/ask/result/{request_id}`).
 - **Referência ADR:** ADR 0024 — Tenant-Level Observability.
 

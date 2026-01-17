@@ -9,12 +9,12 @@ from app.runtime.engine.runtime_identity import get_runtime_identity
 _RUNTIME_TENANT_HTTP_REQUESTS = Counter(
     "runtime_tenant_http_requests_total",
     "Total runtime ask requests per tenant and status code.",
-    ["tenant_ref", "status_code"],
+    ["tenant_id", "tenant_ref", "status_code"],
 )
 _RUNTIME_TENANT_HTTP_LATENCY = Histogram(
     "runtime_tenant_http_request_latency_seconds",
     "Latency for runtime ask requests per tenant and status code.",
-    ["tenant_ref", "status_code"],
+    ["tenant_id", "tenant_ref", "status_code"],
 )
 
 
@@ -30,6 +30,7 @@ def record_tenant_request(
         identity.dedicated_tenant_id.encode("utf-8")
     ).hexdigest()
     labels = {
+        "tenant_id": identity.dedicated_tenant_id,
         "tenant_ref": tenant_ref,
         "status_code": str(status_code),
     }
