@@ -15,7 +15,6 @@ from urllib.parse import urlsplit, urlunsplit
 from fastapi import HTTPException, status
 
 from app.shared.config.settings import settings
-from app.shared.errors import error_payload
 
 logger = logging.getLogger(__name__)
 
@@ -261,22 +260,19 @@ def enforce_rate_limit(
         )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=error_payload(
-                error="rate_limit_backend_unavailable",
-                type="rate_limit",
-                message="rate limiter backend unavailable",
-                details={"backend": exc.backend, "message": exc.safe_message},
-            ),
+            detail={
+                "error": "rate_limit_backend_unavailable",
+                "message": "rate limiter backend unavailable",
+                "backend": exc.backend,
+            },
         ) from exc
     if not result.allowed:
         retry_after = max(1, int(math.ceil(result.retry_after_seconds)))
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=error_payload(
-                error="rate_limit_exceeded",
-                type="rate_limit",
-                message="rate limit exceeded",
-                details={"retry_after_seconds": retry_after},
-            ),
+            detail={
+                "error": "rate_limit_exceeded",
+                "retry_after_seconds": retry_after,
+            },
             headers={"Retry-After": str(retry_after)},
         )

@@ -253,5 +253,4 @@ def test_rate_limit_enforced():
     assert response2.status_code == 429
     detail = response2.json()["detail"]
     assert detail["error"] == "rate_limit_exceeded"
-    assert detail["type"] == "rate_limit"
-    assert detail["details"]["retry_after_seconds"] >= 1
+    assert detail["retry_after_seconds"] >= 1

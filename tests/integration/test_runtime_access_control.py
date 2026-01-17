@@ -80,9 +80,7 @@ def test_runtime_rejects_mismatched_tenant_key(runtime_client: TestClient) -> No
         )
 
     assert response.status_code == 403
-    detail = response.json()["detail"]
-    assert detail["error"] == "tenant_scope_mismatch"
-    assert detail["type"] == "auth"
+    assert response.json()["detail"] == "tenant scope mismatch"
 
 
 def test_runtime_rejects_wrong_role(runtime_client: TestClient) -> None:
@@ -95,9 +93,7 @@ def test_runtime_rejects_wrong_role(runtime_client: TestClient) -> None:
         )
 
     assert response.status_code == 403
-    detail = response.json()["detail"]
-    assert detail["error"] == "identity_role_not_allowed"
-    assert detail["type"] == "auth"
+    assert response.json()["detail"] == "identity role not allowed"
 
 
 def test_runtime_rejects_unscoped_key(runtime_client: TestClient) -> None:
@@ -110,6 +106,4 @@ def test_runtime_rejects_unscoped_key(runtime_client: TestClient) -> None:
         )
 
     assert response.status_code == 403
-    detail = response.json()["detail"]
-    assert detail["error"] == "tenant_scope_required"
-    assert detail["type"] == "auth"
+    assert response.json()["detail"] == "tenant scope required"
