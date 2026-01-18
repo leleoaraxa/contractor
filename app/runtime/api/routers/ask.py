@@ -113,7 +113,29 @@ def ask(req: AskRequest, request: Request) -> AskResponse | JSONResponse:
     x_explain = (request.headers.get("X-Explain") or "").strip().lower()
     explain_enabled = x_explain in {"1", "true", "yes", "y", "on"}
     identity = require_api_key(request)
-    enforce_tenant_scope(identity, req.tenant_id, allowed_roles={"tenant_runtime_client"})
+    try:
+        enforce_tenant_scope(identity, req.tenant_id, allowed_roles={"tenant_runtime_client"})
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_403_FORBIDDEN and exc.detail in {
+            "tenant scope required",
+            "tenant scope mismatch",
+        }:
+            error = "tenant_scope_required"
+            if exc.detail == "tenant scope mismatch":
+                error = "tenant_scope_mismatch"
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=error_payload(
+                    error=error,
+                    type="auth_error",
+                    message=str(exc.detail),
+                    details={
+                        "tenant_id": req.tenant_id,
+                        "tenant_scope": identity.tenant_id if identity else None,
+                    },
+                ),
+            ) from exc
+        raise
     _enforce_dedicated_tenant(req)
     _enforce_residency(req)
     start_time = time.perf_counter()
