@@ -59,4 +59,4 @@ def test_control_plane_rejects_cross_tenant(monkeypatch, tmp_path) -> None:
         headers={"X-API-Key": "alpha-key"},
     )
     assert response.status_code == 403
-    assert response.json()["detail"] == "tenant scope mismatch"
+    assert response.json()["detail"]["error"] == "tenant_scope_mismatch"
