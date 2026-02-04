@@ -22,6 +22,7 @@ COPY vendor /app/vendor
 # Install deps from local wheelhouse only.
 # Note: runtime extras are required for /execute FastAPI tests.
 RUN pip install --upgrade pip \
+  && pip install --no-index --find-links /app/vendor/wheels "setuptools>=68" wheel \
   && pip install --no-index --find-links /app/vendor/wheels -e ".[dev,runtime]"
 
 # Copy tests and configs
