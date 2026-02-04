@@ -7,6 +7,8 @@ import os
 import uuid
 from pathlib import Path
 from typing import Any
+from urllib import error as urllib_error
+from urllib import request as urllib_request
 
 import yaml
 from fastapi import Depends, FastAPI, Header, HTTPException, status
@@ -69,6 +71,7 @@ def load_alias_config() -> dict[str, Any]:
 
 
 def resolve_current_bundle(tenant_id: str) -> tuple[Path, str]:
+    control_plane_bundle_id = resolve_bundle_id_via_control_plane(tenant_id)
     config = load_alias_config()
     tenants = config.get("tenants", config)
     tenant_entry = tenants.get(tenant_id) or tenants.get("*")
@@ -94,7 +97,30 @@ def resolve_current_bundle(tenant_id: str) -> tuple[Path, str]:
         bundle_id = manifest.get("bundle_id")
     if not bundle_id:
         raise RuntimeConfigError("Bundle id missing")
-    return bundle_path, bundle_id
+    if control_plane_bundle_id and bundle_id != control_plane_bundle_id:
+        raise RuntimeConfigError("Bundle id mismatch with Control Plane")
+    return bundle_path, control_plane_bundle_id or bundle_id
+
+
+def resolve_bundle_id_via_control_plane(tenant_id: str) -> str | None:
+    base_url = os.getenv("CONTRACTOR_CONTROL_PLANE_BASE_URL")
+    if not base_url:
+        return None
+    url = f"{base_url.rstrip('/')}/tenants/{tenant_id}/resolve/current"
+    try:
+        with urllib_request.urlopen(urllib_request.Request(url, method="GET")) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib_error.HTTPError as exc:
+        raise RuntimeConfigError(f"Control Plane error: {exc.code}") from exc
+    except urllib_error.URLError as exc:
+        raise RuntimeConfigError("Control Plane unreachable") from exc
+    except json.JSONDecodeError as exc:
+        raise RuntimeConfigError("Control Plane response invalid") from exc
+
+    bundle_id = payload.get("bundle_id")
+    if not bundle_id:
+        raise RuntimeConfigError("Control Plane response missing bundle_id")
+    return str(bundle_id)
 
 
 def load_faq_index(bundle_path: Path) -> dict[str, str]:
