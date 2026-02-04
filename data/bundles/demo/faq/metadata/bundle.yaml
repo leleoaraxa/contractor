@@ -1,0 +1,8 @@
+owner: contractor
+tags:
+  - demo
+  - faq
+  - deterministic
+  - adr-0009
+environment: demo
+notes: "Bundle canônico de demo para FAQ determinístico (ADR 0009)."

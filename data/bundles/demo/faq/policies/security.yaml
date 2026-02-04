@@ -1,0 +1,4 @@
+policy_name: security_minimal
+read_only: true
+allow_network: false
+allow_write: false
