@@ -40,10 +40,25 @@ contractor/
 
 ## Como rodar testes
 
-### Testes unitários
+### Local (venv)
 ```bash
+python -m venv .venv
+# linux/mac:
+source .venv/bin/activate
+# windows (powershell):
+# .\.venv\Scripts\Activate.ps1
+
+pip install -e ".[dev]"
 pytest -q
-````
+
+```
+
+### Docker
+
+```bash
+docker compose build
+docker compose run --rm tests
+```
 
 ### Smoke / integração (se aplicável)
 

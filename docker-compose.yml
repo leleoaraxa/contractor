@@ -1,0 +1,10 @@
+services:
+  tests:
+    build: .
+    working_dir: /app
+    command: ["pytest", "-q"]
+    environment:
+      # Placeholder for future env vars; keep minimal in bootstrap.
+      - CONTRACTOR_ENV=dev
+    volumes:
+      - .:/app
