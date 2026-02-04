@@ -20,11 +20,13 @@
 - Testes E2E do Runtime (fluxo via alias config) implementados e validados no runner oficial (docker compose run --rm tests).
 
 ## O que está em aberto
-- Endpoints adicionais do Runtime (observabilidade/health checks estendidos)
-- Plano de implementação incremental (PRs atômicas)
+- Materialização do Control Plane como serviço/API governado
+- Enforcement de compatibilidade, auditoria completa e políticas no Runtime
+- Pipeline de promoção e rollback de bundles via aliases
+- Observabilidade operacional mínima
 
 ## Última decisão relevante
 - 2026-02-04: Aprovado o caso de uso modelo oficial (FAQ determinístico) como demo canônica do CONTRACTOR (ADR 0009).
 
 ## Próxima tarefa atômica
-- Definir próxima tarefa atômica.
+- Criar o ADR 0010 (Draft): Integração Runtime ↔ Control Plane para resolução do alias `current` via HTTP (fail-closed).

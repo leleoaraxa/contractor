@@ -40,6 +40,7 @@ erro seguro, auditoria e evolução incremental.
 | 0016 | Quality gates v1 (suites, execução e critérios de promoção)                                      | Draft  | ADR 0005/0006/0009 dependem de gates explícitos para promoção. |
 | 0017 | Distribuição de bundles para o Runtime (fetch, digest e cache local)                             | Draft  | Resolver alias retorna bundle_id; falta definir como o runtime obtém o bundle. |
 | 0018 | Observabilidade v1 (métricas mínimas, tracing e logs estruturados)                                | Draft  | ADR 0004 exige sinais operacionais; precisa virar contrato mínimo. |
+| 0019 | Promoção e rollback v1 (workflow de aliases e invariantes)                                       | Draft  | ADR 0003 define aliases, mas não formaliza o workflow de promoção, rollback e invariantes operacionais. |
 
 ---
 
@@ -48,11 +49,12 @@ erro seguro, auditoria e evolução incremental.
 1. **ADR 0010** — Integração Runtime ↔ Control Plane (resolve `current` via HTTP)
 2. **ADR 0011 + ADR 0012** — Autenticação do Control Plane e do Runtime
 3. **ADR 0017** — Distribuição de bundles para o Runtime
-4. **ADR 0016** — Quality gates e promoção de bundles
-5. **ADR 0014** — Auditoria end-to-end
-6. **ADR 0013** — Rate limiting e quotas
-7. **ADR 0015** — Storage e lifecycle de bundles
-8. **ADR 0018** — Observabilidade mínima e SLOs
+4. **ADR 0016** — Quality gates v1
+5. **ADR 0019** — Promoção e rollback de bundles (aliases)
+6. **ADR 0014** — Auditoria end-to-end
+7. **ADR 0013** — Rate limiting e quotas
+8. **ADR 0015** — Storage e lifecycle de bundles
+9. **ADR 0018** — Observabilidade mínima e SLOs
 
 ---
 
