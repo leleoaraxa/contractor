@@ -19,7 +19,6 @@
 - Bundle de demo (FAQ determinístico) implementado conforme ADR 0009
 
 ## O que está em aberto
-- Estratégia de testes de integração end-to-end (CI)
 - Endpoints adicionais do Runtime (observabilidade/health checks estendidos)
 - Plano de implementação incremental (PRs atômicas)
 
@@ -27,4 +26,4 @@
 - 2026-02-04: Aprovado o caso de uso modelo oficial (FAQ determinístico) como demo canônica do CONTRACTOR (ADR 0009).
 
 ## Próxima tarefa atômica
-- Implementar testes de integração end-to-end do Runtime com Control Plane mockado.
+- Definir próxima tarefa atômica.
