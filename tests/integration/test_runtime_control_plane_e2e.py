@@ -1,0 +1,88 @@
+import json
+from pathlib import Path
+
+import pytest
+import yaml
+from fastapi.testclient import TestClient
+
+from app.runtime import app
+
+
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[2]
+
+
+def _load_first_golden_case() -> dict[str, str]:
+    golden_path = (
+        _repo_root() / "data" / "bundles" / "demo" / "faq" / "suites" / "faq_golden.json"
+    )
+    golden_cases = json.loads(golden_path.read_text(encoding="utf-8"))
+    return golden_cases[0]
+
+
+def _load_tenant_key(tenant_id: str) -> str:
+    tenant_path = _repo_root() / "data" / "runtime" / "tenants.json"
+    tenants = json.loads(tenant_path.read_text(encoding="utf-8"))
+    return tenants[tenant_id]
+
+
+def _load_bundle_metadata() -> tuple[Path, str]:
+    bundle_path = _repo_root() / "data" / "bundles" / "demo" / "faq"
+    manifest = yaml.safe_load((bundle_path / "manifest.yaml").read_text(encoding="utf-8"))
+    bundle_id = manifest.get("bundle_id")
+    return bundle_path, bundle_id
+
+
+@pytest.fixture
+def alias_config_path(tmp_path: Path) -> Path:
+    bundle_path, bundle_id = _load_bundle_metadata()
+    alias_config = {
+        "tenants": {
+            "*": {
+                "current_bundle_path": str(bundle_path),
+                "bundle_id": bundle_id,
+            }
+        }
+    }
+    config_path = tmp_path / "aliases.json"
+    config_path.write_text(json.dumps(alias_config), encoding="utf-8")
+    return config_path
+
+
+def test_runtime_e2e_executes_demo_faq(
+    alias_config_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("CONTRACTOR_ALIAS_CONFIG_PATH", str(alias_config_path))
+
+    client = TestClient(app)
+    case = _load_first_golden_case()
+    api_key = _load_tenant_key(case["tenant_id"])
+    headers = {"X-Tenant-Id": case["tenant_id"], "X-Api-Key": api_key}
+
+    response = client.post("/execute", json={"question": case["question"]}, headers=headers)
+
+    assert response.status_code == 200
+    payload = response.json()
+    _, bundle_id = _load_bundle_metadata()
+    assert payload["bundle_id"] == bundle_id
+    assert payload["intent"] == "faq_query"
+    assert payload["status"] == "ok"
+    assert case["expected_answer"] in payload["output_text"]
+
+
+def test_runtime_e2e_fail_closed_when_alias_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    empty_config = tmp_path / "aliases.json"
+    empty_config.write_text(json.dumps({}), encoding="utf-8")
+    monkeypatch.setenv("CONTRACTOR_ALIAS_CONFIG_PATH", str(empty_config))
+
+    client = TestClient(app)
+    case = _load_first_golden_case()
+    api_key = _load_tenant_key(case["tenant_id"])
+    headers = {"X-Tenant-Id": case["tenant_id"], "X-Api-Key": api_key}
+
+    response = client.post("/execute", json={"question": case["question"]}, headers=headers)
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Tenant alias not configured"
