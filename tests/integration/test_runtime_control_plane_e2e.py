@@ -1,115 +1,88 @@
 import json
-import threading
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
 
 import pytest
+import yaml
 from fastapi.testclient import TestClient
 
 from app.runtime import app
 
 
-class ControlPlaneState:
-    def __init__(self) -> None:
-        self.call_count = 0
-        self.last_tenant_id: str | None = None
-        self.responses: dict[str, dict[str, object]] = {}
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[2]
 
 
 def _load_first_golden_case() -> dict[str, str]:
-    repo_root = Path(__file__).resolve().parents[2]
     golden_path = (
-        repo_root / "data" / "bundles" / "demo" / "faq" / "suites" / "faq_golden.json"
+        _repo_root() / "data" / "bundles" / "demo" / "faq" / "suites" / "faq_golden.json"
     )
     golden_cases = json.loads(golden_path.read_text(encoding="utf-8"))
     return golden_cases[0]
 
 
-def _make_control_plane_handler(state: ControlPlaneState) -> type[BaseHTTPRequestHandler]:
-    class ControlPlaneHandler(BaseHTTPRequestHandler):
-        def do_GET(self) -> None:  # noqa: N802
-            parsed = urlparse(self.path)
-            if parsed.path.startswith("/tenants/") and parsed.path.endswith("/resolve/current"):
-                _, tenant_id, *_ = parsed.path.strip("/").split("/")
-                state.call_count += 1
-                state.last_tenant_id = tenant_id
-                response = state.responses.get(
-                    tenant_id, {"status": 404, "body": {"detail": "not found"}}
-                )
-                status_code = int(response.get("status", 500))
-                body = response.get("body", {})
-                self.send_response(status_code)
-                self.send_header("Content-Type", "application/json")
-                self.end_headers()
-                self.wfile.write(json.dumps(body).encode("utf-8"))
-            else:
-                self.send_response(404)
-                self.end_headers()
+def _load_tenant_key(tenant_id: str) -> str:
+    tenant_path = _repo_root() / "data" / "runtime" / "tenants.json"
+    tenants = json.loads(tenant_path.read_text(encoding="utf-8"))
+    return tenants[tenant_id]
 
-        def log_message(self, format: str, *args: object) -> None:  # noqa: A002
-            return
 
-    return ControlPlaneHandler
+def _load_bundle_metadata() -> tuple[Path, str]:
+    bundle_path = _repo_root() / "data" / "bundles" / "demo" / "faq"
+    manifest = yaml.safe_load((bundle_path / "manifest.yaml").read_text(encoding="utf-8"))
+    bundle_id = manifest.get("bundle_id")
+    return bundle_path, bundle_id
 
 
 @pytest.fixture
-def control_plane_server() -> tuple[ControlPlaneState, str]:
-    state = ControlPlaneState()
-    server = ThreadingHTTPServer(("127.0.0.1", 0), _make_control_plane_handler(state))
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    base_url = f"http://127.0.0.1:{server.server_address[1]}"
-    try:
-        yield state, base_url
-    finally:
-        server.shutdown()
-        thread.join(timeout=1)
-
-
-def test_runtime_e2e_resolves_current_and_executes_demo(
-    control_plane_server: tuple[ControlPlaneState, str],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    state, base_url = control_plane_server
-    state.responses["tenant_a"] = {
-        "status": 200,
-        "body": {"bundle_id": "demo-faq-0001"},
+def alias_config_path(tmp_path: Path) -> Path:
+    bundle_path, bundle_id = _load_bundle_metadata()
+    alias_config = {
+        "tenants": {
+            "*": {
+                "current_bundle_path": str(bundle_path),
+                "bundle_id": bundle_id,
+            }
+        }
     }
-    monkeypatch.setenv("CONTRACTOR_CONTROL_PLANE_BASE_URL", base_url)
+    config_path = tmp_path / "aliases.json"
+    config_path.write_text(json.dumps(alias_config), encoding="utf-8")
+    return config_path
+
+
+def test_runtime_e2e_executes_demo_faq(
+    alias_config_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("CONTRACTOR_ALIAS_CONFIG_PATH", str(alias_config_path))
 
     client = TestClient(app)
     case = _load_first_golden_case()
-    headers = {"X-Tenant-Id": case["tenant_id"], "X-Api-Key": "test-key-a"}
+    api_key = _load_tenant_key(case["tenant_id"])
+    headers = {"X-Tenant-Id": case["tenant_id"], "X-Api-Key": api_key}
 
     response = client.post("/execute", json={"question": case["question"]}, headers=headers)
 
     assert response.status_code == 200
     payload = response.json()
-    assert state.call_count == 1
-    assert state.last_tenant_id == case["tenant_id"]
-    assert payload["bundle_id"] == "demo-faq-0001"
+    _, bundle_id = _load_bundle_metadata()
+    assert payload["bundle_id"] == bundle_id
     assert payload["intent"] == "faq_query"
     assert payload["status"] == "ok"
     assert case["expected_answer"] in payload["output_text"]
 
 
-def test_runtime_e2e_fail_closed_when_control_plane_errors(
-    control_plane_server: tuple[ControlPlaneState, str],
-    monkeypatch: pytest.MonkeyPatch,
+def test_runtime_e2e_fail_closed_when_alias_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    state, base_url = control_plane_server
-    state.responses["tenant_a"] = {
-        "status": 500,
-        "body": {"detail": "boom"},
-    }
-    monkeypatch.setenv("CONTRACTOR_CONTROL_PLANE_BASE_URL", base_url)
+    empty_config = tmp_path / "aliases.json"
+    empty_config.write_text(json.dumps({}), encoding="utf-8")
+    monkeypatch.setenv("CONTRACTOR_ALIAS_CONFIG_PATH", str(empty_config))
 
     client = TestClient(app)
     case = _load_first_golden_case()
-    headers = {"X-Tenant-Id": case["tenant_id"], "X-Api-Key": "test-key-a"}
+    api_key = _load_tenant_key(case["tenant_id"])
+    headers = {"X-Tenant-Id": case["tenant_id"], "X-Api-Key": api_key}
 
     response = client.post("/execute", json={"question": case["question"]}, headers=headers)
 
     assert response.status_code == 500
-    assert "Control Plane error" in response.json()["detail"]
+    assert response.json()["detail"] == "Tenant alias not configured"
