@@ -1,0 +1,52 @@
+[
+  {
+    "id": "bundle-definition",
+    "question": "O que é um bundle no CONTRACTOR?",
+    "answer": "Um bundle é o artefato imutável que encapsula ontologia, entidades, políticas, templates e suites que governam o comportamento do sistema em produção."
+  },
+  {
+    "id": "bundle-promotion",
+    "question": "Como funciona a promoção de bundles no CONTRACTOR?",
+    "answer": "A promoção troca o alias do tenant (draft → candidate → current) para apontar para um bundle aprovado em gates, sem alterar o bundle em si."
+  },
+  {
+    "id": "alias-current",
+    "question": "O que é o alias current?",
+    "answer": "O alias current é o ponteiro do tenant para o bundle ativo em produção; o Runtime executa exclusivamente o bundle resolvido por esse alias."
+  },
+  {
+    "id": "control-plane-role",
+    "question": "Qual é o papel do Control Plane?",
+    "answer": "O Control Plane publica bundles, executa gates, promove aliases e registra auditoria; ele não executa o trabalho de produção."
+  },
+  {
+    "id": "runtime-role",
+    "question": "Qual é o papel do Runtime?",
+    "answer": "O Runtime resolve o alias current do tenant, carrega o bundle promovido, aplica políticas e executa a resposta determinística."
+  },
+  {
+    "id": "quality-gates",
+    "question": "O que são quality gates?",
+    "answer": "Quality gates são validações executadas no Control Plane para garantir estrutura, compatibilidade e suites determinísticas antes da promoção."
+  },
+  {
+    "id": "rollback",
+    "question": "Como funciona o rollback de bundles?",
+    "answer": "Rollback é a troca controlada do alias current para apontar para um bundle anterior, preservando imutabilidade e auditoria."
+  },
+  {
+    "id": "audit",
+    "question": "Por que auditoria é obrigatória?",
+    "answer": "Auditoria registra quem publicou, promoveu ou executou um bundle, garantindo rastreabilidade e diagnóstico de mudanças."
+  },
+  {
+    "id": "determinism",
+    "question": "O que significa determinismo na execução?",
+    "answer": "Determinismo significa que a mesma entrada, bundle e políticas produzem a mesma saída, permitindo reprodução e governança."
+  },
+  {
+    "id": "no-hardcoded-domain",
+    "question": "O CONTRACTOR permite lógica de domínio hardcoded?",
+    "answer": "Não. O domínio deve residir nos artefatos do bundle, não em código ad-hoc no Runtime ou Control Plane."
+  }
+]

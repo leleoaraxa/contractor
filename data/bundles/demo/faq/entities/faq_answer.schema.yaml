@@ -1,0 +1,15 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: faq_answer
+type: object
+additionalProperties: false
+required:
+  - answer
+  - intent
+  - status
+properties:
+  answer:
+    type: string
+  intent:
+    type: string
+  status:
+    type: string

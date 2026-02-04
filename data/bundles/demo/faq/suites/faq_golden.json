@@ -1,0 +1,42 @@
+[
+  {
+    "tenant_id": "tenant_a",
+    "question": "O que é um bundle no CONTRACTOR?",
+    "expected_answer": "Um bundle é o artefato imutável que encapsula ontologia, entidades, políticas, templates e suites que governam o comportamento do sistema em produção."
+  },
+  {
+    "tenant_id": "tenant_b",
+    "question": "O que é um bundle no CONTRACTOR?",
+    "expected_answer": "Um bundle é o artefato imutável que encapsula ontologia, entidades, políticas, templates e suites que governam o comportamento do sistema em produção."
+  },
+  {
+    "tenant_id": "tenant_a",
+    "question": "Como funciona a promoção de bundles no CONTRACTOR?",
+    "expected_answer": "A promoção troca o alias do tenant (draft → candidate → current) para apontar para um bundle aprovado em gates, sem alterar o bundle em si."
+  },
+  {
+    "tenant_id": "tenant_b",
+    "question": "Como funciona a promoção de bundles no CONTRACTOR?",
+    "expected_answer": "A promoção troca o alias do tenant (draft → candidate → current) para apontar para um bundle aprovado em gates, sem alterar o bundle em si."
+  },
+  {
+    "tenant_id": "tenant_a",
+    "question": "O que é o alias current?",
+    "expected_answer": "O alias current é o ponteiro do tenant para o bundle ativo em produção; o Runtime executa exclusivamente o bundle resolvido por esse alias."
+  },
+  {
+    "tenant_id": "tenant_b",
+    "question": "Qual é o papel do Runtime?",
+    "expected_answer": "O Runtime resolve o alias current do tenant, carrega o bundle promovido, aplica políticas e executa a resposta determinística."
+  },
+  {
+    "tenant_id": "tenant_a",
+    "question": "O que são quality gates?",
+    "expected_answer": "Quality gates são validações executadas no Control Plane para garantir estrutura, compatibilidade e suites determinísticas antes da promoção."
+  },
+  {
+    "tenant_id": "tenant_b",
+    "question": "Por que auditoria é obrigatória?",
+    "expected_answer": "Auditoria registra quem publicou, promoveu ou executou um bundle, garantindo rastreabilidade e diagnóstico de mudanças."
+  }
+]

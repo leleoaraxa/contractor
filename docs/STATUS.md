@@ -16,10 +16,10 @@
 - Contrato mínimo do Runtime (ADR 0007)
 - Compatibilidade e upgrade do Runtime (ADR 0008)
 - Caso de uso modelo oficial: FAQ determinístico (ADR 0009)
+- Bundle de demo (FAQ determinístico) implementado conforme ADR 0009
 
 ## O que está em aberto
 - Estratégia de testes de integração end-to-end (CI)
-- Implementação do bundle de demo (FAQ)
 - Implementação do Runtime mínimo (executor demo)
 - Plano de implementação incremental (PRs atômicas)
 
@@ -27,9 +27,4 @@
 - 2026-02-04: Aprovado o caso de uso modelo oficial (FAQ determinístico) como demo canônica do CONTRACTOR (ADR 0009).
 
 ## Próxima tarefa atômica
-- Implementar o **bundle de demo (FAQ determinístico)** conforme ADR 0009, incluindo:
-  - dados (JSON),
-  - ontologia,
-  - schemas,
-  - suites golden,
-  - policies mínimas.
+- Implementar o **Runtime mínimo (executor demo)** compatível com o bundle FAQ determinístico (ADR 0009).

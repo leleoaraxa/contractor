@@ -1,0 +1,17 @@
+version: "1.0"
+intents:
+  - name: faq_query
+    description: "Consulta determinística de FAQ do CONTRACTOR."
+    match:
+      type: exact
+      questions:
+        - "O que é um bundle no CONTRACTOR?"
+        - "Como funciona a promoção de bundles no CONTRACTOR?"
+        - "O que é o alias current?"
+        - "Qual é o papel do Control Plane?"
+        - "Qual é o papel do Runtime?"
+        - "O que são quality gates?"
+        - "Como funciona o rollback de bundles?"
+        - "Por que auditoria é obrigatória?"
+        - "O que significa determinismo na execução?"
+        - "O CONTRACTOR permite lógica de domínio hardcoded?"

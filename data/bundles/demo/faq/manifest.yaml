@@ -1,0 +1,8 @@
+bundle_name: demo-faq-deterministico
+bundle_version: "1.0.0"
+bundle_id: demo-faq-0001
+created_at: "2026-02-04T00:00:00Z"
+created_by: contractor-demo
+runtime_compatibility:
+  min_version: "1.0.0"
+description: "Demo/FAQ determinístico (ADR 0009)."
