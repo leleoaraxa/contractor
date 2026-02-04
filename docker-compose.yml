@@ -8,3 +8,5 @@ services:
       - CONTRACTOR_ENV=dev
     volumes:
       - .:/app
+    # Ensure builds don't attempt network installs; deps must be available in vendor/wheels.
+    # (PIP_NO_INDEX/PIP_FIND_LINKS are set in Dockerfile.)
