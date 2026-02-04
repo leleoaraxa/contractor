@@ -2,8 +2,11 @@
 
 Este diretório contém os **Architecture Decision Records (ADRs)** do projeto CONTRACTOR.
 
-Os ADRs registram decisões arquiteturais relevantes, seu contexto, alternativas consideradas e consequências.
-Eles são **fonte de verdade** e têm precedência sobre código, comentários ou implementações ad-hoc.
+Os ADRs registram decisões arquiteturais relevantes, seu contexto, alternativas consideradas
+e consequências. Eles são **fonte de verdade** e têm precedência sobre código, comentários
+ou implementações ad-hoc.
+
+---
 
 ## ADRs existentes
 
@@ -19,13 +22,51 @@ Eles são **fonte de verdade** e têm precedência sobre código, comentários o
 | 0008 | Compatibilidade e upgrade do Runtime               | Accepted |
 | 0009 | Caso de uso modelo (FAQ determinístico demo)       | Accepted |
 
+---
+
+## ADRs planejados (roadmap inevitável)
+
+**Objetivo:** completar o núcleo Control Plane ↔ Runtime governado, com contratos explícitos,
+erro seguro, auditoria e evolução incremental.
+
+| ID   | Título                                                                                           | Status | Motivo |
+|------|--------------------------------------------------------------------------------------------------|--------|--------|
+| 0010 | Integração Runtime ↔ Control Plane (resolução de alias `current` via HTTP, cache e fail-closed) | Draft  | ADR 0007 exige resolução via Control Plane; é necessário formalizar contrato, erros, cache e timeouts. |
+| 0011 | Autenticação e autorização v1 (Control Plane)                                                    | Draft  | ADR 0006 assume autenticação forte e tenant-aware, mas não define modelo. |
+| 0012 | Autenticação v1 do Runtime (chaves por tenant e validação de headers)                             | Draft  | ADR 0007 exige autenticação por tenant; precisa virar contrato verificável. |
+| 0013 | Rate limiting e quotas (policy-driven)                                                           | Draft  | ADR 0004 e 0007 citam negação por política; comportamento precisa ser definido. |
+| 0014 | Auditoria end-to-end (formato, correlação e retenção mínima)                                     | Draft  | ADR 0004 define auditoria mínima, mas não fixa formato nem retenção. |
+| 0015 | Armazenamento de bundles no Control Plane (integridade e lifecycle)                              | Draft  | ADR 0002/0005 exigem imutabilidade; falta definir storage real e GC. |
+| 0016 | Quality gates v1 (suites, execução e critérios de promoção)                                      | Draft  | ADR 0005/0006/0009 dependem de gates explícitos para promoção. |
+| 0017 | Distribuição de bundles para o Runtime (fetch, digest e cache local)                             | Draft  | Resolver alias retorna bundle_id; falta definir como o runtime obtém o bundle. |
+| 0018 | Observabilidade v1 (métricas mínimas, tracing e logs estruturados)                                | Draft  | ADR 0004 exige sinais operacionais; precisa virar contrato mínimo. |
+
+---
+
+## Ordem recomendada de implementação
+
+1. **ADR 0010** — Integração Runtime ↔ Control Plane (resolve `current` via HTTP)
+2. **ADR 0011 + ADR 0012** — Autenticação do Control Plane e do Runtime
+3. **ADR 0017** — Distribuição de bundles para o Runtime
+4. **ADR 0016** — Quality gates e promoção de bundles
+5. **ADR 0014** — Auditoria end-to-end
+6. **ADR 0013** — Rate limiting e quotas
+7. **ADR 0015** — Storage e lifecycle de bundles
+8. **ADR 0018** — Observabilidade mínima e SLOs
+
+---
+
 ## Regras
+
 - Toda decisão estrutural relevante **exige um ADR**.
 - ADRs são **imutáveis após Accepted** (mudanças exigem novo ADR).
-- Implementações devem referenciar o ADR correspondente.
+- Implementações devem referenciar explicitamente o ADR correspondente.
 - ADRs em progresso devem ser marcados como `Draft`.
 
+---
+
 ## Fluxo
+
 1. Criar ADR como `Draft`
 2. Revisar decisão
 3. Marcar como `Accepted`
