@@ -33,6 +33,16 @@ def _select_case_for_tenant(
     raise AssertionError(f"No golden case found for tenant {tenant_id}")
 
 
+def _select_shared_tenant_id(
+    tenant_keys: dict[str, str], cases: list[dict[str, str]]
+) -> str:
+    golden_tenants = {case.get("tenant_id") for case in cases}
+    shared_tenants = sorted(set(tenant_keys.keys()) & golden_tenants)
+    if not shared_tenants:
+        raise AssertionError("No shared tenant_id between tenants.json and golden cases")
+    return shared_tenants[0]
+
+
 def _load_bundle_metadata() -> tuple[Path, str]:
     bundle_path = _repo_root() / "data" / "bundles" / "demo" / "faq"
     manifest = yaml.safe_load((bundle_path / "manifest.yaml").read_text(encoding="utf-8"))
@@ -63,8 +73,9 @@ def test_runtime_alias_config_e2e_executes_demo_faq(
 
     client = TestClient(app)
     tenant_keys = _load_tenant_keys()
-    tenant_id = sorted(tenant_keys.keys())[0]
-    case = _select_case_for_tenant(tenant_id, _load_golden_cases())
+    golden_cases = _load_golden_cases()
+    tenant_id = _select_shared_tenant_id(tenant_keys, golden_cases)
+    case = _select_case_for_tenant(tenant_id, golden_cases)
     headers = {"X-Tenant-Id": tenant_id, "X-Api-Key": tenant_keys[tenant_id]}
 
     response = client.post("/execute", json={"question": case["question"]}, headers=headers)
@@ -87,8 +98,9 @@ def test_runtime_alias_config_e2e_fail_closed_when_alias_missing(
 
     client = TestClient(app)
     tenant_keys = _load_tenant_keys()
-    tenant_id = sorted(tenant_keys.keys())[0]
-    case = _select_case_for_tenant(tenant_id, _load_golden_cases())
+    golden_cases = _load_golden_cases()
+    tenant_id = _select_shared_tenant_id(tenant_keys, golden_cases)
+    case = _select_case_for_tenant(tenant_id, golden_cases)
     headers = {"X-Tenant-Id": tenant_id, "X-Api-Key": tenant_keys[tenant_id]}
 
     response = client.post("/execute", json={"question": case["question"]}, headers=headers)

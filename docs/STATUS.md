@@ -17,6 +17,7 @@
 - Compatibilidade e upgrade do Runtime (ADR 0008)
 - Caso de uso modelo oficial: FAQ determinístico (ADR 0009)
 - Bundle de demo (FAQ determinístico) implementado conforme ADR 0009
+- Testes E2E do Runtime (fluxo via alias config) implementados e validados no runner oficial (docker compose run --rm tests).
 
 ## O que está em aberto
 - Endpoints adicionais do Runtime (observabilidade/health checks estendidos)
