@@ -1,3 +1,4 @@
+# app/runtime.py
 from __future__ import annotations
 
 import json
@@ -97,7 +98,9 @@ def resolve_current_bundle(tenant_id: str) -> tuple[Path, str]:
 
 
 def load_faq_index(bundle_path: Path) -> dict[str, str]:
-    faq_data = json.loads((bundle_path / "data" / "faq.json").read_text(encoding="utf-8"))
+    faq_data = json.loads(
+        (bundle_path / "data" / "faq.json").read_text(encoding="utf-8")
+    )
     return {item["question"]: item["answer"] for item in faq_data}
 
 
@@ -134,7 +137,9 @@ def authenticate(
     api_key: str | None = Header(default=None, alias="X-Api-Key"),
 ) -> str:
     if not tenant_id or not api_key:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized"
+        )
     keys = load_tenant_keys()
     expected_key = keys.get(tenant_id)
     if not expected_key or expected_key != api_key:
@@ -151,7 +156,9 @@ def healthz() -> dict[str, str]:
 
 
 @app.post("/execute")
-def execute(request: ExecuteRequest, tenant_id: str = Depends(authenticate)) -> dict[str, Any]:
+def execute(
+    request: ExecuteRequest, tenant_id: str = Depends(authenticate)
+) -> dict[str, Any]:
     request_id = str(uuid.uuid4())
     try:
         bundle_path, bundle_id = resolve_current_bundle(tenant_id)
