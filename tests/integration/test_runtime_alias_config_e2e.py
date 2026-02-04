@@ -12,18 +12,25 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
-def _load_first_golden_case() -> dict[str, str]:
+def _load_golden_cases() -> list[dict[str, str]]:
     golden_path = (
         _repo_root() / "data" / "bundles" / "demo" / "faq" / "suites" / "faq_golden.json"
     )
-    golden_cases = json.loads(golden_path.read_text(encoding="utf-8"))
-    return golden_cases[0]
+    return json.loads(golden_path.read_text(encoding="utf-8"))
 
 
-def _load_tenant_key(tenant_id: str) -> str:
+def _load_tenant_keys() -> dict[str, str]:
     tenant_path = _repo_root() / "data" / "runtime" / "tenants.json"
-    tenants = json.loads(tenant_path.read_text(encoding="utf-8"))
-    return tenants[tenant_id]
+    return json.loads(tenant_path.read_text(encoding="utf-8"))
+
+
+def _select_case_for_tenant(
+    tenant_id: str, cases: list[dict[str, str]]
+) -> dict[str, str]:
+    for case in cases:
+        if case.get("tenant_id") == tenant_id:
+            return case
+    raise AssertionError(f"No golden case found for tenant {tenant_id}")
 
 
 def _load_bundle_metadata() -> tuple[Path, str]:
@@ -49,15 +56,16 @@ def alias_config_path(tmp_path: Path) -> Path:
     return config_path
 
 
-def test_runtime_e2e_executes_demo_faq(
+def test_runtime_alias_config_e2e_executes_demo_faq(
     alias_config_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("CONTRACTOR_ALIAS_CONFIG_PATH", str(alias_config_path))
 
     client = TestClient(app)
-    case = _load_first_golden_case()
-    api_key = _load_tenant_key(case["tenant_id"])
-    headers = {"X-Tenant-Id": case["tenant_id"], "X-Api-Key": api_key}
+    tenant_keys = _load_tenant_keys()
+    tenant_id = sorted(tenant_keys.keys())[0]
+    case = _select_case_for_tenant(tenant_id, _load_golden_cases())
+    headers = {"X-Tenant-Id": tenant_id, "X-Api-Key": tenant_keys[tenant_id]}
 
     response = client.post("/execute", json={"question": case["question"]}, headers=headers)
 
@@ -70,7 +78,7 @@ def test_runtime_e2e_executes_demo_faq(
     assert case["expected_answer"] in payload["output_text"]
 
 
-def test_runtime_e2e_fail_closed_when_alias_missing(
+def test_runtime_alias_config_e2e_fail_closed_when_alias_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     empty_config = tmp_path / "aliases.json"
@@ -78,9 +86,10 @@ def test_runtime_e2e_fail_closed_when_alias_missing(
     monkeypatch.setenv("CONTRACTOR_ALIAS_CONFIG_PATH", str(empty_config))
 
     client = TestClient(app)
-    case = _load_first_golden_case()
-    api_key = _load_tenant_key(case["tenant_id"])
-    headers = {"X-Tenant-Id": case["tenant_id"], "X-Api-Key": api_key}
+    tenant_keys = _load_tenant_keys()
+    tenant_id = sorted(tenant_keys.keys())[0]
+    case = _select_case_for_tenant(tenant_id, _load_golden_cases())
+    headers = {"X-Tenant-Id": tenant_id, "X-Api-Key": tenant_keys[tenant_id]}
 
     response = client.post("/execute", json={"question": case["question"]}, headers=headers)
 
