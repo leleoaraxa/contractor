@@ -1,7 +1,8 @@
 {{ answer }}
 
-{% if intent or status -%}
+{% if intent or status %}
 ---
-intent: {{ intent }}
-status: {{ status }}
-{%- endif %}
++**metadados**
+- intent: {{ intent }}
+- status: {{ status }}
+{% endif %}
