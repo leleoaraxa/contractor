@@ -1,3 +1,4 @@
+# tests/test_smoke.py
 def test_import_app():
     import app  # noqa: F401
 

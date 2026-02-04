@@ -54,8 +54,9 @@ Não há inferência probabilística, aprendizado ou escrita de dados.
 O bundle de demo deve conter, no mínimo:
 
 ```
+# data/bundles/demo/faq
 
-bundle/
+faq/
 ├── manifest.yaml
 ├── ontology/
 │   └── ontology.yaml          # intent faq_query
@@ -71,7 +72,7 @@ bundle/
 ├── suites/
 │   └── faq_golden.json        # perguntas → respostas esperadas
 └── metadata/
-└── bundle.yaml
+    └── bundle.yaml
 
 ```
 
