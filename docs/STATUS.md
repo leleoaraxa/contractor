@@ -20,11 +20,11 @@
 
 ## O que está em aberto
 - Estratégia de testes de integração end-to-end (CI)
-- Implementação do Runtime mínimo (executor demo)
+- Endpoints adicionais do Runtime (observabilidade/health checks estendidos)
 - Plano de implementação incremental (PRs atômicas)
 
 ## Última decisão relevante
 - 2026-02-04: Aprovado o caso de uso modelo oficial (FAQ determinístico) como demo canônica do CONTRACTOR (ADR 0009).
 
 ## Próxima tarefa atômica
-- Implementar o **Runtime mínimo (executor demo)** compatível com o bundle FAQ determinístico (ADR 0009).
+- Implementar testes de integração end-to-end do Runtime com Control Plane mockado.

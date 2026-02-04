@@ -1,0 +1,12 @@
+{
+  "tenants": {
+    "tenant_a": {
+      "current_bundle_path": "data/bundles/demo/faq",
+      "bundle_id": "demo-faq-0001"
+    },
+    "tenant_b": {
+      "current_bundle_path": "data/bundles/demo/faq",
+      "bundle_id": "demo-faq-0001"
+    }
+  }
+}
