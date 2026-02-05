@@ -22,16 +22,16 @@
 - Autenticação e autorização v1 do Control Plane (API key por tenant, tenant-aware e fail-closed) implementadas e validadas conforme ADR 0011 (Accepted).
 - Autenticação v1 do Runtime (API key por tenant via `X-Tenant-Id` + `X-Api-Key`, sem tenant implícito e fail-closed para configuração inválida/ausente) implementada e validada conforme ADR 0012 (Accepted).
 - Rate limiting e quotas policy-driven por tenant no Runtime (`POST /execute`), com fail-closed para policy ausente/inválida e resposta 429 com `Retry-After`, implementados e validados conforme ADR 0013 (Accepted).
-- Auditoria end-to-end v1 (schema mínimo, correlação por `X-Request-Id`, sink configurável com fail-closed e retenção mínima para arquivo) implementada e validada conforme ADR 0014 (Draft).
+- Auditoria end-to-end v1 (schema mínimo, correlação por `X-Request-Id`, sink configurável com fail-closed, retenção mínima e precedência de erro de auditoria) implementada e validada conforme ADR 0014 (Accepted).
 
 ## O que está em aberto
 - Materialização completa do Control Plane como serviço/API governado (além do endpoint mínimo de resolução)
-- Enforcement de compatibilidade, auditoria completa e políticas no Runtime
+- Enforcement completo de políticas cross-cutting no Runtime
 - Pipeline de promoção e rollback de bundles via aliases
 - Observabilidade operacional mínima
 
 ## Última decisão relevante
-- 2026-02-05: Aprovada e implementada a política v1 de rate limiting e quotas por tenant no Runtime (ADR 0013).
+- 2026-02-05: Aprovado e promovido o contrato de auditoria end-to-end v1, com correlação obrigatória, redaction explícito e fail-closed com precedência (ADR 0014).
 
 ## Próxima tarefa atômica
-- Evoluir ADR 0014 de Draft para Accepted após validação operacional ampliada.
+- Iniciar ADR 0017 (Distribuição de bundles para o Runtime).

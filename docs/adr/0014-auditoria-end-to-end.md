@@ -1,8 +1,8 @@
 # ADR 0014 — Auditoria end-to-end (formato, correlação e retenção mínima)
 
-**Status:** Draft  
-**Data:** 2026-02-XX  
-**Decide:** Contrato mínimo auditável para eventos de auditoria no Runtime e no Control Plane.  
+**Status:** Accepted
+**Data:** 2026-02-05
+**Decide:** Contrato mínimo auditável para eventos de auditoria no Runtime e no Control Plane.
 **Relacionados:** ADR 0004, ADR 0006, ADR 0007, ADR 0010, ADR 0011, ADR 0012, ADR 0013
 
 ---
