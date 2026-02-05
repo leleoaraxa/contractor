@@ -3,7 +3,7 @@
 **Status:** Draft
 **Data:** 2026-02-XX
 **Decide:** Modelo de autenticação e autorização da API do Control Plane
-**Relacionados:** ADR 0001, ADR 0003, ADR 0004, ADR 0006, ADR 0010
+**Relacionados:** ADR 0001, ADR 0003, ADR 0004, ADR 0006, ADR 0007, ADR 0010
 
 ---
 
@@ -21,7 +21,7 @@ Até este ponto, no bootstrap, não há um contrato explícito e verificável de
 - **como** autorizar operações de forma estritamente **tenant-aware**.
 
 Isso cria ambiguidade operacional e enfraquece as garantias de governança/isolamento esperadas para um Control
-Plane.
+Plane, além de conflitar com o princípio de isolamento do contrato mínimo do Runtime (ADR 0007).
 
 ---
 
@@ -190,8 +190,7 @@ Este ADR não define:
 
 ## Próximos passos
 
-1. Implementar validação de `Authorization`  `X-Tenant-Id` no Control Plane.
+1. Implementar validação de `Authorization` + `X-Tenant-Id` no Control Plane.
 2. Aplicar authn/authz a todos os endpoints do Control Plane (incluindo `resolve/current`).
-3. Atualizar a integração do Runtime → Control Plane para enviar os headers exigidos.
-4. Adicionar testes cobrindo casos 401/403/200.
-5. Atualizar `docs/STATUS.md` e promover este ADR para **Accepted** quando estiver 100% materializado e testado.
+3. Adicionar testes cobrindo casos 401/403/200.
+4. Atualizar `docs/STATUS.md` e promover este ADR para **Accepted** quando estiver 100% materializado e testado.
