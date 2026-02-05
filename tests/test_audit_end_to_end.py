@@ -39,6 +39,14 @@ def _runtime_audit_lines(captured: str) -> list[dict[str, Any]]:
     return [e for e in events if e.get("service") == "runtime"]
 
 
+def _prepare_bundle_cache_hit(tmp_path: Path, bundle_id: str) -> Path:
+    source = _bundle_path()
+    bundle_root = tmp_path / "bundles"
+    target = bundle_root / bundle_id
+    shutil.copytree(source, target)
+    return bundle_root
+
+
 def _control_plane_audit_lines(captured: str) -> list[dict[str, Any]]:
     lines = [line for line in captured.splitlines() if line.strip()]
     events = [json.loads(line) for line in lines]
@@ -229,6 +237,8 @@ def test_runtime_propagates_x_request_id_to_control_plane(
         encoding="utf-8",
     )
     monkeypatch.setenv("CONTRACTOR_ALIAS_CONFIG_PATH", str(alias_path))
+    bundle_root = _prepare_bundle_cache_hit(tmp_path, "demo-faq-0001")
+    monkeypatch.setattr(runtime, "_bundle_root", lambda: bundle_root)
 
     with _capture_runtime_request_id_server(
         "tenant_a", "demo-faq-0001", "0.0.0"

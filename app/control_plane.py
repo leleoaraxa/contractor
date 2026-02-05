@@ -124,12 +124,13 @@ def enforce_control_plane_auth(
     return token_tenant_id
 
 
-def resolve_current_bundle_metadata(tenant_id: str) -> tuple[str, str]:
+def resolve_current_bundle_metadata(tenant_id: str) -> tuple[str, str, str | None]:
     config = load_alias_config()
     tenants = config.get("tenants", config)
     tenant_entry = tenants.get(tenant_id) or tenants.get("*")
     if not tenant_entry:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
+    bundle_sha256: str | None = None
     if isinstance(tenant_entry, str):
         bundle_path_value = tenant_entry
         bundle_id = None
@@ -138,6 +139,14 @@ def resolve_current_bundle_metadata(tenant_id: str) -> tuple[str, str]:
             "bundle_path"
         )
         bundle_id = tenant_entry.get("bundle_id")
+        raw_digest = tenant_entry.get("bundle_sha256")
+        if raw_digest is not None:
+            if not isinstance(raw_digest, str) or not raw_digest:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Bundle metadata missing",
+                )
+            bundle_sha256 = raw_digest
     if not bundle_path_value:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -160,7 +169,7 @@ def resolve_current_bundle_metadata(tenant_id: str) -> tuple[str, str]:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Bundle metadata missing",
         )
-    return str(bundle_id), str(min_version)
+    return str(bundle_id), str(min_version), bundle_sha256
 
 
 def _map_error_code(exc: Exception, http_status: int) -> str:
@@ -199,11 +208,14 @@ def resolve_current(
         enforce_control_plane_auth(
             tenant_id=tenant_id, authorization=authorization, x_tenant_id=x_tenant_id
         )
-        bundle_id, min_version = resolve_current_bundle_metadata(tenant_id)
-        return {
+        bundle_id, min_version, bundle_sha256 = resolve_current_bundle_metadata(tenant_id)
+        payload = {
             "bundle_id": bundle_id,
             "runtime_compatibility": {"min_version": min_version},
         }
+        if bundle_sha256:
+            payload["bundle_sha256"] = bundle_sha256
+        return payload
     except HTTPException as exc:
         status_code = exc.status_code
         error_code = _map_error_code(exc, status_code)

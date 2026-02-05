@@ -1,4 +1,5 @@
 import json
+import shutil
 import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -9,6 +10,7 @@ import pytest
 import yaml
 from fastapi.testclient import TestClient
 
+from app import runtime
 from app.runtime import app
 
 
@@ -27,6 +29,15 @@ def _load_bundle_metadata() -> tuple[Path, str, str]:
     bundle_id = manifest.get("bundle_id")
     min_version = manifest.get("runtime_compatibility", {}).get("min_version")
     return bundle_path, bundle_id, min_version
+
+
+def _prepare_bundle_cache_hit(tmp_path: Path, bundle_id: str, source_bundle_path: Path) -> Path:
+    bundle_root = tmp_path / "bundles"
+    target = bundle_root / bundle_id
+    if target.exists():
+        return bundle_root
+    shutil.copytree(source_bundle_path, target)
+    return bundle_root
 
 
 def _select_tenant_id(tenant_keys: dict[str, str]) -> str:
@@ -83,7 +94,7 @@ def alias_config_path(tmp_path: Path) -> Path:
 
 
 def test_runtime_control_plane_e2e_executes_with_current_alias(
-    alias_config_path: Path, monkeypatch: pytest.MonkeyPatch
+    alias_config_path: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     tenant_keys = _load_tenant_keys()
     tenant_id = _select_tenant_id(tenant_keys)
@@ -91,6 +102,8 @@ def test_runtime_control_plane_e2e_executes_with_current_alias(
     response_body = json.dumps(
         {"bundle_id": bundle_id, "runtime_compatibility": {"min_version": min_version}}
     ).encode("utf-8")
+    bundle_root = _prepare_bundle_cache_hit(tmp_path, bundle_id, bundle_path)
+    monkeypatch.setattr(runtime, "_bundle_root", lambda: bundle_root)
 
     with control_plane_server(tenant_id, 200, response_body) as base_url:
         monkeypatch.setenv("CONTRACTOR_CONTROL_PLANE_BASE_URL", base_url)
