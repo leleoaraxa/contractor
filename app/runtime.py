@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 import uuid
 from pathlib import Path
 from typing import Any
@@ -11,7 +12,7 @@ from urllib import error as urllib_error
 from urllib import request as urllib_request
 
 import yaml
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Response, status
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from jsonschema import Draft202012Validator
 from pydantic import BaseModel
@@ -35,6 +36,12 @@ class RuntimeConfigError(RuntimeError):
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_ALIAS_PATH = REPO_ROOT / "data" / "control_plane" / "demo_aliases.json"
 DEFAULT_TENANT_KEYS_PATH = REPO_ROOT / "data" / "runtime" / "tenants.json"
+DEFAULT_RATE_LIMIT_POLICY_PATH = (
+    REPO_ROOT / "data" / "runtime" / "rate_limit_policy.yaml"
+)
+RATE_LIMIT_POLICY_ENV_JSON = "CONTRACTOR_RATE_LIMIT_POLICY_JSON"
+RATE_LIMIT_POLICY_ENV_PATH = "CONTRACTOR_RATE_LIMIT_POLICY_PATH"
+RATE_LIMIT_COUNTERS: dict[tuple[str, str, int], int] = {}
 
 
 def _load_json_file(path: Path) -> dict[str, Any]:
@@ -66,6 +73,129 @@ def load_tenant_keys() -> dict[str, str]:
         raise RuntimeConfigError("Tenant keys config invalid") from exc
 
     return _validate_tenant_keys(config)
+
+
+def load_rate_limit_policy() -> dict[str, Any]:
+    env_json = os.getenv(RATE_LIMIT_POLICY_ENV_JSON)
+    if env_json:
+        try:
+            return json.loads(env_json)
+        except json.JSONDecodeError as exc:
+            raise RuntimeConfigError("Rate limit policy invalid") from exc
+
+    env_path = os.getenv(RATE_LIMIT_POLICY_ENV_PATH)
+    policy_path = Path(env_path) if env_path else DEFAULT_RATE_LIMIT_POLICY_PATH
+    try:
+        return yaml.safe_load(policy_path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise RuntimeConfigError("Rate limit policy missing") from exc
+    except yaml.YAMLError as exc:
+        raise RuntimeConfigError("Rate limit policy invalid") from exc
+
+
+def _validate_policy_bucket(bucket: Any) -> dict[str, int]:
+    if not isinstance(bucket, dict):
+        raise RuntimeConfigError("Rate limit policy invalid")
+    window_seconds = bucket.get("window_seconds")
+    max_requests = bucket.get("max_requests")
+    if not isinstance(window_seconds, int) or window_seconds <= 0:
+        raise RuntimeConfigError("Rate limit policy invalid")
+    if not isinstance(max_requests, int) or max_requests <= 0:
+        raise RuntimeConfigError("Rate limit policy invalid")
+    return {
+        "window_seconds": window_seconds,
+        "max_requests": max_requests,
+    }
+
+
+def validate_rate_limit_policy(policy: Any) -> dict[str, Any]:
+    if not isinstance(policy, dict):
+        raise RuntimeConfigError("Rate limit policy invalid")
+
+    tenants = policy.get("tenants")
+    if not isinstance(tenants, dict) or not tenants:
+        raise RuntimeConfigError("Rate limit policy invalid")
+    if "*" not in tenants:
+        raise RuntimeConfigError("Rate limit policy invalid")
+
+    normalized_tenants: dict[str, dict[str, dict[str, int]]] = {}
+    for tenant_id, tenant_policy in tenants.items():
+        if not isinstance(tenant_id, str) or not tenant_id.strip():
+            raise RuntimeConfigError("Rate limit policy invalid")
+        if not isinstance(tenant_policy, dict):
+            raise RuntimeConfigError("Rate limit policy invalid")
+        normalized_tenants[tenant_id] = {
+            "rate_limit": _validate_policy_bucket(
+                tenant_policy.get("rate_limit", policy.get("rate_limit"))
+            ),
+            "quota": _validate_policy_bucket(
+                tenant_policy.get("quota", policy.get("quota"))
+            ),
+        }
+
+    return {
+        "rate_limit": _validate_policy_bucket(policy.get("rate_limit")),
+        "quota": _validate_policy_bucket(policy.get("quota")),
+        "tenants": normalized_tenants,
+    }
+
+
+def _increment_window_counter(
+    tenant_id: str, bucket_name: str, config: dict[str, int], now: int
+) -> dict[str, int | bool]:
+    window_seconds = config["window_seconds"]
+    max_requests = config["max_requests"]
+    window_start = now - (now % window_seconds)
+    window_reset = window_start + window_seconds
+    key = (tenant_id, bucket_name, window_start)
+    count = RATE_LIMIT_COUNTERS.get(key, 0) + 1
+    RATE_LIMIT_COUNTERS[key] = count
+    return {
+        "max_requests": max_requests,
+        "remaining": max(max_requests - count, 0),
+        "reset": window_reset,
+        "retry_after": max(window_reset - now, 1),
+        "exceeded": count > max_requests,
+    }
+
+
+def enforce_rate_limit_and_quota(tenant_id: str) -> dict[str, str]:
+    policy = validate_rate_limit_policy(load_rate_limit_policy())
+    tenant_policy = policy["tenants"].get(tenant_id, policy["tenants"]["*"])
+    now = int(time.time())
+
+    rate_limit_decision = _increment_window_counter(
+        tenant_id, "rate_limit", tenant_policy["rate_limit"], now
+    )
+    rate_limit_headers = {
+        "X-RateLimit-Limit": str(rate_limit_decision["max_requests"]),
+        "X-RateLimit-Remaining": str(rate_limit_decision["remaining"]),
+        "X-RateLimit-Reset": str(rate_limit_decision["reset"]),
+    }
+    if rate_limit_decision["exceeded"]:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Rate limit exceeded",
+            headers={
+                **rate_limit_headers,
+                "Retry-After": str(rate_limit_decision["retry_after"]),
+            },
+        )
+
+    quota_decision = _increment_window_counter(
+        tenant_id, "quota", tenant_policy["quota"], now
+    )
+    if quota_decision["exceeded"]:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Quota exceeded",
+            headers={
+                **rate_limit_headers,
+                "Retry-After": str(quota_decision["retry_after"]),
+            },
+        )
+
+    return rate_limit_headers
 
 
 def _validate_tenant_keys(config: Any) -> dict[str, str]:
@@ -294,9 +424,19 @@ def healthz() -> dict[str, str]:
 
 @app.post("/execute")
 def execute(
-    request: ExecuteRequest, tenant_id: str = Depends(authenticate)
+    request: ExecuteRequest,
+    response: Response,
+    tenant_id: str = Depends(authenticate),
 ) -> dict[str, Any]:
     request_id = str(uuid.uuid4())
+    try:
+        rate_limit_headers = enforce_rate_limit_and_quota(tenant_id)
+    except RuntimeConfigError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+    for header_name, header_value in rate_limit_headers.items():
+        response.headers[header_name] = header_value
+
     try:
         bundle_path, bundle_id = resolve_current_bundle(tenant_id)
     except RuntimeConfigError as exc:
