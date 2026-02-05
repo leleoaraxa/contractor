@@ -72,13 +72,20 @@ def _validate_tenant_keys(config: Any) -> dict[str, str]:
     if not isinstance(config, dict) or not config:
         raise RuntimeConfigError("Tenant keys config invalid")
 
+    normalized: dict[str, str] = {}
     for tenant_id, api_key in config.items():
         if not isinstance(tenant_id, str) or not tenant_id.strip():
             raise RuntimeConfigError("Tenant keys config invalid")
         if not isinstance(api_key, str) or not api_key.strip():
             raise RuntimeConfigError("Tenant keys config invalid")
 
-    return {tenant_id.strip(): api_key for tenant_id, api_key in config.items()}
+        tid = tenant_id.strip()
+        key = api_key.strip()
+        if tid in normalized:
+            raise RuntimeConfigError("Tenant keys config invalid")
+        normalized[tid] = key
+
+    return normalized
 
 
 def load_alias_config() -> dict[str, Any]:

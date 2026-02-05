@@ -50,14 +50,13 @@ erro seguro, auditoria e evolução incremental.
 
 ## Ordem recomendada de implementação
 
-1. **ADR 0011 + ADR 0012** — Autenticação do Control Plane e do Runtime
+1. **ADR 0013** — Rate limiting e quotas
 2. **ADR 0017** — Distribuição de bundles para o Runtime
 3. **ADR 0016** — Quality gates v1
 4. **ADR 0019** — Promoção e rollback de bundles (aliases)
 5. **ADR 0014** — Auditoria end-to-end
-6. **ADR 0013** — Rate limiting e quotas
-7. **ADR 0015** — Storage e lifecycle de bundles
-8. **ADR 0018** — Observabilidade mínima e SLOs
+6. **ADR 0015** — Storage e lifecycle de bundles
+7. **ADR 0018** — Observabilidade mínima e SLOs
 
 ---
 
