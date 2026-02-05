@@ -1,7 +1,7 @@
 # ADR 0010 — Integração Runtime ↔ Control Plane: resolução do alias `current` via HTTP (fail-closed)
 
-**Status:** Draft
-**Data:** 2026-02-XX
+**Status:** Accepted
+**Data:** 2026-02-05
 **Decide:** Arquitetura de integração Runtime ↔ Control Plane
 **Relacionados:** ADR 0001, ADR 0003, ADR 0006, ADR 0007, ADR 0008
 

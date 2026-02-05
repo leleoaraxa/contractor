@@ -31,7 +31,7 @@ erro seguro, auditoria e evolução incremental.
 
 | ID   | Título                                                                                           | Status | Motivo |
 |------|--------------------------------------------------------------------------------------------------|--------|--------|
-| 0010 | Integração Runtime ↔ Control Plane (resolução de alias `current` via HTTP e fail-closed)        | Draft  | ADR 0007 exige resolução via Control Plane; contrato HTTP, validação e erro seguro já materializados em código. |
+| 0010 | Integração Runtime ↔ Control Plane (resolução de alias `current` via HTTP e fail-closed)        | Accepted | Contrato HTTP mínimo materializado com endpoint `resolve/current`, validação estrita de payload no Runtime, timeout configurável e fail-closed cobertos por testes E2E. |
 | 0011 | Autenticação e autorização v1 (Control Plane)                                                    | Draft  | ADR 0006 assume autenticação forte e tenant-aware, mas não define modelo. |
 | 0012 | Autenticação v1 do Runtime (chaves por tenant e validação de headers)                             | Draft  | ADR 0007 exige autenticação por tenant; precisa virar contrato verificável. |
 | 0013 | Rate limiting e quotas (policy-driven)                                                           | Draft  | ADR 0004 e 0007 citam negação por política; comportamento precisa ser definido. |
@@ -46,15 +46,14 @@ erro seguro, auditoria e evolução incremental.
 
 ## Ordem recomendada de implementação
 
-1. **ADR 0010** — Integração Runtime ↔ Control Plane (resolve `current` via HTTP)
-2. **ADR 0011 + ADR 0012** — Autenticação do Control Plane e do Runtime
-3. **ADR 0017** — Distribuição de bundles para o Runtime
-4. **ADR 0016** — Quality gates v1
-5. **ADR 0019** — Promoção e rollback de bundles (aliases)
-6. **ADR 0014** — Auditoria end-to-end
-7. **ADR 0013** — Rate limiting e quotas
-8. **ADR 0015** — Storage e lifecycle de bundles
-9. **ADR 0018** — Observabilidade mínima e SLOs
+1. **ADR 0011 + ADR 0012** — Autenticação do Control Plane e do Runtime
+2. **ADR 0017** — Distribuição de bundles para o Runtime
+3. **ADR 0016** — Quality gates v1
+4. **ADR 0019** — Promoção e rollback de bundles (aliases)
+5. **ADR 0014** — Auditoria end-to-end
+6. **ADR 0013** — Rate limiting e quotas
+7. **ADR 0015** — Storage e lifecycle de bundles
+8. **ADR 0018** — Observabilidade mínima e SLOs
 
 ---
 

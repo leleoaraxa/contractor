@@ -18,7 +18,7 @@
 - Caso de uso modelo oficial: FAQ determinístico (ADR 0009)
 - Bundle de demo (FAQ determinístico) implementado conforme ADR 0009
 - Testes E2E do Runtime (fluxo via alias config) implementados e validados no runner oficial (docker compose run --rm tests)
-- Integração Runtime ↔ Control Plane para resolução do alias `current` via HTTP (fail-closed) implementada conforme ADR 0010 (Draft).
+- Integração Runtime ↔ Control Plane para resolução do alias `current` via HTTP (fail-closed) implementada e validada conforme ADR 0010 (Accepted).
 
 ## O que está em aberto
 - Materialização do Control Plane como serviço/API governado
@@ -27,7 +27,7 @@
 - Observabilidade operacional mínima
 
 ## Última decisão relevante
-- 2026-02-04: Aprovado o caso de uso modelo oficial (FAQ determinístico) como demo canônica do CONTRACTOR (ADR 0009).
+- 2026-02-05: Aprovada a integração Runtime ↔ Control Plane para resolução do alias `current` via HTTP com fail-closed (ADR 0010).
 
 ## Próxima tarefa atômica
-- Revisar e promover o ADR 0010 para **Accepted**, ou iniciar o ADR 0011 (Autenticação e autorização v1 do Control Plane).
+- Iniciar o ADR 0011 (Autenticação e autorização v1 do Control Plane).
