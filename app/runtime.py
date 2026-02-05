@@ -148,6 +148,19 @@ def _increment_window_counter(
     window_start = now - (now % window_seconds)
     window_reset = window_start + window_seconds
     key = (tenant_id, bucket_name, window_start)
+
+    # v1: GC determinístico para evitar crescimento infinito do map (process-local).
+    # Mantém apenas janelas recentes: 2x a maior window_seconds do bucket atual.
+    # (Sem Redis, sem heurística; limite explícito e estável.)
+    gc_before = now - (window_seconds * 2)
+    if RATE_LIMIT_COUNTERS:
+        to_delete: list[tuple[str, str, int]] = []
+        for k_tenant, k_bucket, k_window_start in RATE_LIMIT_COUNTERS.keys():
+            if k_window_start < gc_before:
+                to_delete.append((k_tenant, k_bucket, k_window_start))
+        for k in to_delete:
+            RATE_LIMIT_COUNTERS.pop(k, None)
+
     count = RATE_LIMIT_COUNTERS.get(key, 0) + 1
     RATE_LIMIT_COUNTERS[key] = count
     return {
