@@ -1,9 +1,9 @@
 import json
 import threading
+from collections.abc import Iterator
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-from typing import Iterator
 
 import pytest
 import yaml

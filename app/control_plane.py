@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import json
 import os
+import time
+import uuid
 from pathlib import Path
 from typing import Any
 
 import yaml
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import FastAPI, Header, HTTPException, status
+
+from app.audit import AuditConfigError, audit_emit, now_utc_iso
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_ALIAS_PATH = REPO_ROOT / "data" / "control_plane" / "demo_aliases.json"
@@ -159,13 +163,85 @@ def resolve_current_bundle_metadata(tenant_id: str) -> tuple[str, str]:
     return str(bundle_id), str(min_version)
 
 
+def _map_error_code(exc: Exception, http_status: int) -> str:
+    if http_status == status.HTTP_401_UNAUTHORIZED:
+        return "unauthorized"
+    if http_status == status.HTTP_403_FORBIDDEN:
+        return "forbidden"
+    if http_status == status.HTTP_500_INTERNAL_SERVER_ERROR:
+        if isinstance(exc.__cause__, (AuthConfigError, AuditConfigError)):
+            return "config_error"
+        if isinstance(exc, AuthConfigError):
+            return "config_error"
+        if isinstance(exc, HTTPException) and "config" in str(exc.detail).lower():
+            return "config_error"
+    return "internal_error"
+
+
 @app.get("/tenants/{tenant_id}/resolve/current")
 def resolve_current(
     tenant_id: str,
-    _: str = Depends(enforce_control_plane_auth),
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+    x_request_id: str | None = Header(default=None, alias="X-Request-Id"),
 ) -> dict[str, Any]:
-    bundle_id, min_version = resolve_current_bundle_metadata(tenant_id)
-    return {
-        "bundle_id": bundle_id,
-        "runtime_compatibility": {"min_version": min_version},
-    }
+    started_at = time.time()
+    request_id = (
+        x_request_id
+        if isinstance(x_request_id, str) and x_request_id.strip()
+        else str(uuid.uuid4())
+    )
+    status_code = status.HTTP_200_OK
+    bundle_id: str | None = None
+    error_code: str | None = None
+
+    try:
+        enforce_control_plane_auth(
+            tenant_id=tenant_id, authorization=authorization, x_tenant_id=x_tenant_id
+        )
+        bundle_id, min_version = resolve_current_bundle_metadata(tenant_id)
+        return {
+            "bundle_id": bundle_id,
+            "runtime_compatibility": {"min_version": min_version},
+        }
+    except HTTPException as exc:
+        status_code = exc.status_code
+        error_code = _map_error_code(exc, status_code)
+        raise
+    except AuthConfigError as exc:
+        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        error_code = "config_error"
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        error_code = _map_error_code(exc, status_code)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from exc
+    finally:
+        event: dict[str, Any] = {
+            "ts_utc": now_utc_iso(),
+            "service": "control_plane",
+            "event": "resolve_current",
+            "tenant_id": tenant_id,
+            "request_id": request_id,
+            "actor": "runtime",
+            "outcome": "ok" if status_code < 400 else "error",
+            "http_status": int(status_code),
+            "latency_ms": int((time.time() - started_at) * 1000),
+        }
+        if bundle_id:
+            event["bundle_id"] = bundle_id
+        if error_code:
+            event["error_code"] = error_code
+        try:
+            audit_emit(event)
+        except AuditConfigError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=str(exc),
+            ) from exc
