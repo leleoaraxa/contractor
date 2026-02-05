@@ -80,7 +80,7 @@ def resolve_current_bundle(tenant_id: str) -> tuple[Path, str]:
     if base_url:
         bundle_id, min_version = resolve_bundle_via_control_plane(tenant_id, base_url)
         ensure_runtime_compatibility(min_version)
-        bundle_path = resolve_bundle_path_from_catalog(bundle_id)
+        bundle_path = resolve_bundle_path_from_bootstrap_alias_config(bundle_id)
         return bundle_path, bundle_id
 
     config = load_alias_config()
@@ -151,14 +151,16 @@ def resolve_bundle_from_alias_entry(tenant_entry: Any) -> tuple[Path, str]:
     return bundle_path, str(bundle_id)
 
 
-def resolve_bundle_path_from_catalog(bundle_id: str) -> Path:
+def resolve_bundle_path_from_bootstrap_alias_config(bundle_id: str) -> Path:
     config = load_alias_config()
     tenants = config.get("tenants", config)
     for tenant_entry in tenants.values():
         bundle_path, resolved_id = resolve_bundle_from_alias_entry(tenant_entry)
         if resolved_id == bundle_id:
             return bundle_path
-    raise RuntimeConfigError("Bundle path not found for Control Plane bundle_id")
+    raise RuntimeConfigError(
+        "Bundle path not found in bootstrap alias config for Control Plane bundle_id"
+    )
 
 
 def _resolve_control_plane_timeout() -> float:

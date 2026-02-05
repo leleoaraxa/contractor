@@ -31,7 +31,7 @@ erro seguro, auditoria e evolução incremental.
 
 | ID   | Título                                                                                           | Status | Motivo |
 |------|--------------------------------------------------------------------------------------------------|--------|--------|
-| 0010 | Integração Runtime ↔ Control Plane (resolução de alias `current` via HTTP, cache e fail-closed) | Draft  | ADR 0007 exige resolução via Control Plane; é necessário formalizar contrato, erros, cache e timeouts. |
+| 0010 | Integração Runtime ↔ Control Plane (resolução de alias `current` via HTTP e fail-closed)        | Draft  | ADR 0007 exige resolução via Control Plane; contrato HTTP, validação e erro seguro já materializados em código. |
 | 0011 | Autenticação e autorização v1 (Control Plane)                                                    | Draft  | ADR 0006 assume autenticação forte e tenant-aware, mas não define modelo. |
 | 0012 | Autenticação v1 do Runtime (chaves por tenant e validação de headers)                             | Draft  | ADR 0007 exige autenticação por tenant; precisa virar contrato verificável. |
 | 0013 | Rate limiting e quotas (policy-driven)                                                           | Draft  | ADR 0004 e 0007 citam negação por política; comportamento precisa ser definido. |
