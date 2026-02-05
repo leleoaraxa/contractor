@@ -22,6 +22,7 @@ ou implementações ad-hoc.
 | 0008 | Compatibilidade e upgrade do Runtime               | Accepted |
 | 0009 | Caso de uso modelo (FAQ determinístico demo)       | Accepted |
 | 0010 | Integração Runtime ↔ Control Plane                 | Accepted |
+| 0011 | Autenticação e autorização v1 (Control Plane)      | Accepted |
 
 ---
 
@@ -32,7 +33,6 @@ erro seguro, auditoria e evolução incremental.
 
 | ID   | Título                                                                                           | Status | Motivo |
 |------|--------------------------------------------------------------------------------------------------|--------|--------|
-| 0011 | Autenticação e autorização v1 (Control Plane)                                                    | Draft  | ADR 0006 assume autenticação forte e tenant-aware; ADR 0007 exige isolamento e execução governada. |
 | 0012 | Autenticação v1 do Runtime (chaves por tenant e validação de headers)                            | Draft  | ADR 0007 exige autenticação por tenant; precisa virar contrato verificável. |
 | 0013 | Rate limiting e quotas (policy-driven)                                                           | Draft  | ADR 0004 e 0007 citam negação por política; comportamento precisa ser definido. |
 | 0014 | Auditoria end-to-end (formato, correlação e retenção mínima)                                     | Draft  | ADR 0004 define auditoria mínima, mas não fixa formato nem retenção. |

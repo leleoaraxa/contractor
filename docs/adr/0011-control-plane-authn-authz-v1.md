@@ -1,7 +1,7 @@
 # ADR 0011 — Autenticação e autorização v1 do Control Plane
 
-**Status:** Draft
-**Data:** 2026-02-XX
+**Status:** Accepted
+**Data:** 2026-02-05
 **Decide:** Modelo de autenticação e autorização da API do Control Plane
 **Relacionados:** ADR 0001, ADR 0003, ADR 0004, ADR 0006, ADR 0007, ADR 0010
 
@@ -107,6 +107,7 @@ X-Tenant-Id: <tenant_id>
 
 - `Authorization` ausente ou malformado → **401 Unauthorized**
 - token inválido/desconhecido → **401 Unauthorized**
+- `X-Tenant-Id` ausente → **401 Unauthorized**
 - configuração de tokens ausente/inválida → **500 Internal Server Error** (fail-closed)
 
 ### Regras de autorização (authz)
@@ -141,6 +142,15 @@ O mecanismo de keys v1 deve ser configurável sem hardcode em código-fonte. For
 
 - via arquivo (ex.: `data/control_plane/tenants.json`)
 - e/ou via variável de ambiente (string JSON)
+
+Variáveis de ambiente definidas pela implementação:
+
+- `CONTRACTOR_CONTROL_PLANE_TENANT_AUTH_CONFIG_JSON`
+- `CONTRACTOR_CONTROL_PLANE_TENANT_AUTH_CONFIG_PATH`
+
+Path default:
+
+- `data/control_plane/tenants.json`
 
 O formato do arquivo/JSON deve ser simples e determinístico, por exemplo:
 
