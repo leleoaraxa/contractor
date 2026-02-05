@@ -269,9 +269,7 @@ def resolve_current_bundle(
     base_url = os.getenv("CONTRACTOR_CONTROL_PLANE_BASE_URL")
     if base_url:
         bundle_id, min_version, expected_digest, control_plane_status = (
-            resolve_bundle_via_control_plane(
-                tenant_id, base_url, request_id=request_id
-            )
+            resolve_bundle_via_control_plane(tenant_id, base_url, request_id=request_id)
         )
         ensure_runtime_compatibility(min_version)
         bundle_path, cache_status = ensure_local_bundle(
@@ -370,11 +368,17 @@ def _safe_extract_tar_gz(archive_path: Path, destination: Path) -> None:
     with tarfile.open(archive_path, mode="r:gz") as tar:
         for member in tar.getmembers():
             member_path = (destination / member.name).resolve()
-            if os.path.commonpath(
-                [str(destination_resolved), str(member_path)]
-            ) != str(destination_resolved):
+            if os.path.commonpath([str(destination_resolved), str(member_path)]) != str(
+                destination_resolved
+            ):
                 raise RuntimeConfigError("Bundle structure invalid")
-        tar.extractall(path=destination)
+
+        # Python 3.14+: use explicit filter to avoid future default behavior changes.
+        try:
+            tar.extractall(path=destination, filter="data")
+        except TypeError:
+            # Older Python: no filter parameter.
+            tar.extractall(path=destination)
 
 
 def _digest_file(path: Path) -> str:
@@ -415,7 +419,9 @@ def _download_bundle_archive(bundle_id: str, destination: Path) -> None:
         ) from exc
 
 
-def ensure_local_bundle(bundle_id: str, expected_digest: str | None) -> tuple[Path, str]:
+def ensure_local_bundle(
+    bundle_id: str, expected_digest: str | None
+) -> tuple[Path, str]:
     bundle_path = _bundle_root() / bundle_id
     if bundle_path.exists():
         _ensure_bundle_structure(bundle_path)
@@ -457,12 +463,16 @@ def _map_error_code(exc: Exception, http_status: int) -> str:
         return "unauthorized"
     if http_status == status.HTTP_403_FORBIDDEN:
         return "forbidden"
-    if http_status == status.HTTP_429_TOO_MANY_REQUESTS and isinstance(exc, HTTPException):
+    if http_status == status.HTTP_429_TOO_MANY_REQUESTS and isinstance(
+        exc, HTTPException
+    ):
         if exc.detail == "Rate limit exceeded":
             return "rate_limit_exceeded"
         if exc.detail == "Quota exceeded":
             return "quota_exceeded"
-    if http_status == status.HTTP_500_INTERNAL_SERVER_ERROR and isinstance(exc, HTTPException):
+    if http_status == status.HTTP_500_INTERNAL_SERVER_ERROR and isinstance(
+        exc, HTTPException
+    ):
         if isinstance(exc.__cause__, (RuntimeConfigError, AuditConfigError)):
             return "config_error"
         if "config" in str(exc.detail).lower():
@@ -676,12 +686,16 @@ def execute(
         raise
     except RuntimeConfigError as exc:
         status_code = exc.status_code
-        error_code = "config_error" if "config" in str(exc).lower() else "internal_error"
+        error_code = (
+            "config_error" if "config" in str(exc).lower() else "internal_error"
+        )
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     except Exception as exc:
         status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         error_code = _map_error_code(exc, status_code)
-        raise HTTPException(status_code=status_code, detail="Internal server error") from exc
+        raise HTTPException(
+            status_code=status_code, detail="Internal server error"
+        ) from exc
     finally:
         latency_ms = int((time.time() - started_at) * 1000)
         event: dict[str, Any] = {
