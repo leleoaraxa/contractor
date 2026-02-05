@@ -1,3 +1,4 @@
+# tests/test_control_plane_gates.py
 from __future__ import annotations
 
 import json
@@ -9,7 +10,9 @@ from fastapi.testclient import TestClient
 from app import control_plane
 
 
-def _set_cp_env(monkeypatch: pytest.MonkeyPatch, auth_path: Path, alias_path: Path) -> None:
+def _set_cp_env(
+    monkeypatch: pytest.MonkeyPatch, auth_path: Path, alias_path: Path
+) -> None:
     monkeypatch.setenv(control_plane.AUTH_CONFIG_PATH_ENV, str(auth_path))
     monkeypatch.setenv(control_plane.ALIAS_CONFIG_PATH_ENV, str(alias_path))
     monkeypatch.delenv(control_plane.AUTH_CONFIG_JSON_ENV, raising=False)
@@ -53,7 +56,9 @@ def test_post_gate_executes_bundle_suite_and_returns_completed_result(
     control_plane_alias_config_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _set_cp_env(monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path)
+    _set_cp_env(
+        monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path
+    )
     monkeypatch.setattr(control_plane, "GATE_STORAGE_ROOT", tmp_path / "gates")
 
     client = TestClient(control_plane.app)
@@ -82,7 +87,9 @@ def test_get_gate_status_reads_local_storage(
     control_plane_alias_config_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _set_cp_env(monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path)
+    _set_cp_env(
+        monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path
+    )
     monkeypatch.setattr(control_plane, "GATE_STORAGE_ROOT", tmp_path / "gates")
 
     client = TestClient(control_plane.app)
@@ -116,7 +123,9 @@ def test_gate_history_lists_runs(
     control_plane_alias_config_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _set_cp_env(monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path)
+    _set_cp_env(
+        monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path
+    )
     monkeypatch.setattr(control_plane, "GATE_STORAGE_ROOT", tmp_path / "gates")
 
     client = TestClient(control_plane.app)
