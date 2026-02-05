@@ -24,6 +24,7 @@
 - Rate limiting e quotas policy-driven por tenant no Runtime (`POST /execute`), com fail-closed para policy ausente/inválida e resposta 429 com `Retry-After`, implementados e validados conforme ADR 0013 (Accepted).
 - Auditoria end-to-end v1 (schema mínimo, correlação por `X-Request-Id`, sink configurável com fail-closed, retenção mínima e precedência de erro de auditoria) implementada e validada conforme ADR 0014 (Accepted).
 - Distribuição de bundles para o Runtime (fetch, digest e cache local) implementada e validada conforme ADR 0017 (Accepted).
+- Quality gates v1 mínimos no Control Plane (endpoints de execução/status/history, execução determinística de suites do bundle e persistência local com auditoria) implementados e validados conforme ADR 0016 (Draft).
 
 ## O que está em aberto
 - Materialização completa do Control Plane como serviço/API governado (além do endpoint mínimo de resolução)

@@ -35,7 +35,7 @@ ou implementações ad-hoc.
 | ID   | Título                                                                 | Status | Motivo |
 |------|------------------------------------------------------------------------|--------|--------|
 | 0015 | Armazenamento de bundles no Control Plane (integridade e lifecycle)    | Draft  | ADR 0002/0005 exigem imutabilidade; falta definir storage real e GC. |
-| 0016 | Quality gates v1 (suites, execução e critérios de promoção)            | Draft  | ADR 0005/0006/0009 dependem de gates explícitos para promoção. |
+| 0016 | Quality gates v1 (suites, execução e critérios de promoção)            | Draft  | Iniciado em v1 com endpoints, execução determinística e persistência local; permanece Draft até acoplamento formal com promoção (ADR 0019). |
 | 0018 | Observabilidade v1 (métricas mínimas, tracing e logs estruturados)      | Draft  | ADR 0004 exige sinais operacionais; precisa virar contrato mínimo. |
 | 0019 | Promoção e rollback v1 (workflow de aliases e invariantes)             | Draft  | ADR 0003 define aliases, mas não formaliza o workflow de promoção e rollback. |
 
