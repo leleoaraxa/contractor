@@ -23,7 +23,7 @@
 - Autenticação v1 do Runtime (API key por tenant via `X-Tenant-Id` + `X-Api-Key`, sem tenant implícito e fail-closed para configuração inválida/ausente) implementada e validada conforme ADR 0012 (Accepted).
 - Rate limiting e quotas policy-driven por tenant no Runtime (`POST /execute`), com fail-closed para policy ausente/inválida e resposta 429 com `Retry-After`, implementados e validados conforme ADR 0013 (Accepted).
 - Auditoria end-to-end v1 (schema mínimo, correlação por `X-Request-Id`, sink configurável com fail-closed, retenção mínima e precedência de erro de auditoria) implementada e validada conforme ADR 0014 (Accepted).
-- ADR 0017 (Draft) com implementação v1 associada: cache local em `data/bundles/{bundle_id}`, fetch sob demanda via `CONTRACTOR_BUNDLE_BASE_URL`, verificação `sha256` com `bundle_sha256` quando presente, unpack seguro, validação estrutural mínima e integração de auditoria `bundle_cache`.
+- Distribuição de bundles para o Runtime (fetch, digest e cache local) implementada e validada conforme ADR 0017 (Accepted).
 
 ## O que está em aberto
 - Materialização completa do Control Plane como serviço/API governado (além do endpoint mínimo de resolução)
@@ -33,7 +33,7 @@
 
 ## Última decisão relevante
 - 2026-02-05: Aprovado e promovido o contrato de auditoria end-to-end v1, com correlação obrigatória, redaction explícito e fail-closed com precedência (ADR 0014).
-- 2026-02-05: Implementação v1 do ADR 0017 (ainda Draft) concluída e validada com testes determinísticos para fetch + digest + cache local e auditoria `bundle_cache`.
+- 2026-02-05: Aprovado e promovido o contrato v1 de distribuição de bundles para o Runtime (ADR 0017).
 
 ## Próxima tarefa atômica
-- Promover ADR 0017 de Draft → Accepted após validação operacional ampliada (origem de bundles, falhas controladas e políticas).
+- Iniciar ADR 0016 (Quality gates v1).

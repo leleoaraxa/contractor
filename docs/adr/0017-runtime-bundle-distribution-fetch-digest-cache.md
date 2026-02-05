@@ -1,6 +1,6 @@
 # ADR 0017 — Distribuição de bundles para o Runtime (fetch, digest e cache local)
 
-**Status:** Draft  
+**Status:** Accepted  
 **Data:** 2026-02-05  
 **Relacionados:** ADR 0002, ADR 0005, ADR 0010, ADR 0011, ADR 0012, ADR 0013, ADR 0014
 
