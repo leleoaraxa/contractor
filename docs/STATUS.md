@@ -21,7 +21,7 @@
 - Integração Runtime ↔ Control Plane para resolução do alias `current` via HTTP (fail-closed) implementada e validada conforme ADR 0010 (Accepted).
 
 ## O que está em aberto
-- Materialização do Control Plane como serviço/API governado
+- Materialização completa do Control Plane como serviço/API governado (além do endpoint mínimo de resolução)
 - Enforcement de compatibilidade, auditoria completa e políticas no Runtime
 - Pipeline de promoção e rollback de bundles via aliases
 - Observabilidade operacional mínima

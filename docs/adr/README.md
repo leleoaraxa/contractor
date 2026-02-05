@@ -21,7 +21,7 @@ ou implementações ad-hoc.
 | 0007 | Contrato mínimo do Runtime                         | Accepted |
 | 0008 | Compatibilidade e upgrade do Runtime               | Accepted |
 | 0009 | Caso de uso modelo (FAQ determinístico demo)       | Accepted |
-| 0010 | Integração Runtime ↔ Control Plane                 | Accepted |
+| 0010 | Integração Runtime ↔ Control Plane (resolve `current`) | Accepted |
 
 ---
 
