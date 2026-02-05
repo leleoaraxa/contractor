@@ -1,0 +1,14 @@
+rate_limit:
+  window_seconds: 60
+  max_requests: 1000
+quota:
+  window_seconds: 86400
+  max_requests: 100000
+tenants:
+  "*":
+    rate_limit:
+      window_seconds: 60
+      max_requests: 1000
+    quota:
+      window_seconds: 86400
+      max_requests: 100000
