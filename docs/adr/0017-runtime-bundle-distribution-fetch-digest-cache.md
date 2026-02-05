@@ -28,7 +28,7 @@ data/bundles/{bundle_id}/
 Regras:
 
 - `{bundle_id}` é o nome do diretório local do bundle.
-- O diretório deve conter `manifest.yaml` e a estrutura mínima obrigatória para execução do pipeline demo atual (`data/`, `entities/`, `ontology/`, `templates/`).
+- O diretório deve conter `manifest.yaml` e a estrutura mínima obrigatória para execução do pipeline atual do Runtime (`data/`, `entities/`, `ontology/`, `templates/`).
 - Diretório existente e válido = `bundle_cache.status = "hit"`.
 - Diretório ausente = `bundle_cache.status = "miss"`.
 
