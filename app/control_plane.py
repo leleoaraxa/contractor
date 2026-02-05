@@ -1,4 +1,3 @@
-# app/control_plane.py
 from __future__ import annotations
 
 import json
@@ -7,19 +6,25 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from fastapi import FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, Header, HTTPException, status
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_ALIAS_PATH = REPO_ROOT / "data" / "control_plane" / "demo_aliases.json"
+DEFAULT_TENANT_AUTH_PATH = REPO_ROOT / "data" / "control_plane" / "tenants.json"
+
+AUTH_CONFIG_PATH_ENV = "CONTRACTOR_CONTROL_PLANE_TENANT_AUTH_CONFIG_PATH"
+AUTH_CONFIG_JSON_ENV = "CONTRACTOR_CONTROL_PLANE_TENANT_AUTH_CONFIG_JSON"
+ALIAS_CONFIG_PATH_ENV = "CONTRACTOR_CONTROL_PLANE_ALIAS_CONFIG_PATH"
 
 app = FastAPI()
 
 
+class AuthConfigError(RuntimeError):
+    """Raised when tenant auth configuration is unavailable or invalid."""
+
+
 def _load_json_file(path: Path) -> dict[str, Any]:
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        return {}
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _load_yaml_file(path: Path) -> dict[str, Any]:
@@ -27,9 +32,92 @@ def _load_yaml_file(path: Path) -> dict[str, Any]:
 
 
 def load_alias_config() -> dict[str, Any]:
-    env_path = os.getenv("CONTRACTOR_CONTROL_PLANE_ALIAS_CONFIG_PATH")
+    env_path = os.getenv(ALIAS_CONFIG_PATH_ENV)
     alias_path = Path(env_path) if env_path else DEFAULT_ALIAS_PATH
-    return _load_json_file(alias_path)
+    try:
+        return _load_json_file(alias_path)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+def _load_tenant_auth_config_payload() -> dict[str, Any]:
+    env_json = os.getenv(AUTH_CONFIG_JSON_ENV)
+    if env_json:
+        try:
+            return json.loads(env_json)
+        except json.JSONDecodeError as exc:
+            raise AuthConfigError("Invalid tenant auth config JSON in environment") from exc
+
+    env_path = os.getenv(AUTH_CONFIG_PATH_ENV)
+    auth_path = Path(env_path) if env_path else DEFAULT_TENANT_AUTH_PATH
+    try:
+        return _load_json_file(auth_path)
+    except FileNotFoundError as exc:
+        raise AuthConfigError("Tenant auth config file is missing") from exc
+    except json.JSONDecodeError as exc:
+        raise AuthConfigError("Tenant auth config file has invalid JSON") from exc
+
+
+def load_tenant_token_index() -> dict[str, str]:
+    config = _load_tenant_auth_config_payload()
+    tenants = config.get("tenants") if isinstance(config, dict) else None
+    if not isinstance(tenants, dict) or not tenants:
+        raise AuthConfigError("Tenant auth config must define a non-empty tenants object")
+
+    token_to_tenant: dict[str, str] = {}
+    for tenant_id, tenant_cfg in tenants.items():
+        if not isinstance(tenant_id, str) or not tenant_id:
+            raise AuthConfigError("Tenant auth config has invalid tenant_id")
+        if not isinstance(tenant_cfg, dict):
+            raise AuthConfigError("Tenant auth config tenant entry must be an object")
+        token = tenant_cfg.get("token")
+        if not isinstance(token, str) or not token:
+            raise AuthConfigError("Tenant auth config token must be a non-empty string")
+        if token in token_to_tenant:
+            raise AuthConfigError("Tenant auth config token must map to exactly one tenant")
+        token_to_tenant[token] = tenant_id
+
+    return token_to_tenant
+
+
+def _extract_bearer_token(authorization: str | None) -> str:
+    if not authorization:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing Authorization",
+        )
+    parts = authorization.split(" ", 1)
+    if len(parts) != 2 or parts[0] != "Bearer" or not parts[1]:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Malformed Authorization",
+        )
+    return parts[1]
+
+
+def enforce_control_plane_auth(
+    tenant_id: str,
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> str:
+    token = _extract_bearer_token(authorization)
+    if not x_tenant_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing X-Tenant-Id")
+
+    try:
+        token_to_tenant = load_tenant_token_index()
+    except AuthConfigError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
+
+    token_tenant_id = token_to_tenant.get(token)
+    if token_tenant_id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    if token_tenant_id != x_tenant_id or tenant_id != x_tenant_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    return token_tenant_id
 
 
 def resolve_current_bundle_metadata(tenant_id: str) -> tuple[str, str]:
@@ -72,7 +160,10 @@ def resolve_current_bundle_metadata(tenant_id: str) -> tuple[str, str]:
 
 
 @app.get("/tenants/{tenant_id}/resolve/current")
-def resolve_current(tenant_id: str) -> dict[str, Any]:
+def resolve_current(
+    tenant_id: str,
+    _: str = Depends(enforce_control_plane_auth),
+) -> dict[str, Any]:
     bundle_id, min_version = resolve_current_bundle_metadata(tenant_id)
     return {
         "bundle_id": bundle_id,

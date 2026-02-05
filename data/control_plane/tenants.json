@@ -1,0 +1,6 @@
+{
+  "tenants": {
+    "tenant_a": {"token": "cp_test_key_a"},
+    "tenant_b": {"token": "cp_test_key_b"}
+  }
+}
