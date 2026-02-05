@@ -68,6 +68,7 @@ Regras:
 - `enabled=false`: não emite e não quebra fluxo.
 - `enabled=true` com config ausente/inválida: fail-closed (HTTP 500).
 - `sink=file` com erro de escrita: fail-closed (HTTP 500).
+- Quando `enabled=true`, falha de auditoria/config tem precedência e pode sobrescrever o status original da request para HTTP 500 (mesmo que seria 401/403/429).
 - Rotação diária para arquivo: `audit.log.jsonl` → `audit-YYYY-MM-DD.log.jsonl`.
 - Retenção mínima aplicada apenas em `sink=file`, com remoção de arquivos mais antigos que `retention_days`.
 

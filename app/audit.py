@@ -101,13 +101,25 @@ def _resolve_rotated_path(file_path: str, event_day: str) -> Path:
 
 def _cleanup_retention(rotated_path: Path, retention_days: int, today_utc: datetime) -> None:
     parent = rotated_path.parent
-    prefix = rotated_path.name.split("-")[0] + "-"
+    suffix = ".log.jsonl"
+    date_len = len("YYYY-MM-DD")
+    marker_len = date_len + len(suffix)
+    name = rotated_path.name
+    if len(name) <= marker_len or not name.endswith(suffix):
+        return
+
+    prefix = name[:-marker_len]
+    if not prefix.endswith("-"):
+        return
+
     cutoff_date = (today_utc - timedelta(days=retention_days)).date()
-    for path in parent.glob(f"{prefix}*.log.jsonl"):
-        name = path.name
-        if not name.startswith(prefix) or not name.endswith(".log.jsonl"):
+    for path in parent.glob(f"{prefix}*{suffix}"):
+        candidate = path.name
+        if not candidate.startswith(prefix) or not candidate.endswith(suffix):
             continue
-        date_part = name[len(prefix) : -10]
+        date_part = candidate[len(prefix) : -len(suffix)]
+        if len(date_part) != date_len:
+            continue
         try:
             file_date = datetime.strptime(date_part, "%Y-%m-%d").date()
         except ValueError:
