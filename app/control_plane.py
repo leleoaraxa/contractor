@@ -9,8 +9,12 @@ from typing import Any
 
 import yaml
 from fastapi import FastAPI, Header, HTTPException, status
+from fastapi.testclient import TestClient
+from pydantic import BaseModel
 
 from app.audit import AuditConfigError, audit_emit, now_utc_iso
+from app.runtime import RuntimeConfigError, load_tenant_keys
+from app.runtime import app as runtime_app
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_ALIAS_PATH = REPO_ROOT / "data" / "control_plane" / "demo_aliases.json"
@@ -21,6 +25,176 @@ AUTH_CONFIG_JSON_ENV = "CONTRACTOR_CONTROL_PLANE_TENANT_AUTH_CONFIG_JSON"
 ALIAS_CONFIG_PATH_ENV = "CONTRACTOR_CONTROL_PLANE_ALIAS_CONFIG_PATH"
 
 app = FastAPI()
+GATE_HISTORY_LIMIT = 50
+GATE_STORAGE_ROOT = REPO_ROOT / "data" / "control_plane" / "gates"
+
+
+class GateRunRequest(BaseModel):
+    suite_id: str | None = None
+
+
+def _atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = path.with_suffix(path.suffix + ".tmp")
+    tmp_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    tmp_path.replace(path)
+
+
+def _read_json(path: Path) -> Any:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _find_bundle_path_by_bundle_id(bundle_id: str) -> Path:
+    bundle_root = REPO_ROOT / "data" / "bundles"
+    for manifest_path in sorted(bundle_root.glob("**/manifest.yaml")):
+        manifest = _load_yaml_file(manifest_path)
+        if manifest.get("bundle_id") == bundle_id:
+            return manifest_path.parent
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bundle not found")
+
+
+def _list_suite_paths(bundle_path: Path, suite_id: str | None) -> list[Path]:
+    suites_dir = bundle_path / "suites"
+    if not suites_dir.exists() or not suites_dir.is_dir():
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Bundle suites missing",
+        )
+    if suite_id:
+        suite_path = suites_dir / f"{suite_id}.json"
+        if not suite_path.exists():
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Suite not found")
+        return [suite_path]
+
+    suite_paths = sorted(suites_dir.glob("*.json"))
+    if not suite_paths:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Bundle suites missing",
+        )
+    return suite_paths
+
+
+def _load_and_validate_suite(path: Path) -> list[dict[str, str]]:
+    try:
+        suite_data = _read_json(path)
+    except (FileNotFoundError, json.JSONDecodeError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Suite invalid",
+        ) from exc
+
+    if not isinstance(suite_data, list) or not suite_data:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Suite invalid",
+        )
+
+    normalized: list[dict[str, str]] = []
+    for case in suite_data:
+        if not isinstance(case, dict):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Suite invalid",
+            )
+        tenant_id = case.get("tenant_id")
+        question = case.get("question")
+        expected_answer = case.get("expected_answer")
+        if (
+            not isinstance(tenant_id, str)
+            or not tenant_id
+            or not isinstance(question, str)
+            or not question
+            or not isinstance(expected_answer, str)
+            or not expected_answer
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Suite invalid",
+            )
+        normalized.append(
+            {
+                "tenant_id": tenant_id,
+                "question": question,
+                "expected_answer": expected_answer,
+            }
+        )
+    return normalized
+
+
+def _gate_storage_file(tenant_id: str, bundle_id: str, gate_id: str) -> Path:
+    return GATE_STORAGE_ROOT / tenant_id / bundle_id / f"{gate_id}.json"
+
+
+def _load_gate_result(tenant_id: str, bundle_id: str, gate_id: str) -> dict[str, Any]:
+    path = _gate_storage_file(tenant_id, bundle_id, gate_id)
+    if not path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gate not found")
+    try:
+        payload = _read_json(path)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Gate storage invalid",
+        ) from exc
+    if not isinstance(payload, dict):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Gate storage invalid",
+        )
+    return payload
+
+
+def _run_suite_cases(
+    suite_cases: list[dict[str, str]], request_id: str
+) -> tuple[list[dict[str, Any]], int, int]:
+    runtime_client = TestClient(runtime_app)
+    tenant_keys = load_tenant_keys()
+    results: list[dict[str, Any]] = []
+    passed_count = 0
+
+    for index, case in enumerate(suite_cases):
+        tenant_id = case["tenant_id"]
+        api_key = tenant_keys.get(tenant_id)
+        if not api_key:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Runtime tenant key missing",
+            )
+        internal_request_id = f"{request_id}:case:{index}"
+        response = runtime_client.post(
+            "/execute",
+            json={"question": case["question"]},
+            headers={
+                "X-Tenant-Id": tenant_id,
+                "X-Api-Key": api_key,
+                "X-Request-Id": internal_request_id,
+            },
+        )
+        if response.status_code >= 500:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Runtime execution failure",
+            )
+        if response.status_code != status.HTTP_200_OK:
+            passed = False
+        else:
+            body = response.json()
+            output_text = body.get("output_text")
+            passed = isinstance(output_text, str) and output_text == case["expected_answer"]
+        if passed:
+            passed_count += 1
+        results.append(
+            {
+                "case_index": index,
+                "tenant_id": tenant_id,
+                "request_id": internal_request_id,
+                "outcome": "pass" if passed else "fail",
+                "http_status": int(response.status_code),
+            }
+        )
+    total = len(suite_cases)
+    return results, passed_count, total - passed_count
 
 
 class AuthConfigError(RuntimeError):
@@ -257,3 +431,171 @@ def resolve_current(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=str(exc),
             ) from exc
+
+
+@app.post("/tenants/{tenant_id}/bundles/{bundle_id}/gates")
+def run_quality_gate(
+    tenant_id: str,
+    bundle_id: str,
+    gate_request: GateRunRequest,
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+    x_request_id: str | None = Header(default=None, alias="X-Request-Id"),
+) -> dict[str, Any]:
+    started_at = time.time()
+    request_id = (
+        x_request_id
+        if isinstance(x_request_id, str) and x_request_id.strip()
+        else str(uuid.uuid4())
+    )
+    gate_id = str(uuid.uuid4())
+    status_code = status.HTTP_200_OK
+    outcome = "pass"
+    summary = {"total": 0, "passed": 0, "failed": 0}
+
+    try:
+        enforce_control_plane_auth(
+            tenant_id=tenant_id, authorization=authorization, x_tenant_id=x_tenant_id
+        )
+        bundle_path = _find_bundle_path_by_bundle_id(bundle_id)
+        suite_paths = _list_suite_paths(bundle_path, gate_request.suite_id)
+
+        suites_result: list[dict[str, Any]] = []
+        for suite_path in suite_paths:
+            suite_cases = _load_and_validate_suite(suite_path)
+            case_results, passed_count, failed_count = _run_suite_cases(suite_cases, request_id)
+            suite_outcome = "pass" if failed_count == 0 else "fail"
+            suites_result.append(
+                {
+                    "suite_id": suite_path.stem,
+                    "total": len(suite_cases),
+                    "passed": passed_count,
+                    "failed": failed_count,
+                    "outcome": suite_outcome,
+                    "cases": case_results,
+                }
+            )
+            summary["total"] += len(suite_cases)
+            summary["passed"] += passed_count
+            summary["failed"] += failed_count
+
+        if summary["failed"] > 0:
+            outcome = "fail"
+
+        payload = {
+            "gate_id": gate_id,
+            "request_id": request_id,
+            "tenant_id": tenant_id,
+            "bundle_id": bundle_id,
+            "status": "completed",
+            "outcome": outcome,
+            "created_at": now_utc_iso(),
+            "criteria": {"pass_rule": "all_cases_must_pass", "max_failures": 0},
+            "summary": summary,
+            "suites": suites_result,
+        }
+        _atomic_write_json(_gate_storage_file(tenant_id, bundle_id, gate_id), payload)
+        return payload
+    except HTTPException as exc:
+        status_code = exc.status_code
+        outcome = "error"
+        raise
+    except RuntimeConfigError as exc:
+        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        outcome = "error"
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        outcome = "error"
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from exc
+    finally:
+        event: dict[str, Any] = {
+            "ts_utc": now_utc_iso(),
+            "service": "control_plane",
+            "event": "quality_gate_run",
+            "tenant_id": tenant_id,
+            "bundle_id": bundle_id,
+            "gate_id": gate_id,
+            "request_id": request_id,
+            "actor": "control_plane_api",
+            "outcome": outcome,
+            "http_status": int(status_code),
+            "latency_ms": int((time.time() - started_at) * 1000),
+            "summary": {
+                "total": summary["total"],
+                "passed": summary["passed"],
+                "failed": summary["failed"],
+            },
+        }
+        try:
+            audit_emit(event)
+        except AuditConfigError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=str(exc),
+            ) from exc
+
+
+@app.get("/tenants/{tenant_id}/bundles/{bundle_id}/gates/{gate_id}")
+def get_quality_gate(
+    tenant_id: str,
+    bundle_id: str,
+    gate_id: str,
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, Any]:
+    enforce_control_plane_auth(
+        tenant_id=tenant_id, authorization=authorization, x_tenant_id=x_tenant_id
+    )
+    return _load_gate_result(tenant_id, bundle_id, gate_id)
+
+
+@app.get("/tenants/{tenant_id}/bundles/{bundle_id}/gates/history")
+def list_quality_gates_history(
+    tenant_id: str,
+    bundle_id: str,
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, Any]:
+    enforce_control_plane_auth(
+        tenant_id=tenant_id, authorization=authorization, x_tenant_id=x_tenant_id
+    )
+    bundle_dir = GATE_STORAGE_ROOT / tenant_id / bundle_id
+    if not bundle_dir.exists():
+        return {
+            "tenant_id": tenant_id,
+            "bundle_id": bundle_id,
+            "limit": GATE_HISTORY_LIMIT,
+            "items": [],
+        }
+
+    paths = sorted(
+        bundle_dir.glob("*.json"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )[:GATE_HISTORY_LIMIT]
+    items: list[dict[str, Any]] = []
+    for path in paths:
+        payload = _load_gate_result(tenant_id, bundle_id, path.stem)
+        items.append(
+            {
+                "gate_id": payload.get("gate_id", path.stem),
+                "request_id": payload.get("request_id"),
+                "created_at": payload.get("created_at"),
+                "status": payload.get("status"),
+                "outcome": payload.get("outcome"),
+                "summary": payload.get("summary"),
+            }
+        )
+    return {
+        "tenant_id": tenant_id,
+        "bundle_id": bundle_id,
+        "limit": GATE_HISTORY_LIMIT,
+        "items": items,
+    }
