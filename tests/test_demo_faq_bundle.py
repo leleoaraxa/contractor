@@ -29,7 +29,9 @@ def test_demo_faq_bundle_structure_and_golden_suite():
 
     for case in golden_cases:
         tenant_id = case.get("tenant_id")
-        assert isinstance(tenant_id, str) and tenant_id.strip(), "tenant_id must be a non-empty string"
+        assert (
+            isinstance(tenant_id, str) and tenant_id.strip()
+        ), "tenant_id must be a non-empty string"
 
         question = case["question"]
         expected_answer = case["expected_answer"]

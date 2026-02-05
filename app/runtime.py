@@ -12,10 +12,12 @@ from urllib import error as urllib_error
 from urllib import request as urllib_request
 
 import yaml
-from fastapi import Depends, FastAPI, Header, HTTPException, Response, status
+from fastapi import FastAPI, Header, HTTPException, Response, status
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from jsonschema import Draft202012Validator
 from pydantic import BaseModel
+
+from app.audit import AuditConfigError, audit_emit, now_utc_iso, sha256_hex
 
 logger = logging.getLogger("contractor.runtime")
 CONTROL_PLANE_TIMEOUT_SECONDS = 2.0
@@ -156,7 +158,7 @@ def _increment_window_counter(
     if RATE_LIMIT_COUNTERS:
         to_delete: list[tuple[str, str, int]] = []
         for k_tenant, k_bucket, k_window_start in RATE_LIMIT_COUNTERS.keys():
-            if k_window_start < gc_before:
+            if k_bucket == bucket_name and k_window_start < gc_before:
                 to_delete.append((k_tenant, k_bucket, k_window_start))
         for k in to_delete:
             RATE_LIMIT_COUNTERS.pop(k, None)
@@ -250,13 +252,17 @@ def load_alias_config() -> dict[str, Any]:
     return {}
 
 
-def resolve_current_bundle(tenant_id: str) -> tuple[Path, str]:
+def resolve_current_bundle(
+    tenant_id: str, request_id: str | None = None
+) -> tuple[Path, str, int | None]:
     base_url = os.getenv("CONTRACTOR_CONTROL_PLANE_BASE_URL")
     if base_url:
-        bundle_id, min_version = resolve_bundle_via_control_plane(tenant_id, base_url)
+        bundle_id, min_version, control_plane_status = resolve_bundle_via_control_plane(
+            tenant_id, base_url, request_id=request_id
+        )
         ensure_runtime_compatibility(min_version)
         bundle_path = resolve_bundle_path_from_bootstrap_alias_config(bundle_id)
-        return bundle_path, bundle_id
+        return bundle_path, bundle_id, control_plane_status
 
     config = load_alias_config()
     tenants = config.get("tenants", config)
@@ -264,16 +270,27 @@ def resolve_current_bundle(tenant_id: str) -> tuple[Path, str]:
     if not tenant_entry:
         raise RuntimeConfigError("Tenant alias not configured")
     bundle_path, bundle_id = resolve_bundle_from_alias_entry(tenant_entry)
-    return bundle_path, bundle_id
+    return bundle_path, bundle_id, None
 
 
-def resolve_bundle_via_control_plane(tenant_id: str, base_url: str) -> tuple[str, str]:
+def resolve_bundle_via_control_plane(
+    tenant_id: str, base_url: str, request_id: str | None = None
+) -> tuple[str, str, int]:
     url = f"{base_url.rstrip('/')}/tenants/{tenant_id}/resolve/current"
     timeout_seconds = _resolve_control_plane_timeout()
+    headers = {"X-Tenant-Id": tenant_id}
+    token = os.getenv("CONTRACTOR_CONTROL_PLANE_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    if request_id:
+        headers["X-Request-Id"] = request_id
+
     try:
         with urllib_request.urlopen(
-            urllib_request.Request(url, method="GET"), timeout=timeout_seconds
+            urllib_request.Request(url, method="GET", headers=headers),
+            timeout=timeout_seconds,
         ) as response:
+            status_code = response.status
             payload = json.loads(response.read().decode("utf-8"))
     except urllib_error.HTTPError as exc:
         raise RuntimeConfigError(
@@ -299,7 +316,25 @@ def resolve_bundle_via_control_plane(tenant_id: str, base_url: str) -> tuple[str
     min_version = runtime_compatibility.get("min_version")
     if not min_version or not isinstance(min_version, str):
         raise RuntimeConfigError("Control Plane response missing min_version")
-    return bundle_id, min_version
+    return bundle_id, min_version, int(status_code)
+
+
+def _map_error_code(exc: Exception, http_status: int) -> str:
+    if http_status == status.HTTP_401_UNAUTHORIZED:
+        return "unauthorized"
+    if http_status == status.HTTP_403_FORBIDDEN:
+        return "forbidden"
+    if http_status == status.HTTP_429_TOO_MANY_REQUESTS and isinstance(exc, HTTPException):
+        if exc.detail == "Rate limit exceeded":
+            return "rate_limit_exceeded"
+        if exc.detail == "Quota exceeded":
+            return "quota_exceeded"
+    if http_status == status.HTTP_500_INTERNAL_SERVER_ERROR and isinstance(exc, HTTPException):
+        if isinstance(exc.__cause__, (RuntimeConfigError, AuditConfigError)):
+            return "config_error"
+        if "config" in str(exc.detail).lower():
+            return "config_error"
+    return "internal_error"
 
 
 def resolve_bundle_from_alias_entry(tenant_entry: Any) -> tuple[Path, str]:
@@ -439,64 +474,117 @@ def healthz() -> dict[str, str]:
 def execute(
     request: ExecuteRequest,
     response: Response,
-    tenant_id: str = Depends(authenticate),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+    x_api_key: str | None = Header(default=None, alias="X-Api-Key"),
+    x_request_id: str | None = Header(default=None, alias="X-Request-Id"),
 ) -> dict[str, Any]:
-    request_id = str(uuid.uuid4())
+    started_at = time.time()
+    request_id = (
+        x_request_id
+        if isinstance(x_request_id, str) and x_request_id.strip()
+        else str(uuid.uuid4())
+    )
+    tenant_id = ""
+    status_code = status.HTTP_200_OK
+    bundle_id: str | None = None
+    rate_limit_info: dict[str, int] | None = None
+    control_plane_status: int | None = None
+    error_code: str | None = None
+
     try:
-        rate_limit_headers = enforce_rate_limit_and_quota(tenant_id)
-    except RuntimeConfigError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        tenant_id = authenticate(tenant_id=x_tenant_id, api_key=x_api_key)
 
-    for header_name, header_value in rate_limit_headers.items():
-        response.headers[header_name] = header_value
+        try:
+            rate_limit_headers = enforce_rate_limit_and_quota(tenant_id)
+            rate_limit_info = {
+                "limit": int(rate_limit_headers["X-RateLimit-Limit"]),
+                "remaining": int(rate_limit_headers["X-RateLimit-Remaining"]),
+                "reset": int(rate_limit_headers["X-RateLimit-Reset"]),
+            }
+        except RuntimeConfigError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
-    try:
-        bundle_path, bundle_id = resolve_current_bundle(tenant_id)
-    except RuntimeConfigError as exc:
-        raise HTTPException(
-            status_code=exc.status_code,
-            detail=str(exc),
-        ) from exc
+        for header_name, header_value in rate_limit_headers.items():
+            response.headers[header_name] = header_value
 
-    intent_name = "faq_query"
-    intent_questions = load_intent_questions(bundle_path, intent_name)
-    answer_map = load_faq_index(bundle_path)
-
-    status_value = "ok" if request.question in intent_questions else "no_match"
-    answer = answer_map.get(request.question, "")
-
-    payload = {
-        "answer": answer,
-        "intent": intent_name,
-        "status": status_value,
-    }
-
-    validator = load_response_validator(bundle_path)
-    errors = sorted(validator.iter_errors(payload), key=lambda err: err.path)
-    if errors:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Invalid response payload",
+        bundle_path, bundle_id, control_plane_status = resolve_current_bundle(
+            tenant_id, request_id=request_id
         )
 
-    output_text = render_output(bundle_path, payload)
+        intent_name = "faq_query"
+        intent_questions = load_intent_questions(bundle_path, intent_name)
+        answer_map = load_faq_index(bundle_path)
 
-    audit_event = {
-        "event_type": "runtime_exec",
-        "tenant_id": tenant_id,
-        "bundle_id": bundle_id,
-        "request_id": request_id,
-        "intent": intent_name,
-        "status": status_value,
-    }
-    logger.info("runtime_exec %s", json.dumps(audit_event, ensure_ascii=False))
+        status_value = "ok" if request.question in intent_questions else "no_match"
+        answer = answer_map.get(request.question, "")
 
-    return {
-        "request_id": request_id,
-        "bundle_id": bundle_id,
-        "tenant_id": tenant_id,
-        "intent": intent_name,
-        "status": status_value,
-        "output_text": output_text,
-        "result": payload,
-    }
+        payload = {
+            "answer": answer,
+            "intent": intent_name,
+            "status": status_value,
+        }
+
+        validator = load_response_validator(bundle_path)
+        errors = sorted(validator.iter_errors(payload), key=lambda err: err.path)
+        if errors:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Invalid response payload",
+            )
+
+        output_text = render_output(bundle_path, payload)
+
+        return {
+            "request_id": request_id,
+            "bundle_id": bundle_id,
+            "tenant_id": tenant_id,
+            "intent": intent_name,
+            "status": status_value,
+            "output_text": output_text,
+            "result": payload,
+        }
+    except HTTPException as exc:
+        status_code = exc.status_code
+        error_code = _map_error_code(exc, exc.status_code)
+        raise
+    except RuntimeConfigError as exc:
+        status_code = exc.status_code
+        error_code = "config_error" if "config" in str(exc).lower() else "internal_error"
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    except Exception as exc:
+        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        error_code = _map_error_code(exc, status_code)
+        raise HTTPException(status_code=status_code, detail="Internal server error") from exc
+    finally:
+        latency_ms = int((time.time() - started_at) * 1000)
+        event: dict[str, Any] = {
+            "ts_utc": now_utc_iso(),
+            "service": "runtime",
+            "event": "execute",
+            "tenant_id": tenant_id,
+            "request_id": request_id,
+            "actor": "external_client",
+            "outcome": "ok" if status_code < 400 else "error",
+            "http_status": int(status_code),
+            "latency_ms": latency_ms,
+            "question_len": len(request.question),
+            "question_sha256": sha256_hex(request.question),
+        }
+        if bundle_id:
+            event["bundle_id"] = bundle_id
+        if control_plane_status is not None:
+            event["control_plane_status"] = control_plane_status
+        if rate_limit_info is not None:
+            event["rate_limit"] = rate_limit_info
+        if error_code is not None:
+            event["error_code"] = error_code
+        if error_code == "config_error":
+            event["error_detail"] = "config"
+
+        try:
+            audit_emit(event)
+        except AuditConfigError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=str(exc),
+            ) from exc

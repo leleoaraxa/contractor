@@ -1,0 +1,4 @@
+enabled: true
+sink: file
+file_path: data/audit/audit.log.jsonl
+retention_days: 7
