@@ -17,6 +17,7 @@ from jsonschema import Draft202012Validator
 from pydantic import BaseModel
 
 logger = logging.getLogger("contractor.runtime")
+CONTROL_PLANE_TIMEOUT_SECONDS = 2.0
 
 
 class ExecuteRequest(BaseModel):
@@ -24,7 +25,11 @@ class ExecuteRequest(BaseModel):
 
 
 class RuntimeConfigError(RuntimeError):
-    pass
+    def __init__(
+        self, message: str, *, status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR
+    ) -> None:
+        super().__init__(message)
+        self.status_code = status_code
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -71,12 +76,58 @@ def load_alias_config() -> dict[str, Any]:
 
 
 def resolve_current_bundle(tenant_id: str) -> tuple[Path, str]:
-    control_plane_bundle_id = resolve_bundle_id_via_control_plane(tenant_id)
+    base_url = os.getenv("CONTRACTOR_CONTROL_PLANE_BASE_URL")
+    if base_url:
+        bundle_id, min_version = resolve_bundle_via_control_plane(tenant_id, base_url)
+        ensure_runtime_compatibility(min_version)
+        bundle_path = resolve_bundle_path_from_catalog(bundle_id)
+        return bundle_path, bundle_id
+
     config = load_alias_config()
     tenants = config.get("tenants", config)
     tenant_entry = tenants.get(tenant_id) or tenants.get("*")
     if not tenant_entry:
         raise RuntimeConfigError("Tenant alias not configured")
+    bundle_path, bundle_id = resolve_bundle_from_alias_entry(tenant_entry)
+    return bundle_path, bundle_id
+
+
+def resolve_bundle_via_control_plane(tenant_id: str, base_url: str) -> tuple[str, str]:
+    url = f"{base_url.rstrip('/')}/tenants/{tenant_id}/resolve/current"
+    timeout_seconds = _resolve_control_plane_timeout()
+    try:
+        with urllib_request.urlopen(
+            urllib_request.Request(url, method="GET"), timeout=timeout_seconds
+        ) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib_error.HTTPError as exc:
+        raise RuntimeConfigError(
+            f"Control Plane error: {exc.code}",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        ) from exc
+    except urllib_error.URLError as exc:
+        raise RuntimeConfigError(
+            "Control Plane unreachable",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise RuntimeConfigError("Control Plane response invalid") from exc
+
+    if not isinstance(payload, dict):
+        raise RuntimeConfigError("Control Plane response invalid")
+    bundle_id = payload.get("bundle_id")
+    runtime_compatibility = payload.get("runtime_compatibility")
+    if not bundle_id or not isinstance(bundle_id, str):
+        raise RuntimeConfigError("Control Plane response missing bundle_id")
+    if not isinstance(runtime_compatibility, dict):
+        raise RuntimeConfigError("Control Plane response missing runtime_compatibility")
+    min_version = runtime_compatibility.get("min_version")
+    if not min_version or not isinstance(min_version, str):
+        raise RuntimeConfigError("Control Plane response missing min_version")
+    return bundle_id, min_version
+
+
+def resolve_bundle_from_alias_entry(tenant_entry: Any) -> tuple[Path, str]:
     if isinstance(tenant_entry, str):
         bundle_path_value = tenant_entry
         bundle_id = None
@@ -97,30 +148,49 @@ def resolve_current_bundle(tenant_id: str) -> tuple[Path, str]:
         bundle_id = manifest.get("bundle_id")
     if not bundle_id:
         raise RuntimeConfigError("Bundle id missing")
-    if control_plane_bundle_id and bundle_id != control_plane_bundle_id:
-        raise RuntimeConfigError("Bundle id mismatch with Control Plane")
-    return bundle_path, control_plane_bundle_id or bundle_id
+    return bundle_path, str(bundle_id)
 
 
-def resolve_bundle_id_via_control_plane(tenant_id: str) -> str | None:
-    base_url = os.getenv("CONTRACTOR_CONTROL_PLANE_BASE_URL")
-    if not base_url:
-        return None
-    url = f"{base_url.rstrip('/')}/tenants/{tenant_id}/resolve/current"
+def resolve_bundle_path_from_catalog(bundle_id: str) -> Path:
+    config = load_alias_config()
+    tenants = config.get("tenants", config)
+    for tenant_entry in tenants.values():
+        bundle_path, resolved_id = resolve_bundle_from_alias_entry(tenant_entry)
+        if resolved_id == bundle_id:
+            return bundle_path
+    raise RuntimeConfigError("Bundle path not found for Control Plane bundle_id")
+
+
+def _resolve_control_plane_timeout() -> float:
+    env_value = os.getenv("CONTRACTOR_CONTROL_PLANE_TIMEOUT_SECONDS")
+    if not env_value:
+        return CONTROL_PLANE_TIMEOUT_SECONDS
     try:
-        with urllib_request.urlopen(urllib_request.Request(url, method="GET")) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except urllib_error.HTTPError as exc:
-        raise RuntimeConfigError(f"Control Plane error: {exc.code}") from exc
-    except urllib_error.URLError as exc:
-        raise RuntimeConfigError("Control Plane unreachable") from exc
-    except json.JSONDecodeError as exc:
-        raise RuntimeConfigError("Control Plane response invalid") from exc
+        timeout = float(env_value)
+    except ValueError as exc:
+        raise RuntimeConfigError("Control Plane timeout invalid") from exc
+    if timeout <= 0:
+        raise RuntimeConfigError("Control Plane timeout invalid")
+    return timeout
 
-    bundle_id = payload.get("bundle_id")
-    if not bundle_id:
-        raise RuntimeConfigError("Control Plane response missing bundle_id")
-    return str(bundle_id)
+
+def ensure_runtime_compatibility(min_version: str) -> None:
+    from app import __version__ as runtime_version
+
+    current = _parse_semver(runtime_version)
+    minimum = _parse_semver(min_version)
+    if current < minimum:
+        raise RuntimeConfigError("Runtime incompatible with bundle")
+
+
+def _parse_semver(value: str) -> tuple[int, int, int]:
+    parts = value.split(".")
+    if len(parts) != 3:
+        raise RuntimeConfigError("Invalid runtime version format")
+    try:
+        return tuple(int(part) for part in parts)  # type: ignore[return-value]
+    except ValueError as exc:
+        raise RuntimeConfigError("Invalid runtime version format") from exc
 
 
 def load_faq_index(bundle_path: Path) -> dict[str, str]:
@@ -190,7 +260,7 @@ def execute(
         bundle_path, bundle_id = resolve_current_bundle(tenant_id)
     except RuntimeConfigError as exc:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=exc.status_code,
             detail=str(exc),
         ) from exc
 
