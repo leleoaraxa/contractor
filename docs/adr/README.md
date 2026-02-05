@@ -26,7 +26,7 @@ ou implementações ad-hoc.
 | 0012 | Autenticação v1 do Runtime (chaves por tenant e validação de headers)  | Accepted |
 | 0013 | Rate limiting e quotas (policy-driven)                                 | Accepted |
 | 0014 | Auditoria end-to-end (formato, correlação e retenção mínima)           | Accepted |
-| 0017 | Distribuição de bundles para o Runtime (fetch, digest e cache local) | Accepted |
+| 0017 | Distribuição de bundles para o Runtime (fetch, digest e cache local)   | Accepted |
 
 ---
 
