@@ -149,3 +149,29 @@ def test_runtime_control_plane_fail_closed_on_invalid_payload(
 
     assert response.status_code == 500
     assert response.json()["detail"] == "Control Plane response missing runtime_compatibility"
+
+
+def test_runtime_control_plane_fail_closed_on_incompatible_runtime_version(
+    alias_config_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    tenant_keys = _load_tenant_keys()
+    tenant_id = _select_tenant_id(tenant_keys)
+    _, bundle_id, _ = _load_bundle_metadata()
+    response_body = json.dumps(
+        {
+            "bundle_id": bundle_id,
+            "runtime_compatibility": {"min_version": "999.0.0"},
+        }
+    ).encode("utf-8")
+
+    with control_plane_server(tenant_id, 200, response_body) as base_url:
+        monkeypatch.setenv("CONTRACTOR_CONTROL_PLANE_BASE_URL", base_url)
+        monkeypatch.setenv("CONTRACTOR_ALIAS_CONFIG_PATH", str(alias_config_path))
+
+        client = TestClient(app)
+        headers = {"X-Tenant-Id": tenant_id, "X-Api-Key": tenant_keys[tenant_id]}
+
+        response = client.post("/execute", json={"question": "irrelevant"}, headers=headers)
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Runtime incompatible with bundle"
