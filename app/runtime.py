@@ -1,13 +1,13 @@
 # app/runtime.py
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
 import shutil
 import tarfile
 import tempfile
-import hashlib
 import time
 import uuid
 from pathlib import Path
@@ -52,10 +52,7 @@ RATE_LIMIT_COUNTERS: dict[tuple[str, str, int], int] = {}
 EXPECTED_BUNDLE_DIRS = (
     "data",
     "entities",
-    "metadata",
     "ontology",
-    "policies",
-    "suites",
     "templates",
 )
 
@@ -355,11 +352,17 @@ def _ensure_bundle_structure(bundle_path: Path) -> None:
 
 def _set_bundle_read_only(bundle_path: Path) -> None:
     for path in bundle_path.rglob("*"):
-        if path.is_dir():
-            path.chmod(0o555)
-        else:
-            path.chmod(0o444)
-    bundle_path.chmod(0o555)
+        try:
+            if path.is_dir():
+                path.chmod(0o555)
+            else:
+                path.chmod(0o444)
+        except OSError:
+            continue
+    try:
+        bundle_path.chmod(0o555)
+    except OSError:
+        pass
 
 
 def _safe_extract_tar_gz(archive_path: Path, destination: Path) -> None:
