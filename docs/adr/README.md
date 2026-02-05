@@ -21,6 +21,7 @@ ou implementações ad-hoc.
 | 0007 | Contrato mínimo do Runtime                         | Accepted |
 | 0008 | Compatibilidade e upgrade do Runtime               | Accepted |
 | 0009 | Caso de uso modelo (FAQ determinístico demo)       | Accepted |
+| 0010 | Integração Runtime ↔ Control Plane                 | Accepted |
 
 ---
 
@@ -31,7 +32,6 @@ erro seguro, auditoria e evolução incremental.
 
 | ID   | Título                                                                                           | Status | Motivo |
 |------|--------------------------------------------------------------------------------------------------|--------|--------|
-| 0010 | Integração Runtime ↔ Control Plane (resolução de alias `current` via HTTP e fail-closed)        | Accepted | Contrato HTTP mínimo materializado com endpoint `resolve/current`, validação estrita de payload no Runtime, timeout configurável e fail-closed cobertos por testes E2E. |
 | 0011 | Autenticação e autorização v1 (Control Plane)                                                    | Draft  | ADR 0006 assume autenticação forte e tenant-aware, mas não define modelo. |
 | 0012 | Autenticação v1 do Runtime (chaves por tenant e validação de headers)                             | Draft  | ADR 0007 exige autenticação por tenant; precisa virar contrato verificável. |
 | 0013 | Rate limiting e quotas (policy-driven)                                                           | Draft  | ADR 0004 e 0007 citam negação por política; comportamento precisa ser definido. |
