@@ -484,6 +484,11 @@ def execute(
         if isinstance(x_request_id, str) and x_request_id.strip()
         else str(uuid.uuid4())
     )
+    audit_tenant_id = (
+        x_tenant_id.strip()
+        if isinstance(x_tenant_id, str) and x_tenant_id.strip()
+        else "unknown"
+    )
     tenant_id = ""
     status_code = status.HTTP_200_OK
     bundle_id: str | None = None
@@ -561,7 +566,7 @@ def execute(
             "ts_utc": now_utc_iso(),
             "service": "runtime",
             "event": "execute",
-            "tenant_id": tenant_id,
+            "tenant_id": audit_tenant_id,
             "request_id": request_id,
             "actor": "external_client",
             "outcome": "ok" if status_code < 400 else "error",
