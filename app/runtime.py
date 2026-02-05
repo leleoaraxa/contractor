@@ -51,9 +51,34 @@ def _load_yaml_file(path: Path) -> dict[str, Any]:
 def load_tenant_keys() -> dict[str, str]:
     env_value = os.getenv("CONTRACTOR_TENANT_KEYS")
     if env_value:
-        return json.loads(env_value)
+        try:
+            config = json.loads(env_value)
+        except json.JSONDecodeError as exc:
+            raise RuntimeConfigError("Tenant keys config invalid") from exc
+        return _validate_tenant_keys(config)
+
     file_path = Path(os.getenv("CONTRACTOR_TENANT_KEYS_PATH", DEFAULT_TENANT_KEYS_PATH))
-    return _load_json_file(file_path)
+    try:
+        config = json.loads(file_path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise RuntimeConfigError("Tenant keys config missing") from exc
+    except json.JSONDecodeError as exc:
+        raise RuntimeConfigError("Tenant keys config invalid") from exc
+
+    return _validate_tenant_keys(config)
+
+
+def _validate_tenant_keys(config: Any) -> dict[str, str]:
+    if not isinstance(config, dict) or not config:
+        raise RuntimeConfigError("Tenant keys config invalid")
+
+    for tenant_id, api_key in config.items():
+        if not isinstance(tenant_id, str) or not tenant_id.strip():
+            raise RuntimeConfigError("Tenant keys config invalid")
+        if not isinstance(api_key, str) or not api_key.strip():
+            raise RuntimeConfigError("Tenant keys config invalid")
+
+    return {tenant_id.strip(): api_key for tenant_id, api_key in config.items()}
 
 
 def load_alias_config() -> dict[str, Any]:
@@ -234,15 +259,22 @@ def authenticate(
     tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
     api_key: str | None = Header(default=None, alias="X-Api-Key"),
 ) -> str:
-    if not tenant_id or not api_key:
+    normalized_tenant_id = tenant_id.strip() if isinstance(tenant_id, str) else ""
+    normalized_api_key = api_key.strip() if isinstance(api_key, str) else ""
+    if not normalized_tenant_id or not normalized_api_key:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized"
         )
-    keys = load_tenant_keys()
-    expected_key = keys.get(tenant_id)
-    if not expected_key or expected_key != api_key:
+
+    try:
+        keys = load_tenant_keys()
+    except RuntimeConfigError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+    expected_key = keys.get(normalized_tenant_id)
+    if not expected_key or expected_key != normalized_api_key:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-    return tenant_id
+    return normalized_tenant_id
 
 
 app = FastAPI()

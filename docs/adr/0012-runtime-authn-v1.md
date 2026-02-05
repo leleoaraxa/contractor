@@ -1,7 +1,7 @@
 # ADR 0012 — Autenticação v1 do Runtime (chaves por tenant e validação de headers)
 
-**Status:** Draft
-**Data:** 2026-02-XX
+**Status:** Accepted
+**Data:** 2026-02-05
 **Decide:** Contrato de autenticação (authn) mínimo do Runtime (v1)
 **Relacionados:** ADR 0001, ADR 0004, ADR 0007, ADR 0010, ADR 0011
 
@@ -20,7 +20,7 @@ passa a depender de um modelo coerente de identidade/tenant entre as duas superf
 
 ---
 
-## Decisão a ser tomada
+## Decisão
 
 Definir o contrato mínimo (v1) de autenticação do Runtime para `POST /execute`, incluindo:
 

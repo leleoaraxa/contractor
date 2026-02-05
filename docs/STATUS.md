@@ -20,6 +20,7 @@
 - Testes E2E do Runtime (fluxo via alias config) implementados e validados no runner oficial (docker compose run --rm tests)
 - Integração Runtime ↔ Control Plane para resolução do alias `current` via HTTP (fail-closed) implementada e validada conforme ADR 0010 (Accepted).
 - Autenticação e autorização v1 do Control Plane (API key por tenant, tenant-aware e fail-closed) implementadas e validadas conforme ADR 0011 (Accepted).
+- Autenticação v1 do Runtime (API key por tenant via `X-Tenant-Id` + `X-Api-Key`, sem tenant implícito e fail-closed para configuração inválida/ausente) implementada e validada conforme ADR 0012 (Accepted).
 
 ## O que está em aberto
 - Materialização completa do Control Plane como serviço/API governado (além do endpoint mínimo de resolução)
@@ -28,7 +29,7 @@
 - Observabilidade operacional mínima
 
 ## Última decisão relevante
-- 2026-02-05: Aprovada a autenticação e autorização v1 do Control Plane com API key por tenant e isolamento estrito (ADR 0011).
+- 2026-02-05: Aprovada a autenticação v1 do Runtime com `X-Tenant-Id` + `X-Api-Key`, isolamento tenant-aware e fail-closed (ADR 0012).
 
 ## Próxima tarefa atômica
-- Iniciar o ADR 0012 (Autenticação v1 do Runtime).
+- Iniciar o ADR 0013 (Rate limiting e quotas policy-driven).
