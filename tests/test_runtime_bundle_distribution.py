@@ -114,7 +114,14 @@ def runtime_client(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> TestClien
     runtime.RATE_LIMIT_COUNTERS.clear()
     monkeypatch.setenv(
         "CONTRACTOR_AUDIT_CONFIG_JSON",
-        json.dumps({"enabled": True, "sink": "stdout", "retention_days": 7}),
+        json.dumps(
+            {
+                "enabled": True,
+                "sink": "stdout",
+                "file_path": "data/audit/audit.log.jsonl",
+                "retention_days": 7,
+            }
+        ),
     )
     monkeypatch.setenv(
         "CONTRACTOR_TENANT_KEYS", json.dumps({"tenant_a": "runtime_test_key_a"})
