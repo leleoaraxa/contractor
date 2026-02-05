@@ -33,7 +33,7 @@
 
 ## Última decisão relevante
 - 2026-02-05: Aprovado e promovido o contrato de auditoria end-to-end v1, com correlação obrigatória, redaction explícito e fail-closed com precedência (ADR 0014).
-- 2026-02-05: Aprovado e promovido o contrato v1 de distribuição de bundles para o Runtime (ADR 0017).
+- 2026-02-05: Aprovado e promovido o contrato de distribuição de bundles para o Runtime (ADR 0017).
 
 ## Próxima tarefa atômica
 - Iniciar ADR 0016 (Quality gates v1).
