@@ -23,6 +23,7 @@ ou implementações ad-hoc.
 | 0009 | Caso de uso modelo (FAQ determinístico demo)       | Accepted |
 | 0010 | Integração Runtime ↔ Control Plane                 | Accepted |
 | 0011 | Autenticação e autorização v1 (Control Plane)      | Accepted |
+| 0012 | Autenticação v1 do Runtime (chaves por tenant e validação de headers) | Accepted |
 
 ---
 
@@ -33,7 +34,6 @@ erro seguro, auditoria e evolução incremental.
 
 | ID   | Título                                                                                           | Status | Motivo |
 |------|--------------------------------------------------------------------------------------------------|--------|--------|
-| 0012 | Autenticação v1 do Runtime (chaves por tenant e validação de headers)                            | Draft  | ADR 0007 exige autenticação por tenant; precisa virar contrato verificável. |
 | 0013 | Rate limiting e quotas (policy-driven)                                                           | Draft  | ADR 0004 e 0007 citam negação por política; comportamento precisa ser definido. |
 | 0014 | Auditoria end-to-end (formato, correlação e retenção mínima)                                     | Draft  | ADR 0004 define auditoria mínima, mas não fixa formato nem retenção. |
 | 0015 | Armazenamento de bundles no Control Plane (integridade e lifecycle)                              | Draft  | ADR 0002/0005 exigem imutabilidade; falta definir storage real e GC. |
@@ -42,7 +42,7 @@ erro seguro, auditoria e evolução incremental.
 | 0018 | Observabilidade v1 (métricas mínimas, tracing e logs estruturados)                                | Draft  | ADR 0004 exige sinais operacionais; precisa virar contrato mínimo. |
 | 0019 | Promoção e rollback v1 (workflow de aliases e invariantes)                                       | Draft  | ADR 0003 define aliases, mas não formaliza o workflow de promoção, rollback e invariantes operacionais. |
 
-> Nota: os ADRs 0011–0019 são mantidos como **Draft** e devem existir como arquivos neste diretório
+> Nota: os ADRs 0013–0019 são mantidos como **Draft** e devem existir como arquivos neste diretório
 > enquanto estiverem em progresso, para evitar “roadmap sem documentação”.
 
 
