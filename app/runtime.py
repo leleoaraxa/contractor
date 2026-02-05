@@ -4,6 +4,10 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shutil
+import tarfile
+import tempfile
+import hashlib
 import time
 import uuid
 from pathlib import Path
@@ -43,7 +47,17 @@ DEFAULT_RATE_LIMIT_POLICY_PATH = (
 )
 RATE_LIMIT_POLICY_ENV_JSON = "CONTRACTOR_RATE_LIMIT_POLICY_JSON"
 RATE_LIMIT_POLICY_ENV_PATH = "CONTRACTOR_RATE_LIMIT_POLICY_PATH"
+BUNDLE_BASE_URL_ENV = "CONTRACTOR_BUNDLE_BASE_URL"
 RATE_LIMIT_COUNTERS: dict[tuple[str, str, int], int] = {}
+EXPECTED_BUNDLE_DIRS = (
+    "data",
+    "entities",
+    "metadata",
+    "ontology",
+    "policies",
+    "suites",
+    "templates",
+)
 
 
 def _load_json_file(path: Path) -> dict[str, Any]:
@@ -254,15 +268,19 @@ def load_alias_config() -> dict[str, Any]:
 
 def resolve_current_bundle(
     tenant_id: str, request_id: str | None = None
-) -> tuple[Path, str, int | None]:
+) -> tuple[Path, str, int | None, str | None]:
     base_url = os.getenv("CONTRACTOR_CONTROL_PLANE_BASE_URL")
     if base_url:
-        bundle_id, min_version, control_plane_status = resolve_bundle_via_control_plane(
-            tenant_id, base_url, request_id=request_id
+        bundle_id, min_version, expected_digest, control_plane_status = (
+            resolve_bundle_via_control_plane(
+                tenant_id, base_url, request_id=request_id
+            )
         )
         ensure_runtime_compatibility(min_version)
-        bundle_path = resolve_bundle_path_from_bootstrap_alias_config(bundle_id)
-        return bundle_path, bundle_id, control_plane_status
+        bundle_path, cache_status = ensure_local_bundle(
+            bundle_id, expected_digest=expected_digest
+        )
+        return bundle_path, bundle_id, control_plane_status, cache_status
 
     config = load_alias_config()
     tenants = config.get("tenants", config)
@@ -270,12 +288,12 @@ def resolve_current_bundle(
     if not tenant_entry:
         raise RuntimeConfigError("Tenant alias not configured")
     bundle_path, bundle_id = resolve_bundle_from_alias_entry(tenant_entry)
-    return bundle_path, bundle_id, None
+    return bundle_path, bundle_id, None, None
 
 
 def resolve_bundle_via_control_plane(
     tenant_id: str, base_url: str, request_id: str | None = None
-) -> tuple[str, str, int]:
+) -> tuple[str, str, str | None, int]:
     url = f"{base_url.rstrip('/')}/tenants/{tenant_id}/resolve/current"
     timeout_seconds = _resolve_control_plane_timeout()
     headers = {"X-Tenant-Id": tenant_id}
@@ -316,7 +334,119 @@ def resolve_bundle_via_control_plane(
     min_version = runtime_compatibility.get("min_version")
     if not min_version or not isinstance(min_version, str):
         raise RuntimeConfigError("Control Plane response missing min_version")
-    return bundle_id, min_version, int(status_code)
+    expected_digest = payload.get("bundle_sha256")
+    if expected_digest is not None and not isinstance(expected_digest, str):
+        raise RuntimeConfigError("Control Plane response invalid bundle_sha256")
+    return bundle_id, min_version, expected_digest, int(status_code)
+
+
+def _bundle_root() -> Path:
+    return REPO_ROOT / "data" / "bundles"
+
+
+def _ensure_bundle_structure(bundle_path: Path) -> None:
+    manifest_path = bundle_path / "manifest.yaml"
+    if not manifest_path.is_file():
+        raise RuntimeConfigError("Bundle structure invalid")
+    for expected_dir in EXPECTED_BUNDLE_DIRS:
+        if not (bundle_path / expected_dir).is_dir():
+            raise RuntimeConfigError("Bundle structure invalid")
+
+
+def _set_bundle_read_only(bundle_path: Path) -> None:
+    for path in bundle_path.rglob("*"):
+        if path.is_dir():
+            path.chmod(0o555)
+        else:
+            path.chmod(0o444)
+    bundle_path.chmod(0o555)
+
+
+def _safe_extract_tar_gz(archive_path: Path, destination: Path) -> None:
+    destination_resolved = destination.resolve()
+    with tarfile.open(archive_path, mode="r:gz") as tar:
+        for member in tar.getmembers():
+            member_path = (destination / member.name).resolve()
+            if os.path.commonpath(
+                [str(destination_resolved), str(member_path)]
+            ) != str(destination_resolved):
+                raise RuntimeConfigError("Bundle structure invalid")
+        tar.extractall(path=destination)
+
+
+def _digest_file(path: Path) -> str:
+    hasher = hashlib.sha256()
+    with path.open("rb") as file_obj:
+        for chunk in iter(lambda: file_obj.read(8192), b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
+
+def _download_bundle_archive(bundle_id: str, destination: Path) -> None:
+    base_url = os.getenv(BUNDLE_BASE_URL_ENV)
+    if not base_url:
+        raise RuntimeConfigError(
+            "Bundle download base URL missing",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+    archive_url = f"{base_url.rstrip('/')}/{bundle_id}.tar.gz"
+    try:
+        with urllib_request.urlopen(
+            archive_url, timeout=_resolve_control_plane_timeout()
+        ) as response:
+            destination.write_bytes(response.read())
+    except urllib_error.HTTPError as exc:
+        if exc.code == 404:
+            raise RuntimeConfigError(
+                "Bundle not found in origin",
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            ) from exc
+        raise RuntimeConfigError(
+            "Bundle download failed",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        ) from exc
+    except urllib_error.URLError as exc:
+        raise RuntimeConfigError(
+            "Bundle download failed",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        ) from exc
+
+
+def ensure_local_bundle(bundle_id: str, expected_digest: str | None) -> tuple[Path, str]:
+    bundle_path = _bundle_root() / bundle_id
+    if bundle_path.exists():
+        _ensure_bundle_structure(bundle_path)
+        return bundle_path, "hit"
+
+    if not expected_digest:
+        raise RuntimeConfigError("Bundle digest missing")
+
+    with tempfile.TemporaryDirectory() as temp_dir_str:
+        temp_dir = Path(temp_dir_str)
+        archive_path = temp_dir / "bundle.tar.gz"
+        extract_path = temp_dir / "extract"
+        extract_path.mkdir(parents=True, exist_ok=True)
+
+        _download_bundle_archive(bundle_id, archive_path)
+        received_digest = _digest_file(archive_path)
+        if received_digest != expected_digest:
+            raise RuntimeConfigError("Bundle digest mismatch")
+
+        _safe_extract_tar_gz(archive_path, extract_path)
+        source_path = extract_path
+        if not (source_path / "manifest.yaml").is_file():
+            subdirs = [p for p in extract_path.iterdir() if p.is_dir()]
+            if len(subdirs) == 1:
+                source_path = subdirs[0]
+
+        _ensure_bundle_structure(source_path)
+        bundle_path.parent.mkdir(parents=True, exist_ok=True)
+        if bundle_path.exists():
+            raise RuntimeConfigError("Bundle already exists")
+        shutil.move(str(source_path), str(bundle_path))
+
+    _set_bundle_read_only(bundle_path)
+    return bundle_path, "miss"
 
 
 def _map_error_code(exc: Exception, http_status: int) -> str:
@@ -359,18 +489,6 @@ def resolve_bundle_from_alias_entry(tenant_entry: Any) -> tuple[Path, str]:
     if not bundle_id:
         raise RuntimeConfigError("Bundle id missing")
     return bundle_path, str(bundle_id)
-
-
-def resolve_bundle_path_from_bootstrap_alias_config(bundle_id: str) -> Path:
-    config = load_alias_config()
-    tenants = config.get("tenants", config)
-    for tenant_entry in tenants.values():
-        bundle_path, resolved_id = resolve_bundle_from_alias_entry(tenant_entry)
-        if resolved_id == bundle_id:
-            return bundle_path
-    raise RuntimeConfigError(
-        "Bundle path not found in bootstrap alias config for Control Plane bundle_id"
-    )
 
 
 def _resolve_control_plane_timeout() -> float:
@@ -494,6 +612,7 @@ def execute(
     bundle_id: str | None = None
     rate_limit_info: dict[str, int] | None = None
     control_plane_status: int | None = None
+    bundle_cache_status: str | None = None
     error_code: str | None = None
 
     try:
@@ -512,8 +631,8 @@ def execute(
         for header_name, header_value in rate_limit_headers.items():
             response.headers[header_name] = header_value
 
-        bundle_path, bundle_id, control_plane_status = resolve_current_bundle(
-            tenant_id, request_id=request_id
+        bundle_path, bundle_id, control_plane_status, bundle_cache_status = (
+            resolve_current_bundle(tenant_id, request_id=request_id)
         )
 
         intent_name = "faq_query"
@@ -579,6 +698,11 @@ def execute(
             event["bundle_id"] = bundle_id
         if control_plane_status is not None:
             event["control_plane_status"] = control_plane_status
+        if bundle_cache_status is not None and bundle_id is not None:
+            event["bundle_cache"] = {
+                "status": bundle_cache_status,
+                "bundle_id": bundle_id,
+            }
         if rate_limit_info is not None:
             event["rate_limit"] = rate_limit_info
         if error_code is not None:
