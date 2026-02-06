@@ -26,6 +26,7 @@
 - Distribuição de bundles para o Runtime (fetch, digest e cache local) implementada e validada conforme ADR 0017 (Accepted).
 - Quality gates v1 mínimos no Control Plane (endpoints de execução/status/history, execução determinística de suites do bundle e persistência local com auditoria) implementados e validados conforme ADR 0016 (Draft).
 
+
 ## O que está em aberto
 - Materialização completa do Control Plane como serviço/API governado (além do endpoint mínimo de resolução)
 - Enforcement completo de políticas cross-cutting no Runtime
@@ -37,4 +38,5 @@
 - 2026-02-05: Aprovado e promovido o contrato de distribuição de bundles para o Runtime (ADR 0017).
 
 ## Próxima tarefa atômica
-- Iniciar ADR 0016 (Quality gates v1).
+- Iniciar ADR 0019 (Promoção e rollback v1: workflow de aliases e invariantes).
+

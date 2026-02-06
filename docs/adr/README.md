@@ -26,6 +26,7 @@ ou implementações ad-hoc.
 | 0012 | Autenticação v1 do Runtime (chaves por tenant e validação de headers)  | Accepted |
 | 0013 | Rate limiting e quotas (policy-driven)                                 | Accepted |
 | 0014 | Auditoria end-to-end (formato, correlação e retenção mínima)           | Accepted |
+| 0016 | Quality gates v1 (suites, execução e critérios de promoção)            | Draft    |
 | 0017 | Distribuição de bundles para o Runtime (fetch, digest e cache local)   | Accepted |
 
 ---
@@ -35,23 +36,19 @@ ou implementações ad-hoc.
 | ID   | Título                                                                 | Status | Motivo |
 |------|------------------------------------------------------------------------|--------|--------|
 | 0015 | Armazenamento de bundles no Control Plane (integridade e lifecycle)    | Draft  | ADR 0002/0005 exigem imutabilidade; falta definir storage real e GC. |
-| 0016 | Quality gates v1 (suites, execução e critérios de promoção)            | Draft  | Iniciado em v1 com endpoints, execução determinística e persistência local; permanece Draft até acoplamento formal com promoção (ADR 0019). |
 | 0018 | Observabilidade v1 (métricas mínimas, tracing e logs estruturados)      | Draft  | ADR 0004 exige sinais operacionais; precisa virar contrato mínimo. |
 | 0019 | Promoção e rollback v1 (workflow de aliases e invariantes)             | Draft  | ADR 0003 define aliases, mas não formaliza o workflow de promoção e rollback. |
 
-
-> Nota: os ADRs 0015–0019 são mantidos como **Draft** e devem existir como arquivos neste diretório
-> enquanto estiverem em progresso, para evitar “roadmap sem documentação”.
-
+> Nota: ADRs em Draft **devem existir como arquivos**, mesmo após implementação parcial,
+> para evitar “roadmap sem documentação”.
 
 ---
 
-## Ordem recomendada de implementação
+## Ordem recomendada de evolução
 
-1. **ADR 0016** — Quality gates v1
-2. **ADR 0019** — Promoção e rollback v1 (workflow de aliases e invariantes)
-3. **ADR 0015** — Armazenamento de bundles no Control Plane
-4. **ADR 0018** — Observabilidade v1
+1. **ADR 0019** — Promoção e rollback v1 (workflow de aliases e invariantes)
+2. **ADR 0015** — Armazenamento de bundles no Control Plane
+3. **ADR 0018** — Observabilidade v1
 
 ---
 
@@ -60,13 +57,14 @@ ou implementações ad-hoc.
 - Toda decisão estrutural relevante **exige um ADR**.
 - ADRs são **imutáveis após Accepted** (mudanças exigem novo ADR).
 - Implementações devem referenciar explicitamente o ADR correspondente.
-- ADRs em progresso devem ser marcados como `Draft`.
+- ADRs podem permanecer `Draft` mesmo após implementação, enquanto dependências não forem resolvidas.
 
 ---
 
 ## Fluxo
 
 1. Criar ADR como `Draft`
-2. Revisar decisão
-3. Marcar como `Accepted`
-4. Atualizar `docs/STATUS.md` se a decisão impactar milestone ou próxima tarefa
+2. Implementar e validar contrato
+3. Resolver dependências arquiteturais
+4. Marcar como `Accepted`
+5. Atualizar `docs/STATUS.md` se impactar milestone ou próxima tarefa

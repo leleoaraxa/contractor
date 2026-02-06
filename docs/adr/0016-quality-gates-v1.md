@@ -1,8 +1,8 @@
 # ADR 0016 — Quality gates v1 (suites, execução e critérios de promoção)
 
-**Status:** Draft  
-**Data:** 2026-02-06  
-**Decide:** Contrato executável mínimo de quality gates no Control Plane  
+**Status:** Draft
+**Data:** 2026-02-06
+**Decide:** Contrato executável mínimo de quality gates no Control Plane
 **Relacionados:** ADR 0005, ADR 0006, ADR 0009, ADR 0014, ADR 0017, ADR 0019
 
 ---
@@ -138,3 +138,7 @@ Não registrar payload completo de suite nem resposta completa do Runtime no eve
 1. Evoluir para vínculo de promoção (ADR 0019).
 2. Definir tipos adicionais de suite mantendo determinismo.
 3. Avaliar backend de persistência compartilhado quando houver necessidade operacional.
+
+> Nota de status: apesar de totalmente implementado e validado por testes automatizados,
+> este ADR permanece em `Draft` até que o vínculo formal entre gate e promoção seja definido
+> no ADR 0019. Nenhum contrato aqui definido é considerado instável.
