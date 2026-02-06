@@ -25,16 +25,12 @@ RUNTIME_AUDIT_CONFIG_JSON = json.dumps(
 )
 RUNTIME_RATE_LIMIT_POLICY_JSON = json.dumps(
     {
-        "default": {
-            "window_seconds": 60,
-            "max_requests": 1000,
-            "quota": {"interval_seconds": 86400, "max_requests": 1000},
-        },
+        "rate_limit": {"window_seconds": 60, "max_requests": 1000},
+        "quota": {"window_seconds": 86400, "max_requests": 1000},
         "tenants": {
             "*": {
-                "window_seconds": 60,
-                "max_requests": 1000,
-                "quota": {"interval_seconds": 86400, "max_requests": 1000},
+                "rate_limit": {"window_seconds": 60, "max_requests": 1000},
+                "quota": {"window_seconds": 86400, "max_requests": 1000},
             }
         },
     }
