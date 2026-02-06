@@ -9,6 +9,16 @@ from fastapi.testclient import TestClient
 
 from app import control_plane
 
+SUITE_TENANT_A_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "data"
+    / "bundles"
+    / "demo"
+    / "faq"
+    / "suites"
+    / "faq_golden_tenant_a.json"
+)
+
 RUNTIME_TENANT_KEYS_JSON = json.dumps(
     {
         "tenant_a": "test-key-a",
@@ -88,6 +98,8 @@ def test_post_gate_executes_bundle_suite_and_returns_completed_result(
     control_plane_alias_config_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    expected_total = len(json.loads(SUITE_TENANT_A_PATH.read_text(encoding="utf-8")))
+
     _set_cp_env(
         monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path
     )
@@ -101,7 +113,7 @@ def test_post_gate_executes_bundle_suite_and_returns_completed_result(
             "X-Tenant-Id": "tenant_a",
             "X-Request-Id": "req-gate-1",
         },
-        json={"suite_id": "faq_golden"},
+        json={"suite_id": "faq_golden_tenant_a"},
     )
 
     assert response.status_code == 200
@@ -110,7 +122,9 @@ def test_post_gate_executes_bundle_suite_and_returns_completed_result(
     assert body["request_id"] == "req-gate-1"
     assert body["status"] == "completed"
     assert body["outcome"] == "pass"
-    assert body["summary"] == {"total": 8, "passed": 8, "failed": 0}
+    assert body["summary"]["total"] == expected_total
+    assert body["summary"]["passed"] == expected_total
+    assert body["summary"]["failed"] == 0
 
 
 def test_get_gate_status_reads_local_storage(
@@ -132,7 +146,7 @@ def test_get_gate_status_reads_local_storage(
             "X-Tenant-Id": "tenant_a",
             "X-Request-Id": "req-gate-2",
         },
-        json={"suite_id": "faq_golden"},
+        json={"suite_id": "faq_golden_tenant_a"},
     )
     gate_id = create_response.json()["gate_id"]
 
@@ -169,7 +183,7 @@ def test_gate_history_lists_runs(
                 "X-Tenant-Id": "tenant_a",
                 "X-Request-Id": request_id,
             },
-            json={"suite_id": "faq_golden"},
+            json={"suite_id": "faq_golden_tenant_a"},
         )
         assert response.status_code == 200
 
