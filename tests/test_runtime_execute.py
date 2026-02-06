@@ -1,3 +1,4 @@
+# tests/test_runtime_execute.py
 import json
 from pathlib import Path
 
@@ -18,7 +19,13 @@ def _load_tenant_keys() -> dict[str, str]:
 
 def _load_golden_cases() -> list[dict[str, str]]:
     golden_path = (
-        _repo_root() / "data" / "bundles" / "demo" / "faq" / "suites" / "faq_golden.json"
+        _repo_root()
+        / "data"
+        / "bundles"
+        / "demo"
+        / "faq"
+        / "suites"
+        / "faq_golden.json"
     )
     return json.loads(golden_path.read_text(encoding="utf-8"))
 
@@ -38,7 +45,9 @@ def _select_shared_tenant_id(
     golden_tenants = {case.get("tenant_id") for case in cases}
     shared_tenants = sorted(set(tenant_keys.keys()) & golden_tenants)
     if not shared_tenants:
-        raise AssertionError("No shared tenant_id between tenants.json and golden cases")
+        raise AssertionError(
+            "No shared tenant_id between tenants.json and golden cases"
+        )
     return shared_tenants[0]
 
 
@@ -60,7 +69,9 @@ def test_runtime_execute_uses_manifest_bundle_id_and_tenant_data() -> None:
     bundle_id = _load_bundle_id()
     headers = {"X-Tenant-Id": tenant_id, "X-Api-Key": tenant_keys[tenant_id]}
 
-    response = client.post("/execute", json={"question": case["question"]}, headers=headers)
+    response = client.post(
+        "/execute", json={"question": case["question"]}, headers=headers
+    )
 
     assert response.status_code == 200
     payload = response.json()

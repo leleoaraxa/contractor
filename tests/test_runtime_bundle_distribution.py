@@ -1,3 +1,4 @@
+# tests/test_runtime_bundle_distribution.py
 import hashlib
 import json
 import shutil
@@ -24,7 +25,9 @@ def _source_bundle_path() -> Path:
 
 
 def _bundle_id() -> str:
-    manifest = yaml.safe_load((_source_bundle_path() / "manifest.yaml").read_text(encoding="utf-8"))
+    manifest = yaml.safe_load(
+        (_source_bundle_path() / "manifest.yaml").read_text(encoding="utf-8")
+    )
     return str(manifest["bundle_id"])
 
 

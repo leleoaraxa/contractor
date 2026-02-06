@@ -1,3 +1,4 @@
+# tests/test_audit_end_to_end.py
 from __future__ import annotations
 
 import json
@@ -179,7 +180,9 @@ def test_runtime_audit_auth_errors_emit_event(
 
 
 @contextmanager
-def _capture_runtime_request_id_server(tenant_id: str, bundle_id: str, min_version: str) -> Any:
+def _capture_runtime_request_id_server(
+    tenant_id: str, bundle_id: str, min_version: str
+) -> Any:
     observed: dict[str, str | None] = {"x_request_id": None}
 
     class Handler(BaseHTTPRequestHandler):
@@ -241,9 +244,10 @@ def test_runtime_propagates_x_request_id_to_control_plane(
     bundle_root = _prepare_bundle_cache_hit(tmp_path, "demo-faq-0001")
     monkeypatch.setattr(runtime, "_bundle_root", lambda: bundle_root)
 
-    with _capture_runtime_request_id_server(
-        "tenant_a", "demo-faq-0001", "0.0.0"
-    ) as (base_url, observed):
+    with _capture_runtime_request_id_server("tenant_a", "demo-faq-0001", "0.0.0") as (
+        base_url,
+        observed,
+    ):
         monkeypatch.setenv("CONTRACTOR_CONTROL_PLANE_BASE_URL", base_url)
         response = runtime_client.post(
             "/execute",

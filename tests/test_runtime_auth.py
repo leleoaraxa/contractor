@@ -1,3 +1,4 @@
+# tests/test_runtime_auth.py
 from __future__ import annotations
 
 import json
@@ -15,7 +16,13 @@ def _repo_root() -> Path:
 
 def _load_golden_case() -> dict[str, str]:
     golden_path = (
-        _repo_root() / "data" / "bundles" / "demo" / "faq" / "suites" / "faq_golden.json"
+        _repo_root()
+        / "data"
+        / "bundles"
+        / "demo"
+        / "faq"
+        / "suites"
+        / "faq_golden.json"
     )
     cases = json.loads(golden_path.read_text(encoding="utf-8"))
     if not cases:
@@ -37,7 +44,9 @@ def test_runtime_execute_rejects_missing_headers(client: TestClient) -> None:
 def test_runtime_execute_rejects_unknown_tenant(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("CONTRACTOR_TENANT_KEYS", json.dumps({"tenant_a": "runtime_test_key_a"}))
+    monkeypatch.setenv(
+        "CONTRACTOR_TENANT_KEYS", json.dumps({"tenant_a": "runtime_test_key_a"})
+    )
 
     response = client.post(
         "/execute",
@@ -51,7 +60,9 @@ def test_runtime_execute_rejects_unknown_tenant(
 def test_runtime_execute_rejects_invalid_key(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("CONTRACTOR_TENANT_KEYS", json.dumps({"tenant_a": "runtime_test_key_a"}))
+    monkeypatch.setenv(
+        "CONTRACTOR_TENANT_KEYS", json.dumps({"tenant_a": "runtime_test_key_a"})
+    )
 
     response = client.post(
         "/execute",

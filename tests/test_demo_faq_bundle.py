@@ -1,3 +1,4 @@
+# tests/test_demo_faq_bundle.py
 import json
 from pathlib import Path
 
@@ -20,7 +21,9 @@ def test_demo_faq_bundle_structure_and_golden_suite():
     for file_path in required_files:
         assert file_path.is_file(), f"Missing required bundle file: {file_path}"
 
-    faq_data = json.loads((bundle_root / "data" / "faq.json").read_text(encoding="utf-8"))
+    faq_data = json.loads(
+        (bundle_root / "data" / "faq.json").read_text(encoding="utf-8")
+    )
     answers_by_question = {item["question"]: item["answer"] for item in faq_data}
 
     golden_cases = json.loads(
@@ -35,7 +38,9 @@ def test_demo_faq_bundle_structure_and_golden_suite():
 
         question = case["question"]
         expected_answer = case["expected_answer"]
-        assert question in answers_by_question, f"Question not found in FAQ dataset: {question}"
+        assert (
+            question in answers_by_question
+        ), f"Question not found in FAQ dataset: {question}"
         assert (
             answers_by_question[question] == expected_answer
         ), f"Answer mismatch for question: {question}"

@@ -1,3 +1,4 @@
+# tests/test_control_plane_auth.py
 from __future__ import annotations
 
 import json
@@ -41,7 +42,9 @@ def control_plane_alias_config_path(tmp_path: Path) -> Path:
     return path
 
 
-def _set_cp_env(monkeypatch: pytest.MonkeyPatch, auth_path: Path, alias_path: Path) -> None:
+def _set_cp_env(
+    monkeypatch: pytest.MonkeyPatch, auth_path: Path, alias_path: Path
+) -> None:
     monkeypatch.setenv(control_plane.AUTH_CONFIG_PATH_ENV, str(auth_path))
     monkeypatch.setenv(control_plane.ALIAS_CONFIG_PATH_ENV, str(alias_path))
     monkeypatch.delenv(control_plane.AUTH_CONFIG_JSON_ENV, raising=False)
@@ -52,7 +55,9 @@ def test_control_plane_rejects_missing_authorization_header(
     control_plane_alias_config_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _set_cp_env(monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path)
+    _set_cp_env(
+        monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path
+    )
     client = TestClient(control_plane.app)
 
     response = client.get(
@@ -68,7 +73,9 @@ def test_control_plane_rejects_invalid_token(
     control_plane_alias_config_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _set_cp_env(monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path)
+    _set_cp_env(
+        monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path
+    )
     client = TestClient(control_plane.app)
 
     response = client.get(
@@ -87,7 +94,9 @@ def test_control_plane_rejects_tenant_mismatch_between_token_header_and_path(
     control_plane_alias_config_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _set_cp_env(monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path)
+    _set_cp_env(
+        monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path
+    )
     client = TestClient(control_plane.app)
 
     response = client.get(
@@ -106,7 +115,9 @@ def test_control_plane_returns_current_bundle_for_valid_request(
     control_plane_alias_config_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _set_cp_env(monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path)
+    _set_cp_env(
+        monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path
+    )
     client = TestClient(control_plane.app)
 
     response = client.get(
@@ -127,7 +138,9 @@ def test_control_plane_fails_closed_with_missing_auth_config(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv(control_plane.AUTH_CONFIG_PATH_ENV, "non-existent-tenants.json")
-    monkeypatch.setenv(control_plane.ALIAS_CONFIG_PATH_ENV, str(control_plane_alias_config_path))
+    monkeypatch.setenv(
+        control_plane.ALIAS_CONFIG_PATH_ENV, str(control_plane_alias_config_path)
+    )
     monkeypatch.delenv(control_plane.AUTH_CONFIG_JSON_ENV, raising=False)
 
     client = TestClient(control_plane.app)
@@ -147,7 +160,9 @@ def test_control_plane_fails_closed_with_invalid_auth_config_json(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv(control_plane.AUTH_CONFIG_JSON_ENV, "{invalid-json")
-    monkeypatch.setenv(control_plane.ALIAS_CONFIG_PATH_ENV, str(control_plane_alias_config_path))
+    monkeypatch.setenv(
+        control_plane.ALIAS_CONFIG_PATH_ENV, str(control_plane_alias_config_path)
+    )
 
     client = TestClient(control_plane.app)
     response = client.get(
