@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app import control_plane
-from test_control_plane_gates import _set_cp_env
+from tests.test_control_plane_auth import _set_cp_env  # type: ignore
 
 
 @pytest.fixture
