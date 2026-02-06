@@ -1,3 +1,4 @@
+# tests/test_control_plane_promote_rollback.py
 from __future__ import annotations
 
 import json
@@ -7,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app import control_plane
-from tests.test_control_plane_gates import _set_cp_env
+from test_control_plane_gates import _set_cp_env
 
 
 @pytest.fixture
@@ -48,7 +49,9 @@ def _mk_bundle(tmp_path: Path, bundle_id: str) -> Path:
     return bundle_path
 
 
-def _write_gate_pass(root: Path, tenant_id: str, bundle_id: str, gate_id: str = "gate-1") -> None:
+def _write_gate_pass(
+    root: Path, tenant_id: str, bundle_id: str, gate_id: str = "gate-1"
+) -> None:
     path = root / tenant_id / bundle_id / f"{gate_id}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -76,7 +79,9 @@ def test_set_candidate_persists_and_is_idempotent(
     control_plane_alias_config_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _set_cp_env(monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path)
+    _set_cp_env(
+        monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path
+    )
     monkeypatch.setattr(control_plane, "ALIAS_STATE_ROOT", tmp_path / "alias_state")
 
     bundle_path = _mk_bundle(tmp_path, "demo-faq-0001")
@@ -99,7 +104,9 @@ def test_set_candidate_persists_and_is_idempotent(
         json={"bundle_id": "demo-faq-0001"},
     )
     assert response2.status_code == 200
-    state = json.loads((tmp_path / "alias_state" / "tenant_a.json").read_text(encoding="utf-8"))
+    state = json.loads(
+        (tmp_path / "alias_state" / "tenant_a.json").read_text(encoding="utf-8")
+    )
     assert state["aliases"]["candidate"] == {"bundle_id": "demo-faq-0001"}
 
 
@@ -109,7 +116,9 @@ def test_promote_requires_candidate(
     control_plane_alias_config_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _set_cp_env(monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path)
+    _set_cp_env(
+        monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path
+    )
     monkeypatch.setattr(control_plane, "ALIAS_STATE_ROOT", tmp_path / "alias_state")
     monkeypatch.setattr(control_plane, "GATE_STORAGE_ROOT", tmp_path / "gates")
 
@@ -127,7 +136,9 @@ def test_promote_requires_gate_pass(
     control_plane_alias_config_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _set_cp_env(monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path)
+    _set_cp_env(
+        monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path
+    )
     monkeypatch.setattr(control_plane, "ALIAS_STATE_ROOT", tmp_path / "alias_state")
     monkeypatch.setattr(control_plane, "GATE_STORAGE_ROOT", tmp_path / "gates")
 
@@ -157,7 +168,9 @@ def test_promote_happy_path_and_idempotent(
     control_plane_alias_config_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _set_cp_env(monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path)
+    _set_cp_env(
+        monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path
+    )
     monkeypatch.setattr(control_plane, "ALIAS_STATE_ROOT", tmp_path / "alias_state")
     monkeypatch.setattr(control_plane, "GATE_STORAGE_ROOT", tmp_path / "gates")
 
@@ -195,7 +208,9 @@ def test_rollback_requires_gate_pass(
     control_plane_alias_config_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _set_cp_env(monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path)
+    _set_cp_env(
+        monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path
+    )
     monkeypatch.setattr(control_plane, "ALIAS_STATE_ROOT", tmp_path / "alias_state")
     monkeypatch.setattr(control_plane, "GATE_STORAGE_ROOT", tmp_path / "gates")
 
@@ -214,7 +229,9 @@ def test_rollback_happy_path(
     control_plane_alias_config_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _set_cp_env(monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path)
+    _set_cp_env(
+        monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path
+    )
     monkeypatch.setattr(control_plane, "ALIAS_STATE_ROOT", tmp_path / "alias_state")
     monkeypatch.setattr(control_plane, "GATE_STORAGE_ROOT", tmp_path / "gates")
     _write_gate_pass(tmp_path / "gates", "tenant_a", "demo-faq-0002")
@@ -235,7 +252,9 @@ def test_alias_endpoints_enforce_tenant_isolation(
     control_plane_alias_config_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _set_cp_env(monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path)
+    _set_cp_env(
+        monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path
+    )
     monkeypatch.setattr(control_plane, "ALIAS_STATE_ROOT", tmp_path / "alias_state")
 
     client = TestClient(control_plane.app)

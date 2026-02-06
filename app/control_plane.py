@@ -1,3 +1,4 @@
+# app/control_plane.py
 from __future__ import annotations
 
 import json
@@ -59,7 +60,9 @@ def _find_bundle_path_by_bundle_id(bundle_id: str) -> Path:
         manifest = _load_yaml_file(manifest_path)
         if manifest.get("bundle_id") == bundle_id:
             return manifest_path.parent
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bundle not found")
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND, detail="Bundle not found"
+    )
 
 
 def _list_suite_paths(bundle_path: Path, suite_id: str | None) -> list[Path]:
@@ -72,7 +75,9 @@ def _list_suite_paths(bundle_path: Path, suite_id: str | None) -> list[Path]:
     if suite_id:
         suite_path = suites_dir / f"{suite_id}.json"
         if not suite_path.exists():
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Suite not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Suite not found"
+            )
         return [suite_path]
 
     suite_paths = sorted(suites_dir.glob("*.json"))
@@ -138,7 +143,9 @@ def _gate_storage_file(tenant_id: str, bundle_id: str, gate_id: str) -> Path:
 def _load_gate_result(tenant_id: str, bundle_id: str, gate_id: str) -> dict[str, Any]:
     path = _gate_storage_file(tenant_id, bundle_id, gate_id)
     if not path.exists():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gate not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Gate not found"
+        )
     try:
         payload = _read_json(path)
     except json.JSONDecodeError as exc:
@@ -218,7 +225,9 @@ def _save_alias_state(tenant_id: str, payload: dict[str, Any]) -> None:
 def _ensure_passed_gate_for_bundle(tenant_id: str, bundle_id: str) -> None:
     bundle_dir = GATE_STORAGE_ROOT / tenant_id / bundle_id
     if not bundle_dir.exists():
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Gate approval required")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Gate approval required"
+        )
     for path in sorted(bundle_dir.glob("*.json")):
         try:
             payload = _read_json(path)
@@ -247,7 +256,9 @@ def _ensure_passed_gate_for_bundle(tenant_id: str, bundle_id: str) -> None:
             and payload["outcome"] == "pass"
         ):
             return
-    raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Gate approval required")
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT, detail="Gate approval required"
+    )
 
 
 def _run_suite_cases(
@@ -303,7 +314,9 @@ def _run_suite_cases(
     return results, passed_count, total - passed_count
 
 
-def _ensure_suite_matches_tenant(suite_cases: list[dict[str, str]], tenant_id: str) -> None:
+def _ensure_suite_matches_tenant(
+    suite_cases: list[dict[str, str]], tenant_id: str
+) -> None:
     if any(case["tenant_id"] != tenant_id for case in suite_cases):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -338,7 +351,9 @@ def _load_tenant_auth_config_payload() -> dict[str, Any]:
         try:
             return json.loads(env_json)
         except json.JSONDecodeError as exc:
-            raise AuthConfigError("Invalid tenant auth config JSON in environment") from exc
+            raise AuthConfigError(
+                "Invalid tenant auth config JSON in environment"
+            ) from exc
 
     env_path = os.getenv(AUTH_CONFIG_PATH_ENV)
     auth_path = Path(env_path) if env_path else DEFAULT_TENANT_AUTH_PATH
@@ -354,7 +369,9 @@ def load_tenant_token_index() -> dict[str, str]:
     config = _load_tenant_auth_config_payload()
     tenants = config.get("tenants") if isinstance(config, dict) else None
     if not isinstance(tenants, dict) or not tenants:
-        raise AuthConfigError("Tenant auth config must define a non-empty tenants object")
+        raise AuthConfigError(
+            "Tenant auth config must define a non-empty tenants object"
+        )
 
     token_to_tenant: dict[str, str] = {}
     for tenant_id, tenant_cfg in tenants.items():
@@ -366,7 +383,9 @@ def load_tenant_token_index() -> dict[str, str]:
         if not isinstance(token, str) or not token:
             raise AuthConfigError("Tenant auth config token must be a non-empty string")
         if token in token_to_tenant:
-            raise AuthConfigError("Tenant auth config token must map to exactly one tenant")
+            raise AuthConfigError(
+                "Tenant auth config token must map to exactly one tenant"
+            )
         token_to_tenant[token] = tenant_id
 
     return token_to_tenant
@@ -394,7 +413,9 @@ def enforce_control_plane_auth(
 ) -> str:
     token = _extract_bearer_token(authorization)
     if not x_tenant_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing X-Tenant-Id")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing X-Tenant-Id"
+        )
 
     try:
         token_to_tenant = load_tenant_token_index()
@@ -406,7 +427,9 @@ def enforce_control_plane_auth(
 
     token_tenant_id = token_to_tenant.get(token)
     if token_tenant_id is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+        )
     if token_tenant_id != x_tenant_id or tenant_id != x_tenant_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     return token_tenant_id
@@ -417,7 +440,9 @@ def resolve_current_bundle_metadata(tenant_id: str) -> tuple[str, str, str | Non
     tenants = config.get("tenants", config)
     tenant_entry = tenants.get(tenant_id) or tenants.get("*")
     if not tenant_entry:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found"
+        )
     bundle_sha256: str | None = None
     if isinstance(tenant_entry, str):
         bundle_path_value = tenant_entry
@@ -496,7 +521,9 @@ def resolve_current(
         enforce_control_plane_auth(
             tenant_id=tenant_id, authorization=authorization, x_tenant_id=x_tenant_id
         )
-        bundle_id, min_version, bundle_sha256 = resolve_current_bundle_metadata(tenant_id)
+        bundle_id, min_version, bundle_sha256 = resolve_current_bundle_metadata(
+            tenant_id
+        )
         payload = {
             "bundle_id": bundle_id,
             "runtime_compatibility": {"min_version": min_version},
@@ -545,8 +572,6 @@ def resolve_current(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=str(exc),
             ) from exc
-
-
 
 
 @app.post("/tenants/{tenant_id}/aliases/candidate")
@@ -640,7 +665,9 @@ def promote_alias_current(
         state = _load_alias_state(tenant_id)
         candidate = state["aliases"].get("candidate")
         current = state["aliases"].get("current")
-        if not isinstance(candidate, dict) or not isinstance(candidate.get("bundle_id"), str):
+        if not isinstance(candidate, dict) or not isinstance(
+            candidate.get("bundle_id"), str
+        ):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Candidate alias not set",
@@ -755,6 +782,7 @@ def rollback_alias_current(
                 detail=str(exc),
             ) from exc
 
+
 @app.post("/tenants/{tenant_id}/bundles/{bundle_id}/gates")
 def run_quality_gate(
     tenant_id: str,
@@ -786,7 +814,9 @@ def run_quality_gate(
         for suite_path in suite_paths:
             suite_cases = _load_and_validate_suite(suite_path)
             _ensure_suite_matches_tenant(suite_cases, tenant_id)
-            case_results, passed_count, failed_count = _run_suite_cases(suite_cases, request_id)
+            case_results, passed_count, failed_count = _run_suite_cases(
+                suite_cases, request_id
+            )
             suite_outcome = "pass" if failed_count == 0 else "fail"
             suites_result.append(
                 {

@@ -1,3 +1,4 @@
+# tests/integration/test_runtime_control_plane_e2e.py
 import json
 import shutil
 import threading
@@ -25,13 +26,17 @@ def _load_tenant_keys() -> dict[str, str]:
 
 def _load_bundle_metadata() -> tuple[Path, str, str]:
     bundle_path = _repo_root() / "data" / "bundles" / "demo" / "faq"
-    manifest = yaml.safe_load((bundle_path / "manifest.yaml").read_text(encoding="utf-8"))
+    manifest = yaml.safe_load(
+        (bundle_path / "manifest.yaml").read_text(encoding="utf-8")
+    )
     bundle_id = manifest.get("bundle_id")
     min_version = manifest.get("runtime_compatibility", {}).get("min_version")
     return bundle_path, bundle_id, min_version
 
 
-def _prepare_bundle_cache_hit(tmp_path: Path, bundle_id: str, source_bundle_path: Path) -> Path:
+def _prepare_bundle_cache_hit(
+    tmp_path: Path, bundle_id: str, source_bundle_path: Path
+) -> Path:
     bundle_root = tmp_path / "bundles"
     target = bundle_root / bundle_id
     if target.exists():
@@ -137,7 +142,9 @@ def test_runtime_control_plane_fail_closed_on_http_error(
         client = TestClient(app)
         headers = {"X-Tenant-Id": tenant_id, "X-Api-Key": tenant_keys[tenant_id]}
 
-        response = client.post("/execute", json={"question": "irrelevant"}, headers=headers)
+        response = client.post(
+            "/execute", json={"question": "irrelevant"}, headers=headers
+        )
 
     assert response.status_code == 503
     assert response.json()["detail"] == "Control Plane error: 500"
@@ -158,10 +165,15 @@ def test_runtime_control_plane_fail_closed_on_invalid_payload(
         client = TestClient(app)
         headers = {"X-Tenant-Id": tenant_id, "X-Api-Key": tenant_keys[tenant_id]}
 
-        response = client.post("/execute", json={"question": "irrelevant"}, headers=headers)
+        response = client.post(
+            "/execute", json={"question": "irrelevant"}, headers=headers
+        )
 
     assert response.status_code == 500
-    assert response.json()["detail"] == "Control Plane response missing runtime_compatibility"
+    assert (
+        response.json()["detail"]
+        == "Control Plane response missing runtime_compatibility"
+    )
 
 
 def test_runtime_control_plane_fail_closed_on_incompatible_runtime_version(
@@ -184,7 +196,9 @@ def test_runtime_control_plane_fail_closed_on_incompatible_runtime_version(
         client = TestClient(app)
         headers = {"X-Tenant-Id": tenant_id, "X-Api-Key": tenant_keys[tenant_id]}
 
-        response = client.post("/execute", json={"question": "irrelevant"}, headers=headers)
+        response = client.post(
+            "/execute", json={"question": "irrelevant"}, headers=headers
+        )
 
     assert response.status_code == 500
     assert response.json()["detail"] == "Runtime incompatible with bundle"

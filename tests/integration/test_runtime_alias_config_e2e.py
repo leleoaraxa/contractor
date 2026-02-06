@@ -1,3 +1,4 @@
+# tests/integration/test_runtime_alias_config_e2e.py
 import json
 from pathlib import Path
 
@@ -14,7 +15,13 @@ def _repo_root() -> Path:
 
 def _load_golden_cases() -> list[dict[str, str]]:
     golden_path = (
-        _repo_root() / "data" / "bundles" / "demo" / "faq" / "suites" / "faq_golden.json"
+        _repo_root()
+        / "data"
+        / "bundles"
+        / "demo"
+        / "faq"
+        / "suites"
+        / "faq_golden.json"
     )
     return json.loads(golden_path.read_text(encoding="utf-8"))
 
@@ -39,13 +46,17 @@ def _select_shared_tenant_id(
     golden_tenants = {case.get("tenant_id") for case in cases}
     shared_tenants = sorted(set(tenant_keys.keys()) & golden_tenants)
     if not shared_tenants:
-        raise AssertionError("No shared tenant_id between tenants.json and golden cases")
+        raise AssertionError(
+            "No shared tenant_id between tenants.json and golden cases"
+        )
     return shared_tenants[0]
 
 
 def _load_bundle_metadata() -> tuple[Path, str]:
     bundle_path = _repo_root() / "data" / "bundles" / "demo" / "faq"
-    manifest = yaml.safe_load((bundle_path / "manifest.yaml").read_text(encoding="utf-8"))
+    manifest = yaml.safe_load(
+        (bundle_path / "manifest.yaml").read_text(encoding="utf-8")
+    )
     bundle_id = manifest.get("bundle_id")
     return bundle_path, bundle_id
 
@@ -78,7 +89,9 @@ def test_runtime_alias_config_e2e_executes_demo_faq(
     case = _select_case_for_tenant(tenant_id, golden_cases)
     headers = {"X-Tenant-Id": tenant_id, "X-Api-Key": tenant_keys[tenant_id]}
 
-    response = client.post("/execute", json={"question": case["question"]}, headers=headers)
+    response = client.post(
+        "/execute", json={"question": case["question"]}, headers=headers
+    )
 
     assert response.status_code == 200
     payload = response.json()
@@ -103,7 +116,9 @@ def test_runtime_alias_config_e2e_fail_closed_when_alias_missing(
     case = _select_case_for_tenant(tenant_id, golden_cases)
     headers = {"X-Tenant-Id": tenant_id, "X-Api-Key": tenant_keys[tenant_id]}
 
-    response = client.post("/execute", json={"question": case["question"]}, headers=headers)
+    response = client.post(
+        "/execute", json={"question": case["question"]}, headers=headers
+    )
 
     assert response.status_code == 500
     assert response.json()["detail"] == "Tenant alias not configured"

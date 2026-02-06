@@ -1,3 +1,4 @@
+# app/audit.py
 from __future__ import annotations
 
 import hashlib
@@ -99,7 +100,9 @@ def _resolve_rotated_path(file_path: str, event_day: str) -> Path:
     return base_path.with_name(rotated_name)
 
 
-def _cleanup_retention(rotated_path: Path, retention_days: int, today_utc: datetime) -> None:
+def _cleanup_retention(
+    rotated_path: Path, retention_days: int, today_utc: datetime
+) -> None:
     parent = rotated_path.parent
     suffix = ".log.jsonl"
     date_len = len("YYYY-MM-DD")
