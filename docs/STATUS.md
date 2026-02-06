@@ -25,12 +25,12 @@
 - Auditoria end-to-end v1 (schema mínimo, correlação por `X-Request-Id`, sink configurável com fail-closed, retenção mínima e precedência de erro de auditoria) implementada e validada conforme ADR 0014 (Accepted).
 - Distribuição de bundles para o Runtime (fetch, digest e cache local) implementada e validada conforme ADR 0017 (Accepted).
 - Quality gates v1 mínimos no Control Plane (endpoints de execução/status/history, execução determinística de suites do bundle e persistência local com auditoria) implementados e validados conforme ADR 0016 (Draft).
+- Promotion/rollback v1 no Control Plane (set de candidate, promote e rollback explícito com gate aprovado por tenant+bundle, persistência local atômica e auditoria por operação) implementados e validados conforme ADR 0019 (Draft).
 
 
 ## O que está em aberto
 - Materialização completa do Control Plane como serviço/API governado (além do endpoint mínimo de resolução)
 - Enforcement completo de políticas cross-cutting no Runtime
-- Pipeline de promoção e rollback de bundles via aliases
 - Observabilidade operacional mínima
 
 ## Última decisão relevante
@@ -38,5 +38,5 @@
 - 2026-02-05: Aprovado e promovido o contrato de distribuição de bundles para o Runtime (ADR 0017).
 
 ## Próxima tarefa atômica
-- Iniciar ADR 0019 (Promoção e rollback v1: workflow de aliases e invariantes).
+- Consolidar ADR 0019 (Promoção e rollback v1) com integração progressiva ao fluxo de resolve/current legado.
 

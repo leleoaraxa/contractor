@@ -28,6 +28,7 @@ ou implementações ad-hoc.
 | 0014 | Auditoria end-to-end (formato, correlação e retenção mínima)           | Accepted |
 | 0016 | Quality gates v1 (suites, execução e critérios de promoção)            | Draft    |
 | 0017 | Distribuição de bundles para o Runtime (fetch, digest e cache local)   | Accepted |
+| 0019 | Promoção e rollback v1 (workflow de aliases e invariantes)             | Draft    |
 
 ---
 
@@ -37,7 +38,6 @@ ou implementações ad-hoc.
 |------|------------------------------------------------------------------------|--------|--------|
 | 0015 | Armazenamento de bundles no Control Plane (integridade e lifecycle)    | Draft  | ADR 0002/0005 exigem imutabilidade; falta definir storage real e GC. |
 | 0018 | Observabilidade v1 (métricas mínimas, tracing e logs estruturados)      | Draft  | ADR 0004 exige sinais operacionais; precisa virar contrato mínimo. |
-| 0019 | Promoção e rollback v1 (workflow de aliases e invariantes)             | Draft  | ADR 0003 define aliases, mas não formaliza o workflow de promoção e rollback. |
 
 > Nota: ADRs em Draft **devem existir como arquivos**, mesmo após implementação parcial,
 > para evitar “roadmap sem documentação”.
@@ -46,9 +46,8 @@ ou implementações ad-hoc.
 
 ## Ordem recomendada de evolução
 
-1. **ADR 0019** — Promoção e rollback v1 (workflow de aliases e invariantes)
-2. **ADR 0015** — Armazenamento de bundles no Control Plane
-3. **ADR 0018** — Observabilidade v1
+1. **ADR 0015** — Armazenamento de bundles no Control Plane
+2. **ADR 0018** — Observabilidade v1
 
 ---
 
@@ -68,3 +67,9 @@ ou implementações ad-hoc.
 3. Resolver dependências arquiteturais
 4. Marcar como `Accepted`
 5. Atualizar `docs/STATUS.md` se impactar milestone ou próxima tarefa
+
+
+## Referências de arquivos
+
+- [ADR 0016 — Quality gates v1](./0016-quality-gates-v1.md)
+- [ADR 0019 — Promoção e rollback v1](./0019-promotion-rollback-v1.md)
