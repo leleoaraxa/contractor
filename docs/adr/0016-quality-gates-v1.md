@@ -49,7 +49,7 @@ O schema real observado em `data/bundles/**/suites/*.json` (hoje: `demo/faq/suit
   - `question: string não-vazia`
   - `expected_answer: string não-vazia`
 
-v1 suporta **somente** esse formato.
+v1 suporta **somente** esse formato. Suites são **tenant-scoped**; o Control Plane rejeita cases cross-tenant (`422 Suite invalid`).
 
 ### 3) Execução determinística v1
 
