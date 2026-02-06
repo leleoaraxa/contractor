@@ -80,13 +80,13 @@ def _load_and_validate_suite(path: Path) -> list[dict[str, str]]:
         suite_data = _read_json(path)
     except (FileNotFoundError, json.JSONDecodeError) as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Suite invalid",
         ) from exc
 
     if not isinstance(suite_data, list) or not suite_data:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Suite invalid",
         )
 
@@ -94,7 +94,7 @@ def _load_and_validate_suite(path: Path) -> list[dict[str, str]]:
     for case in suite_data:
         if not isinstance(case, dict):
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Suite invalid",
             )
         tenant_id = case.get("tenant_id")
@@ -109,7 +109,7 @@ def _load_and_validate_suite(path: Path) -> list[dict[str, str]]:
             or not expected_answer
         ):
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Suite invalid",
             )
         normalized.append(
@@ -201,7 +201,7 @@ def _run_suite_cases(
 def _ensure_suite_matches_tenant(suite_cases: list[dict[str, str]], tenant_id: str) -> None:
     if any(case["tenant_id"] != tenant_id for case in suite_cases):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Suite invalid",
         )
 
