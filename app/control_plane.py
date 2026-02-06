@@ -180,8 +180,9 @@ def _run_suite_cases(
             passed = False
         else:
             body = response.json()
-            output_text = body.get("output_text")
-            passed = isinstance(output_text, str) and output_text == case["expected_answer"]
+            result = body.get("result")
+            answer = result.get("answer") if isinstance(result, dict) else None
+            passed = isinstance(answer, str) and answer == case["expected_answer"]
         if passed:
             passed_count += 1
         results.append(
@@ -551,20 +552,6 @@ def run_quality_gate(
             ) from exc
 
 
-@app.get("/tenants/{tenant_id}/bundles/{bundle_id}/gates/{gate_id}")
-def get_quality_gate(
-    tenant_id: str,
-    bundle_id: str,
-    gate_id: str,
-    authorization: str | None = Header(default=None, alias="Authorization"),
-    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
-) -> dict[str, Any]:
-    enforce_control_plane_auth(
-        tenant_id=tenant_id, authorization=authorization, x_tenant_id=x_tenant_id
-    )
-    return _load_gate_result(tenant_id, bundle_id, gate_id)
-
-
 @app.get("/tenants/{tenant_id}/bundles/{bundle_id}/gates/history")
 def list_quality_gates_history(
     tenant_id: str,
@@ -608,3 +595,17 @@ def list_quality_gates_history(
         "limit": GATE_HISTORY_LIMIT,
         "items": items,
     }
+
+
+@app.get("/tenants/{tenant_id}/bundles/{bundle_id}/gates/{gate_id}")
+def get_quality_gate(
+    tenant_id: str,
+    bundle_id: str,
+    gate_id: str,
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+) -> dict[str, Any]:
+    enforce_control_plane_auth(
+        tenant_id=tenant_id, authorization=authorization, x_tenant_id=x_tenant_id
+    )
+    return _load_gate_result(tenant_id, bundle_id, gate_id)
