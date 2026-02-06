@@ -197,6 +197,14 @@ def _run_suite_cases(
     return results, passed_count, total - passed_count
 
 
+def _ensure_suite_matches_tenant(suite_cases: list[dict[str, str]], tenant_id: str) -> None:
+    if any(case["tenant_id"] != tenant_id for case in suite_cases):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Suite invalid",
+        )
+
+
 class AuthConfigError(RuntimeError):
     """Raised when tenant auth configuration is unavailable or invalid."""
 
@@ -463,6 +471,7 @@ def run_quality_gate(
         suites_result: list[dict[str, Any]] = []
         for suite_path in suite_paths:
             suite_cases = _load_and_validate_suite(suite_path)
+            _ensure_suite_matches_tenant(suite_cases, tenant_id)
             case_results, passed_count, failed_count = _run_suite_cases(suite_cases, request_id)
             suite_outcome = "pass" if failed_count == 0 else "fail"
             suites_result.append(
