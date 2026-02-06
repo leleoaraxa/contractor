@@ -9,6 +9,37 @@ from fastapi.testclient import TestClient
 
 from app import control_plane
 
+RUNTIME_TENANT_KEYS_JSON = json.dumps(
+    {
+        "tenant_a": "test-key-a",
+        "tenant_b": "test-key-b",
+    }
+)
+RUNTIME_AUDIT_CONFIG_JSON = json.dumps(
+    {
+        "enabled": True,
+        "sink": "stdout",
+        "file_path": "data/audit/audit.log.jsonl",
+        "retention_days": 7,
+    }
+)
+RUNTIME_RATE_LIMIT_POLICY_JSON = json.dumps(
+    {
+        "default": {
+            "window_seconds": 60,
+            "max_requests": 1000,
+            "quota": {"interval_seconds": 86400, "max_requests": 1000},
+        },
+        "tenants": {
+            "*": {
+                "window_seconds": 60,
+                "max_requests": 1000,
+                "quota": {"interval_seconds": 86400, "max_requests": 1000},
+            }
+        },
+    }
+)
+
 
 def _set_cp_env(
     monkeypatch: pytest.MonkeyPatch, auth_path: Path, alias_path: Path
@@ -16,6 +47,11 @@ def _set_cp_env(
     monkeypatch.setenv(control_plane.AUTH_CONFIG_PATH_ENV, str(auth_path))
     monkeypatch.setenv(control_plane.ALIAS_CONFIG_PATH_ENV, str(alias_path))
     monkeypatch.delenv(control_plane.AUTH_CONFIG_JSON_ENV, raising=False)
+    monkeypatch.setenv("CONTRACTOR_TENANT_KEYS", RUNTIME_TENANT_KEYS_JSON)
+    monkeypatch.setenv("CONTRACTOR_AUDIT_CONFIG_JSON", RUNTIME_AUDIT_CONFIG_JSON)
+    monkeypatch.setenv(
+        "CONTRACTOR_RATE_LIMIT_POLICY_JSON", RUNTIME_RATE_LIMIT_POLICY_JSON
+    )
 
 
 @pytest.fixture
@@ -155,3 +191,57 @@ def test_gate_history_lists_runs(
     assert len(body["items"]) == 2
     request_ids = {item["request_id"] for item in body["items"]}
     assert request_ids == {"req-gate-3", "req-gate-4"}
+
+
+def test_post_gate_rejects_suite_with_cross_tenant_case(
+    tmp_path: Path,
+    control_plane_auth_config_path: Path,
+    control_plane_alias_config_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _set_cp_env(
+        monkeypatch, control_plane_auth_config_path, control_plane_alias_config_path
+    )
+    monkeypatch.setattr(control_plane, "GATE_STORAGE_ROOT", tmp_path / "gates")
+
+    bundle_path = tmp_path / "bundle"
+    suites_path = bundle_path / "suites"
+    suites_path.mkdir(parents=True)
+    (bundle_path / "manifest.yaml").write_text(
+        "bundle_id: demo-faq-0001\nruntime_compatibility:\n  min_version: '1.0.0'\n",
+        encoding="utf-8",
+    )
+    (suites_path / "faq_golden.json").write_text(
+        json.dumps(
+            [
+                {
+                    "tenant_id": "tenant_a",
+                    "question": "q1",
+                    "expected_answer": "a1",
+                },
+                {
+                    "tenant_id": "tenant_b",
+                    "question": "q2",
+                    "expected_answer": "a2",
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        control_plane, "_find_bundle_path_by_bundle_id", lambda _bundle_id: bundle_path
+    )
+
+    client = TestClient(control_plane.app)
+    response = client.post(
+        "/tenants/tenant_a/bundles/demo-faq-0001/gates",
+        headers={
+            "Authorization": "Bearer cp_test_key_a",
+            "X-Tenant-Id": "tenant_a",
+            "X-Request-Id": "req-gate-cross-tenant",
+        },
+        json={"suite_id": "faq_golden"},
+    )
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": "Suite invalid"}
