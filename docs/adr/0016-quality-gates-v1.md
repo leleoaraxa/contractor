@@ -58,7 +58,7 @@ v1 suporta **somente** esse formato. Suites são **tenant-scoped**; o Control Pl
 - `X-Request-Id` do POST de gate é preservado e cada caso recebe request id derivado:
   - `{request_id}:case:{i}`.
 - Critério de comparação v1:
-  - `pass` quando `output_text` retornado pelo Runtime é exatamente igual a `expected_answer`.
+  - `pass` quando `result.answer` retornado pelo Runtime é exatamente igual a `expected_answer` (com `output_text` mantido apenas como campo renderizado para cliente).
 
 ### 4) Critérios de aprovação v1
 
