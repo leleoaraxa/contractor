@@ -27,10 +27,19 @@ ALIAS_CONFIG_PATH_ENV = "CONTRACTOR_CONTROL_PLANE_ALIAS_CONFIG_PATH"
 app = FastAPI()
 GATE_HISTORY_LIMIT = 50
 GATE_STORAGE_ROOT = REPO_ROOT / "data" / "control_plane" / "gates"
+ALIAS_STATE_ROOT = REPO_ROOT / "data" / "control_plane" / "alias_state"
 
 
 class GateRunRequest(BaseModel):
     suite_id: str | None = None
+
+
+class AliasCandidateRequest(BaseModel):
+    bundle_id: str
+
+
+class AliasRollbackRequest(BaseModel):
+    bundle_id: str
 
 
 def _atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -143,6 +152,102 @@ def _load_gate_result(tenant_id: str, bundle_id: str, gate_id: str) -> dict[str,
             detail="Gate storage invalid",
         )
     return payload
+
+
+def _alias_state_file(tenant_id: str) -> Path:
+    return ALIAS_STATE_ROOT / f"{tenant_id}.json"
+
+
+def _default_alias_state(tenant_id: str) -> dict[str, Any]:
+    return {
+        "tenant_id": tenant_id,
+        "aliases": {
+            "candidate": None,
+            "current": None,
+        },
+    }
+
+
+def _load_alias_state(tenant_id: str) -> dict[str, Any]:
+    path = _alias_state_file(tenant_id)
+    if not path.exists():
+        return _default_alias_state(tenant_id)
+    try:
+        payload = _read_json(path)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Alias state invalid",
+        ) from exc
+    if not isinstance(payload, dict):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Alias state invalid",
+        )
+    if payload.get("tenant_id") != tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Alias state invalid",
+        )
+    aliases = payload.get("aliases")
+    if not isinstance(aliases, dict):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Alias state invalid",
+        )
+    for alias_name in ("candidate", "current"):
+        alias_value = aliases.get(alias_name)
+        if alias_value is None:
+            continue
+        if (
+            not isinstance(alias_value, dict)
+            or not isinstance(alias_value.get("bundle_id"), str)
+            or not alias_value["bundle_id"]
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Alias state invalid",
+            )
+    return payload
+
+
+def _save_alias_state(tenant_id: str, payload: dict[str, Any]) -> None:
+    _atomic_write_json(_alias_state_file(tenant_id), payload)
+
+
+def _ensure_passed_gate_for_bundle(tenant_id: str, bundle_id: str) -> None:
+    bundle_dir = GATE_STORAGE_ROOT / tenant_id / bundle_id
+    if not bundle_dir.exists():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Gate approval required")
+    for path in sorted(bundle_dir.glob("*.json")):
+        try:
+            payload = _read_json(path)
+        except json.JSONDecodeError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Gate storage invalid",
+            ) from exc
+        if not isinstance(payload, dict):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Gate storage invalid",
+            )
+        if (
+            not isinstance(payload.get("tenant_id"), str)
+            or not isinstance(payload.get("bundle_id"), str)
+            or not isinstance(payload.get("outcome"), str)
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Gate storage invalid",
+            )
+        if (
+            payload["tenant_id"] == tenant_id
+            and payload["bundle_id"] == bundle_id
+            and payload["outcome"] == "pass"
+        ):
+            return
+    raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Gate approval required")
 
 
 def _run_suite_cases(
@@ -441,6 +546,214 @@ def resolve_current(
                 detail=str(exc),
             ) from exc
 
+
+
+
+@app.post("/tenants/{tenant_id}/aliases/candidate")
+def set_alias_candidate(
+    tenant_id: str,
+    alias_request: AliasCandidateRequest,
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+    x_request_id: str | None = Header(default=None, alias="X-Request-Id"),
+) -> dict[str, Any]:
+    started_at = time.time()
+    request_id = (
+        x_request_id
+        if isinstance(x_request_id, str) and x_request_id.strip()
+        else str(uuid.uuid4())
+    )
+    status_code = status.HTTP_200_OK
+    from_bundle_id: str | None = None
+    to_bundle_id: str | None = None
+
+    try:
+        enforce_control_plane_auth(
+            tenant_id=tenant_id, authorization=authorization, x_tenant_id=x_tenant_id
+        )
+        _find_bundle_path_by_bundle_id(alias_request.bundle_id)
+        state = _load_alias_state(tenant_id)
+        candidate = state["aliases"]["candidate"]
+        from_bundle_id = candidate["bundle_id"] if isinstance(candidate, dict) else None
+        to_bundle_id = alias_request.bundle_id
+        state["aliases"]["candidate"] = {"bundle_id": alias_request.bundle_id}
+        _save_alias_state(tenant_id, state)
+        return {
+            "tenant_id": tenant_id,
+            "aliases": state["aliases"],
+        }
+    except HTTPException as exc:
+        status_code = exc.status_code
+        raise
+    except Exception as exc:
+        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from exc
+    finally:
+        event: dict[str, Any] = {
+            "ts_utc": now_utc_iso(),
+            "service": "control_plane",
+            "event": "alias_candidate_set",
+            "tenant_id": tenant_id,
+            "request_id": request_id,
+            "actor": "control_plane_api",
+            "outcome": "ok" if status_code < 400 else "error",
+            "http_status": int(status_code),
+            "latency_ms": int((time.time() - started_at) * 1000),
+        }
+        if from_bundle_id:
+            event["from_bundle_id"] = from_bundle_id
+        if to_bundle_id:
+            event["to_bundle_id"] = to_bundle_id
+        try:
+            audit_emit(event)
+        except AuditConfigError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=str(exc),
+            ) from exc
+
+
+@app.post("/tenants/{tenant_id}/aliases/promote")
+def promote_alias_current(
+    tenant_id: str,
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+    x_request_id: str | None = Header(default=None, alias="X-Request-Id"),
+) -> dict[str, Any]:
+    started_at = time.time()
+    request_id = (
+        x_request_id
+        if isinstance(x_request_id, str) and x_request_id.strip()
+        else str(uuid.uuid4())
+    )
+    status_code = status.HTTP_200_OK
+    from_bundle_id: str | None = None
+    to_bundle_id: str | None = None
+
+    try:
+        enforce_control_plane_auth(
+            tenant_id=tenant_id, authorization=authorization, x_tenant_id=x_tenant_id
+        )
+        state = _load_alias_state(tenant_id)
+        candidate = state["aliases"].get("candidate")
+        current = state["aliases"].get("current")
+        if not isinstance(candidate, dict) or not isinstance(candidate.get("bundle_id"), str):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Candidate alias not set",
+            )
+        candidate_bundle_id = candidate["bundle_id"]
+        from_bundle_id = current["bundle_id"] if isinstance(current, dict) else None
+        to_bundle_id = candidate_bundle_id
+        _ensure_passed_gate_for_bundle(tenant_id, candidate_bundle_id)
+        state["aliases"]["current"] = {"bundle_id": candidate_bundle_id}
+        _save_alias_state(tenant_id, state)
+        return {
+            "tenant_id": tenant_id,
+            "aliases": state["aliases"],
+        }
+    except HTTPException as exc:
+        status_code = exc.status_code
+        raise
+    except Exception as exc:
+        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from exc
+    finally:
+        event: dict[str, Any] = {
+            "ts_utc": now_utc_iso(),
+            "service": "control_plane",
+            "event": "alias_promote",
+            "tenant_id": tenant_id,
+            "request_id": request_id,
+            "actor": "control_plane_api",
+            "outcome": "ok" if status_code < 400 else "error",
+            "http_status": int(status_code),
+            "latency_ms": int((time.time() - started_at) * 1000),
+        }
+        if from_bundle_id:
+            event["from_bundle_id"] = from_bundle_id
+        if to_bundle_id:
+            event["to_bundle_id"] = to_bundle_id
+        try:
+            audit_emit(event)
+        except AuditConfigError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=str(exc),
+            ) from exc
+
+
+@app.post("/tenants/{tenant_id}/aliases/rollback")
+def rollback_alias_current(
+    tenant_id: str,
+    alias_request: AliasRollbackRequest,
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+    x_request_id: str | None = Header(default=None, alias="X-Request-Id"),
+) -> dict[str, Any]:
+    started_at = time.time()
+    request_id = (
+        x_request_id
+        if isinstance(x_request_id, str) and x_request_id.strip()
+        else str(uuid.uuid4())
+    )
+    status_code = status.HTTP_200_OK
+    from_bundle_id: str | None = None
+    to_bundle_id: str | None = None
+
+    try:
+        enforce_control_plane_auth(
+            tenant_id=tenant_id, authorization=authorization, x_tenant_id=x_tenant_id
+        )
+        state = _load_alias_state(tenant_id)
+        current = state["aliases"].get("current")
+        from_bundle_id = current["bundle_id"] if isinstance(current, dict) else None
+        to_bundle_id = alias_request.bundle_id
+        _ensure_passed_gate_for_bundle(tenant_id, alias_request.bundle_id)
+        state["aliases"]["current"] = {"bundle_id": alias_request.bundle_id}
+        _save_alias_state(tenant_id, state)
+        return {
+            "tenant_id": tenant_id,
+            "aliases": state["aliases"],
+        }
+    except HTTPException as exc:
+        status_code = exc.status_code
+        raise
+    except Exception as exc:
+        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from exc
+    finally:
+        event: dict[str, Any] = {
+            "ts_utc": now_utc_iso(),
+            "service": "control_plane",
+            "event": "alias_rollback",
+            "tenant_id": tenant_id,
+            "request_id": request_id,
+            "actor": "control_plane_api",
+            "outcome": "ok" if status_code < 400 else "error",
+            "http_status": int(status_code),
+            "latency_ms": int((time.time() - started_at) * 1000),
+        }
+        if from_bundle_id:
+            event["from_bundle_id"] = from_bundle_id
+        if to_bundle_id:
+            event["to_bundle_id"] = to_bundle_id
+        try:
+            audit_emit(event)
+        except AuditConfigError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=str(exc),
+            ) from exc
 
 @app.post("/tenants/{tenant_id}/bundles/{bundle_id}/gates")
 def run_quality_gate(
